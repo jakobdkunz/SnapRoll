@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(_: Request, { params }: { params: { id: string } }) {
   const studentId = params.id;
   // Sections the student is enrolled in
@@ -38,5 +41,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       .filter((v): v is string => Boolean(v))
   );
 
-  return NextResponse.json({ sections, checkedInSectionIds: Array.from(checkedInSectionIds) });
+  return NextResponse.json(
+    { sections, checkedInSectionIds: Array.from(checkedInSectionIds) },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
