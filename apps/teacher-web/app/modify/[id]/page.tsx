@@ -18,6 +18,8 @@ export default function ModifyPage() {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [needNames, setNeedNames] = useState(false);
+  const [sectionTitle, setSectionTitle] = useState<string>('Roster');
+  const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
 
   async function load() {
     try {
@@ -32,6 +34,19 @@ export default function ModifyPage() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.id]);
+
+  useEffect(() => {
+    async function loadSection() {
+      try {
+        const res = await apiFetch<{ section: { title: string; gradient: string } }>(`/api/sections/${params.id}`);
+        setSectionTitle(res.section.title);
+        setSectionGradient(res.section.gradient);
+      } catch (err) {
+        console.warn('Failed to load section details', err);
+      }
+    }
+    loadSection();
   }, [params.id]);
 
   async function handleAdd() {
@@ -114,11 +129,21 @@ export default function ModifyPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="mb-4 font-medium">Roster</div>
-        <div className="space-y-2">
+      <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}> 
+        <div className="absolute inset-0 bg-black/10" />
+        <div className="relative grid place-items-center text-white py-8 sm:py-10">
+          <div className="font-futuristic font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
+        </div>
+      </div>
+
+      <Card className="p-4 sm:p-6">
+        <div className="mb-4 sm:mb-6 flex items-center justify-between">
+          <div className="font-medium text-lg">Roster</div>
+          <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
+        </div>
+        <div className="space-y-3">
           {students.map((s) => (
-            <div key={s.id} className="p-2 border rounded flex flex-col sm:flex-row sm:items-center gap-2">
+            <div key={s.id} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
               {editId === s.id ? (
                 <>
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -137,7 +162,7 @@ export default function ModifyPage() {
                     <div className="font-medium truncate">{s.firstName} {s.lastName}</div>
                     <div className="text-sm text-slate-500 truncate">{s.email}</div>
                   </div>
-                  <div className="sm:ml-auto flex gap-2 flex-wrap">
+                  <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
                     <Button variant="ghost" onClick={() => beginEdit(s)}>Edit</Button>
                     <Button variant="ghost" onClick={() => removeStudent(s.id)}>Remove</Button>
                   </div>
@@ -146,7 +171,7 @@ export default function ModifyPage() {
             </div>
           ))}
         </div>
-        <div className="mt-4 space-y-2">
+        <div className="mt-6 space-y-3">
           <div className="font-medium">Add Student</div>
           <TextInput placeholder="Email" value={newEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setNewEmail(e.target.value); setNeedNames(false); setNewFirstName(''); setNewLastName(''); }} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
           {needNames && (
@@ -155,12 +180,12 @@ export default function ModifyPage() {
             </div>
           )}
           {needNames && (
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <TextInput placeholder="First name" value={newFirstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewFirstName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
               <TextInput placeholder="Last name" value={newLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
             </div>
           )}
-          <Button onClick={handleAdd}>Add Student</Button>
+          <Button className="w-full sm:w-auto" onClick={handleAdd}>Add Student</Button>
         </div>
       </Card>
     </div>
