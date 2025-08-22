@@ -11,7 +11,6 @@ type HistoryResponse = {
 
 function formatDateMDY(dateStr: string) {
   const [y, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
-  const dt = new Date(y, m - 1, d);
   return `${(m).toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}/${y}`;
 }
 
