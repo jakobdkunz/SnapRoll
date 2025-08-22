@@ -144,14 +144,8 @@ export default function HistoryPage() {
         limit: number;
       }>(`/api/sections/${params.id}/history?offset=${currentOffset}&limit=${currentLimit}`);
       if (reqId !== requestIdRef.current) return; // ignore stale
-      setStudents(data.students);
-      setDays(data.days);
-      setStudentRecords(data.records);
-      setTotalDays(data.totalDays || 0);
-      setOffset(data.offset ?? currentOffset);
-      setLimit(data.limit ?? currentLimit);
 
-      // After initial load, jump to rightmost page once using totalDays and current limit
+      // Compute desired initial offset before committing state to avoid flicker
       if (!initializedRightmostRef.current) {
         const total = data.totalDays || 0;
         const lim = data.limit || currentLimit;
@@ -159,11 +153,17 @@ export default function HistoryPage() {
         const current = data.offset ?? currentOffset;
         initializedRightmostRef.current = true;
         if (desiredOffset !== current) {
-          // Trigger a follow-up load to show the most recent page
-          setIsFetching(true);
           await loadHistory(desiredOffset, lim);
+          return; // don't commit intermediate (oldest) page
         }
       }
+
+      setStudents(data.students);
+      setDays(data.days);
+      setStudentRecords(data.records);
+      setTotalDays(data.totalDays || 0);
+      setOffset(data.offset ?? currentOffset);
+      setLimit(data.limit ?? currentLimit);
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
@@ -362,7 +362,11 @@ export default function HistoryPage() {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-slate-600">Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</div>
+        <div className="text-sm text-slate-600">
+          {days.length > 0 && totalDays > 0
+            ? <>Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</>
+            : 'Loading…'}
+        </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>
