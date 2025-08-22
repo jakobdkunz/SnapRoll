@@ -1,16 +1,25 @@
 import { z } from 'zod';
 
 export function getApiBaseUrl() {
-  // Check if we're running on a tunneled URL and use the tunneled API URL
+  // Prefer special handling for localtunnel during local testing
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     if (hostname.includes('loca.lt')) {
-      // Use a hardcoded tunnel URL that we know works
       return 'https://nine-baths-appear.loca.lt';
     }
   }
-  
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002';
+
+  const raw = process.env.NEXT_PUBLIC_API_URL;
+  if (raw && raw.trim().length > 0) {
+    const trimmed = raw.trim().replace(/\/+$/, '');
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    // If protocol is missing, default to https
+    return `https://${trimmed}`;
+  }
+
+  return 'http://localhost:3002';
 }
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -19,7 +28,8 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit & { schema?: z.ZodType<T> } = {}
 ): Promise<T> {
-  const url = `${getApiBaseUrl()}${path}`;
+  const base = getApiBaseUrl();
+  const url = `${base}${path}`;
   const init: RequestInit = {
     ...options,
     headers: {
