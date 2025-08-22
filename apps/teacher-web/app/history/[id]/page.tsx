@@ -75,20 +75,27 @@ export default function HistoryPage() {
     setTeacherId(id);
   }, [params.id]);
 
-  // Compute initial columns based on container before first fetch to avoid overflow
+  // Compute initial columns based on actual measured widths before first fetch
   useEffect(() => {
     if (initialized) return;
-    const el = containerRef.current;
-    const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-    const horizontalPadding = 32;
-    const available = Math.max(0, containerWidth - STUDENT_COL - horizontalPadding);
-    const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
-    if (initialLimit !== limit) setLimit(initialLimit);
-    setInitialized(true);
-    // load immediately regardless of teacherId; API route does not require it
-    loadHistory(offset, initialLimit);
+    const measure = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+      const studentW = firstThRef.current?.offsetWidth ?? STUDENT_COL;
+      const available = Math.max(0, containerWidth - studentW);
+      const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
+      if (initialLimit !== limit) setLimit(initialLimit);
+      setInitialized(true);
+      loadHistory(offset, initialLimit);
+    };
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(measure);
+    } else {
+      measure();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, containerRef.current]);
+  }, [initialized]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
@@ -135,8 +142,8 @@ export default function HistoryPage() {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const horizontalPadding = 32; // card/container padding/scrollbar buffer
-      const available = Math.max(0, containerWidth - STUDENT_COL - horizontalPadding);
+      const studentW = firstThRef.current?.offsetWidth ?? STUDENT_COL;
+      const available = Math.max(0, containerWidth - studentW);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
