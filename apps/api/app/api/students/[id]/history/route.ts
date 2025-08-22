@@ -93,7 +93,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   return NextResponse.json(
     { sections, days: uniqueDatesDesc.map((d) => ({ date: d })), records },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'no-store, max-age=0, must-revalidate', 'Pragma': 'no-cache', 'Vary': 'X-TZ-Offset' } }
   );
 }
 
