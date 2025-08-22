@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { Card } from '@snaproll/ui';
+import { usePathname } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient?: string };
@@ -12,6 +13,7 @@ type SectionsResponse = { sections: Section[]; checkedInSectionIds?: string[] };
 type CheckinResponse = { ok: boolean; status: string; section?: { id: string; title: string } };
 
 export default function SectionsPage() {
+  const pathname = usePathname();
   const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +112,14 @@ export default function SectionsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, studentId]);
+
+  // Refetch when navigating back to this route to avoid stale in-memory state
+  useEffect(() => {
+    if (!mounted || !studentId) return;
+    setLoading(true);
+    load(studentId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Refresh data when returning to this tab/page (prevents stale titles/gradients after visiting other pages)
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Card, Badge } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
@@ -15,6 +16,7 @@ function formatDateMDY(dateStr: string) {
 }
 
 export default function MyAttendancePage() {
+  const pathname = usePathname();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [data, setData] = useState<HistoryResponse | null>(null);
@@ -46,6 +48,18 @@ export default function MyAttendancePage() {
       setLoading(false);
     }
   }, [studentId]);
+
+  // Refetch when navigating back to this route to avoid stale in-memory state
+  useEffect(() => {
+    if (!studentId) return;
+    void (async () => {
+      try {
+        const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
+        setData(res);
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Ensure we always show fresh data when navigating to this page or returning to the tab
   useEffect(() => {
