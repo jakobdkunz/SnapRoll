@@ -42,6 +42,31 @@ export default function HistoryPage() {
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
+  const [studentColW, setStudentColW] = useState<number>(STUDENT_COL);
+
+  // Measure the width of the longest visible student name on mobile and set student column width
+  useEffect(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+    if (!isMobile) {
+      setStudentColW(STUDENT_COL);
+      return;
+    }
+    const measure = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const nodes = container.querySelectorAll<HTMLElement>('.sr-student-name');
+      let max = 0;
+      nodes.forEach((el) => {
+        const width = el.scrollWidth;
+        if (width > max) max = width;
+      });
+      // Add small padding so text isn't tight against the first day column
+      const computed = Math.min(320, Math.max(120, Math.ceil(max + 16)));
+      setStudentColW(computed);
+    };
+    if (typeof window !== 'undefined') requestAnimationFrame(measure);
+    else measure();
+  }, [students]);
 
   const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
     const reqId = ++requestIdRef.current;
@@ -82,7 +107,8 @@ export default function HistoryPage() {
       const el = containerRef.current;
       const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const CARD_INNER_PADDING = 32; // matches Card p-4
-      const available = Math.max(0, containerWidth - STUDENT_COL - CARD_INNER_PADDING);
+      const studentWidth = (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL;
+      const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
       const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (initialLimit !== limit) setLimit(initialLimit);
       setInitialized(true);
@@ -94,7 +120,7 @@ export default function HistoryPage() {
       measure();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, params.id]);
+  }, [initialized, params.id, studentColW]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
@@ -142,7 +168,8 @@ export default function HistoryPage() {
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const CARD_INNER_PADDING = 32;
-      const available = Math.max(0, containerWidth - STUDENT_COL - CARD_INNER_PADDING);
+      const studentWidth = (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL;
+      const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
@@ -151,7 +178,7 @@ export default function HistoryPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, offset]);
+  }, [limit, loadHistory, offset, studentColW]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
@@ -267,15 +294,19 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600">Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>← Previous</Button>
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>Next →</Button>
+          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
+            ← <span className="hidden sm:inline">Previous</span>
+          </Button>
+          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>
+            <span className="hidden sm:inline">Next</span> →
+          </Button>
         </div>
       </div>
       <div ref={containerRef} className="relative overflow-hidden">
       <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-2 pr-1 py-2 text-left" style={{ width: STUDENT_COL, minWidth: STUDENT_COL, maxWidth: STUDENT_COL }}>Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-2 pr-1 py-2 text-left" style={{ width: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, minWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, maxWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
@@ -290,9 +321,9 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student, i) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-2 pr-1 py-1 text-sm" style={{ width: STUDENT_COL, minWidth: STUDENT_COL, maxWidth: STUDENT_COL }}>
-                <div className="font-medium truncate whitespace-nowrap overflow-hidden">{student.firstName} {student.lastName}</div>
-                <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden">{student.email}</div>
+              <td className="sticky left-0 z-0 bg-white pl-2 pr-1 py-1 text-sm" style={{ width: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, minWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, maxWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL }}>
+                <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
+                <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
               {[...days].reverse().map((day, j) => {
                 const reversedIndex = days.length - 1 - j;
