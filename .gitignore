@@ -1,0 +1,13 @@
+node_modules
+.turbo
+.next
+.next/**
+dist
+build
+.env
+.env.*
+pnpm-lock.yaml
+coverage
+public/*.generated.*
+.DS_Store
+
