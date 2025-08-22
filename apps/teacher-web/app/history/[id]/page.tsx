@@ -53,6 +53,7 @@ export default function HistoryPage() {
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
   const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
   const hasMeasuredMobileRef = useRef(false);
+  const initializedRightmostRef = useRef(false);
 
   function formatHeaderDateMD(date: Date) {
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -108,6 +109,20 @@ export default function HistoryPage() {
       setTotalDays(data.totalDays || 0);
       setOffset(data.offset ?? currentOffset);
       setLimit(data.limit ?? currentLimit);
+
+      // After initial load, jump to rightmost page once using totalDays and current limit
+      if (!initializedRightmostRef.current) {
+        const total = data.totalDays || 0;
+        const lim = data.limit || currentLimit;
+        const desiredOffset = Math.max(0, total - lim);
+        const current = data.offset ?? currentOffset;
+        initializedRightmostRef.current = true;
+        if (desiredOffset !== current) {
+          // Trigger a follow-up load to show the most recent page
+          setIsFetching(true);
+          await loadHistory(desiredOffset, lim);
+        }
+      }
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
