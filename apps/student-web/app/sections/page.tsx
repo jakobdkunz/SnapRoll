@@ -216,7 +216,7 @@ export default function SectionsPage() {
             if (studentId) window.location.href = '/my-attendance';
           }}
         >
-          My attendance ->
+          My attendance →
         </button>
       </Card>
 
