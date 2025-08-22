@@ -13,10 +13,10 @@
     "next": "14.2.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "@snaproll/ui": "workspace:*",
-    "@snaproll/lib": "workspace:*",
-    "@snaproll/config": "workspace:*",
-    "@snaproll/api-client": "workspace:*",
+    "@snaproll/ui": "^0.1.0",
+    "@snaproll/lib": "^0.1.0",
+    "@snaproll/config": "^0.1.0",
+    "@snaproll/api-client": "^0.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
