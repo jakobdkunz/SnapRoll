@@ -43,6 +43,6 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
   return NextResponse.json(
     { sections, checkedInSectionIds: Array.from(checkedInSectionIds) },
-    { headers: { 'Cache-Control': 'no-store' } }
+    { headers: { 'Cache-Control': 'no-store', 'Pragma': 'no-cache' } }
   );
 }

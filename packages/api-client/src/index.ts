@@ -29,11 +29,17 @@ export async function apiFetch<T>(
   options: RequestInit & { schema?: z.ZodType<T> } = {}
 ): Promise<T> {
   const base = getApiBaseUrl();
-  const url = `${base}${path}`;
+  const isGet = !options.method || options.method.toUpperCase() === 'GET';
+  const cacheBuster = isGet ? `${path.includes('?') ? '&' : '?'}t=${Date.now()}` : '';
+  const url = `${base}${path}${cacheBuster}`;
   const init: RequestInit = {
     ...options,
+    // Prevent browser/SW caching
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      Pragma: 'no-cache',
       ...(options.headers || {}),
     },
   };
