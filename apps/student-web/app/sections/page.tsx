@@ -3,9 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Card } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 type Section = { id: string; title: string; gradient?: string };
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
