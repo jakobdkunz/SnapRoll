@@ -56,7 +56,9 @@ export default function MyAttendancePage() {
       try {
         const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
         setData(res);
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
@@ -69,7 +71,7 @@ export default function MyAttendancePage() {
         try {
           const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
           setData(res);
-        } catch (_e) {
+        } catch {
           /* ignore transient fetch errors */
         }
       })();
