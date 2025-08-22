@@ -38,7 +38,7 @@ export async function apiFetch<T>(
     cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-store, max-age=0, must-revalidate',
       Pragma: 'no-cache',
       ...(typeof window !== 'undefined' ? { 'X-TZ-Offset': String(new Date().getTimezoneOffset()) } : {}),
       ...(options.headers || {}),

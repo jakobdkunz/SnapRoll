@@ -83,7 +83,8 @@ export default function SectionsPage() {
 
   async function load(currentStudentId: string) {
     try {
-      const data = await apiFetch<SectionsResponse>(`/api/students/${currentStudentId}/sections`);
+      // Add a cache-buster to force fresh data even during client-side navigations
+      const data = await apiFetch<SectionsResponse>(`/api/students/${currentStudentId}/sections?_=${Date.now()}`);
       setSections(data.sections);
       setCheckedInIds(data.checkedInSectionIds || []);
     } catch (error) {

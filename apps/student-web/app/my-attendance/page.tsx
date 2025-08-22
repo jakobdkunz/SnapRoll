@@ -34,7 +34,7 @@ export default function MyAttendancePage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiFetch<HistoryResponse>(`/api/students/${id}/history`);
+        const res = await apiFetch<HistoryResponse>(`/api/students/${id}/history?_=${Date.now()}`);
         setData(res);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to load attendance');
@@ -54,7 +54,7 @@ export default function MyAttendancePage() {
     if (!studentId) return;
     void (async () => {
       try {
-        const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
+        const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history?_=${Date.now()}`);
         setData(res);
       } catch {
         /* ignore */
@@ -69,7 +69,7 @@ export default function MyAttendancePage() {
     const refetch = () => {
       void (async () => {
         try {
-          const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
+          const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history?_=${Date.now()}`);
           setData(res);
         } catch {
           /* ignore transient fetch errors */
