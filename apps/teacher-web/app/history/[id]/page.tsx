@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Card, Badge, Button } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
@@ -33,8 +33,14 @@ export default function HistoryPage() {
   const [totalDays, setTotalDays] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [limit, setLimit] = useState<number>(12);
+  const [isFetching, setIsFetching] = useState<boolean>(false);
+  const requestIdRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const firstThRef = useRef<HTMLTableCellElement | null>(null);
 
   const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
+    const reqId = ++requestIdRef.current;
+    setIsFetching(true);
     try {
       const data = await apiFetch<{ 
         students: Student[]; 
@@ -44,7 +50,7 @@ export default function HistoryPage() {
         offset: number;
         limit: number;
       }>(`/api/sections/${params.id}/history?offset=${currentOffset}&limit=${currentLimit}`);
-      
+      if (reqId !== requestIdRef.current) return; // ignore stale
       setStudents(data.students);
       setDays(data.days);
       setStudentRecords(data.records);
@@ -54,6 +60,7 @@ export default function HistoryPage() {
     } catch (error) {
       console.error('Failed to load history:', error);
     } finally {
+      if (reqId === requestIdRef.current) setIsFetching(false);
       setLoading(false);
     }
   }, [params.id]);
@@ -104,23 +111,24 @@ export default function HistoryPage() {
 
   // (duplicate removed)
 
-  // Recalculate how many columns fit and reload on resize
+  // Recalculate how many columns fit based on container and first column widths
   useEffect(() => {
-    function recalcLimit() {
-      const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
-      const leftCol = 260; // student column width
-      const cell = 84; // approx per-day column width
-      const padding = 48; // card padding
-      const cols = Math.max(3, Math.min(60, Math.floor((width - leftCol - padding) / cell)));
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+      const firstColWidth = firstThRef.current?.offsetWidth ?? 260;
+      const perCol = 88; // approx width per day column including padding
+      const horizontalPadding = 32; // padding inside card/container
+      const available = Math.max(0, containerWidth - firstColWidth - horizontalPadding);
+      const cols = Math.max(3, Math.min(60, Math.floor(available / perCol)));
       if (cols !== limit) {
         setLimit(cols);
-        setLoading(true);
         loadHistory(offset, cols);
       }
-    }
-    recalcLimit();
-    window.addEventListener('resize', recalcLimit);
-    return () => window.removeEventListener('resize', recalcLimit);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
   }, [limit, loadHistory, offset]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
@@ -238,15 +246,15 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600">Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); setLoading(true); loadHistory(next, limit); }} disabled={offset === 0}>← Previous</Button>
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); setLoading(true); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>Next →</Button>
+          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>← Previous</Button>
+          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>Next →</Button>
         </div>
       </div>
-      <div className="overflow-hidden">
+      <div ref={containerRef} className="relative overflow-visible">
       <table className="min-w-full border-separate border-spacing-0">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
             {[...days].reverse().map((day) => (
               <th key={day.id} className="p-2 text-sm font-medium text-slate-600">
                 {formatDateMDY(new Date(day.date))}
@@ -274,6 +282,11 @@ export default function HistoryPage() {
           ))}
         </tbody>
       </table>
+      {isFetching && (
+        <div className="absolute inset-0 pointer-events-none grid place-items-center">
+          <div className="px-2 py-1 text-xs rounded bg-white/80 text-slate-600 border">Loading…</div>
+        </div>
+      )}
       </div>
     </Card>
   );
