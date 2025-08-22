@@ -1,5 +1,6 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card, Badge, Button } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
@@ -54,6 +55,46 @@ export default function HistoryPage() {
   const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
   const hasMeasuredMobileRef = useRef(false);
   const initializedRightmostRef = useRef(false);
+  const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
+    { visible: false, text: '', anchorX: 0, anchorY: 0 }
+  );
+
+  function showTooltip(text: string, rect: DOMRect) {
+    setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
+  }
+  function hideTooltip() {
+    setTooltip(t => ({ ...t, visible: false }));
+  }
+
+  function TooltipOverlay() {
+    const ref = useRef<HTMLDivElement | null>(null);
+    const [pos, setPos] = useState<{ left: number; top: number }>({ left: tooltip.anchorX, top: tooltip.anchorY });
+    useLayoutEffect(() => {
+      if (!tooltip.visible) return;
+      const el = ref.current;
+      if (!el) return;
+      const vw = window.innerWidth;
+      const margin = 8;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const left = Math.min(vw - margin - w, Math.max(margin, tooltip.anchorX - w / 2));
+      // Prefer above; if not enough room, place below
+      let top = tooltip.anchorY - margin - h;
+      if (top < margin) top = tooltip.anchorY + margin;
+      setPos({ left, top });
+    }, [tooltip.visible, tooltip.anchorX, tooltip.anchorY]);
+    if (!tooltip.visible) return null;
+    return createPortal(
+      <div
+        ref={ref}
+        style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 9999, maxWidth: 'calc(100vw - 16px)' }}
+        className="pointer-events-none px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg"
+      >
+        {tooltip.text}
+      </div>,
+      document.body
+    );
+  }
 
   function formatHeaderDateMD(date: Date) {
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -293,7 +334,7 @@ export default function HistoryPage() {
     }
 
     return (
-      <div className="relative group">
+      <div className="relative group" onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }} onMouseLeave={hideTooltip} onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }} onTouchEnd={hideTooltip}>
         <select
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
@@ -313,12 +354,6 @@ export default function HistoryPage() {
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           {statusDisplay}
         </div>
-        {tooltipText && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-            {tooltipText}
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
-          </div>
-        )}
       </div>
     );
   }
@@ -384,6 +419,7 @@ export default function HistoryPage() {
         </div>
       )}
       </div>
+      <TooltipOverlay />
     </Card>
   );
 }
