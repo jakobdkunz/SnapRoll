@@ -120,9 +120,8 @@ export default function HistoryPage() {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const firstColWidth = firstThRef.current?.offsetWidth ?? 260;
       const horizontalPadding = 32; // card/container padding/scrollbar buffer
-      const available = Math.max(0, containerWidth - firstColWidth - horizontalPadding);
+      const available = Math.max(0, containerWidth - 260 - horizontalPadding);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
@@ -131,7 +130,7 @@ export default function HistoryPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, offset]);
+  }, [limit, loadHistory, offset, PER_COL]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
