@@ -1,4 +1,4 @@
-const CACHE = 'snaproll-cache-v2';
+const CACHE = 'snaproll-cache-v3';
 const OFFLINE_URLS = ['/','/manifest.json','/icon.svg','/maskable.svg'];
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -48,12 +48,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Default: network-first
+  // Default: network-first, but do not cache JSON/API responses
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(request, copy));
+        const isJson = (response.headers.get('content-type') || '').includes('application/json');
+        if (!isJson) {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+        }
         return response;
       })
       .catch(async () => await caches.match(request))
