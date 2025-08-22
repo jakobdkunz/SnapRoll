@@ -303,13 +303,13 @@ export default function SectionsPage() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {sections.map((s) => {
             const gradientClass = s.gradient || 'gradient-1';
             const isCheckedIn = checkedInIds.includes(s.id);
             return (
-              <Card key={s.id} className="p-4 flex flex-col overflow-hidden group">
-                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-4 text-white relative overflow-hidden grid place-items-center`}>
+              <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
+                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 text-white relative overflow-hidden grid place-items-center`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   {/* Checked-in badge */}
                   {isCheckedIn && (
@@ -325,7 +325,7 @@ export default function SectionsPage() {
                   <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
                   <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
                 </div>
-                <div className="font-medium mb-2 text-slate-700">{s.title}</div>
+                <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
               </Card>
             );
           })}

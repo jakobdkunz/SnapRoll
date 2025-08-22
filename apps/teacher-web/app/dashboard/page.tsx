@@ -101,13 +101,13 @@ export default function DashboardPage() {
           }}>Create New Section</Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-3 gap-6 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
           {sections.map((s) => {
             const gradientClass = s.gradient;
             
             return (
-              <Card key={s.id} className="p-4 flex flex-col overflow-hidden group">
-                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-4 grid place-items-center text-white relative overflow-hidden`}>
+              <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
+                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
                     <div className="font-futuristic font-bold text-lg leading-tight px-2">
@@ -126,11 +126,18 @@ export default function DashboardPage() {
                     ✏️
                   </button>
                 </div>
-                <div className="font-medium mb-2 text-slate-700">{s.title}</div>
-                <div className="mt-auto flex gap-2">
+                <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
+                <div className="mt-auto hidden sm:flex gap-2">
                   <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
-                  <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>View Report</Button>
+                  <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
                   <Button onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
+                </div>
+                <div className="mt-auto sm:hidden">
+                  <div className="flex gap-2">
+                    <Button className="flex-1" onClick={() => router.push(`/attendance/${s.id}`)}>Attendance</Button>
+                    <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
+                    <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
+                  </div>
                 </div>
               </Card>
             );
