@@ -11,6 +11,8 @@ export default function TeacherWelcomePage() {
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [needsNames, setNeedsNames] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -21,22 +23,50 @@ export default function TeacherWelcomePage() {
     }
   }, [router]);
 
-  const isValid = email.trim() && firstName.trim() && lastName.trim();
-
   async function onContinue() {
-    if (!isValid) return;
+    setError(null);
+    const cleanEmail = email.trim();
+    if (!cleanEmail) return;
     setLoading(true);
     try {
-      const { teacher } = await apiFetch<{ teacher: { id: string; email: string; firstName: string; lastName: string } }>('/api/auth/teacher', {
-        method: 'POST',
-        body: JSON.stringify({ email, firstName, lastName }),
-      });
+      // Try email-only login
+      const res = await apiFetch<{ teacher?: { id: string; email: string; firstName: string; lastName: string }; found?: boolean }>(
+        '/api/auth/teacher',
+        { method: 'POST', body: JSON.stringify({ email: cleanEmail }) }
+      );
+      if (res.teacher) {
+        const t = res.teacher;
+        localStorage.setItem('snaproll.teacherId', t.id);
+        localStorage.setItem('snaproll.teacherName', `${t.firstName} ${t.lastName}`);
+        localStorage.setItem('snaproll.teacherEmail', t.email);
+        router.push('/dashboard');
+        return;
+      }
+      // If not found, reveal name fields and wait for user to submit again
+      setNeedsNames(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to continue');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function onCreate() {
+    setError(null);
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !firstName.trim() || !lastName.trim()) return;
+    setLoading(true);
+    try {
+      const { teacher } = await apiFetch<{ teacher: { id: string; email: string; firstName: string; lastName: string } }>(
+        '/api/auth/teacher',
+        { method: 'POST', body: JSON.stringify({ email: cleanEmail, firstName: firstName.trim(), lastName: lastName.trim() }) }
+      );
       localStorage.setItem('snaproll.teacherId', teacher.id);
       localStorage.setItem('snaproll.teacherName', `${teacher.firstName} ${teacher.lastName}`);
       localStorage.setItem('snaproll.teacherEmail', teacher.email);
       router.push('/dashboard');
-    } catch (error) {
-      console.error('Login failed:', error);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to create account');
     } finally {
       setLoading(false);
     }
@@ -57,35 +87,50 @@ export default function TeacherWelcomePage() {
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
-                onContinue();
+                if (needsNames) {
+                  onCreate();
+                } else {
+                  onContinue();
+                }
               }
             }}
           />
-          <TextInput
-            placeholder="First name"
-            value={firstName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onContinue();
-              }
-            }}
-          />
-          <TextInput
-            placeholder="Last name"
-            value={lastName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
-            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onContinue();
-              }
-            }}
-          />
-          <Button onClick={onContinue} disabled={!isValid || loading} className="w-full">
-            {loading ? 'Continuing...' : 'Continue'}
-          </Button>
+          {needsNames && (
+            <>
+              <TextInput
+                placeholder="First name"
+                value={firstName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onCreate();
+                  }
+                }}
+              />
+              <TextInput
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onCreate();
+                  }
+                }}
+              />
+            </>
+          )}
+          {error && <div className="text-sm text-red-600">{error}</div>}
+          {!needsNames ? (
+            <Button onClick={onContinue} disabled={loading} className="w-full">
+              {loading ? 'Continuing…' : 'Continue'}
+            </Button>
+          ) : (
+            <Button onClick={onCreate} disabled={loading || !firstName.trim() || !lastName.trim()} className="w-full">
+              {loading ? 'Creating…' : 'Create account'}
+            </Button>
+          )}
         </div>
       </Card>
     </div>

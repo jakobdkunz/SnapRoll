@@ -108,28 +108,36 @@ async function seedDemoData(teacherId: string) {
 }
 
 export async function POST(request: Request) {
-  const { email, firstName, lastName } = (await request.json()) as { email: string; firstName: string; lastName: string };
-  const cleanEmail = email.trim().toLowerCase();
-  if (!cleanEmail || !firstName?.trim() || !lastName?.trim()) {
-    return NextResponse.json({ error: 'Email, first name, and last name required' }, { status: 400 });
+  const body = (await request.json()) as { email: string; firstName?: string; lastName?: string };
+  const cleanEmail = body.email?.trim().toLowerCase();
+  const firstName = body.firstName?.trim();
+  const lastName = body.lastName?.trim();
+  if (!cleanEmail) {
+    return NextResponse.json({ error: 'Email required' }, { status: 400 });
   }
 
   let teacher = await prisma.user.findFirst({ where: { email: cleanEmail, role: 'TEACHER' } });
-  if (!teacher) {
-    teacher = await prisma.user.create({ 
-      data: { 
-        email: cleanEmail, 
-        firstName: firstName.trim(), 
-        lastName: lastName.trim(), 
-        role: 'TEACHER' 
-      } 
-    });
-
+  if (teacher) {
     if (cleanEmail === 'demo@example.com') {
       await seedDemoData(teacher.id);
     }
+    return NextResponse.json({ teacher });
   }
-  // Ensure demo data exists even if the account already existed
+
+  // No teacher found -- if names provided, create; otherwise indicate not found
+  if (!firstName || !lastName) {
+    return NextResponse.json({ found: false }, { status: 200 });
+  }
+
+  teacher = await prisma.user.create({ 
+    data: { 
+      email: cleanEmail, 
+      firstName, 
+      lastName, 
+      role: 'TEACHER' 
+    } 
+  });
+
   if (cleanEmail === 'demo@example.com') {
     await seedDemoData(teacher.id);
   }
