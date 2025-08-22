@@ -50,6 +50,7 @@ model ClassDay {
   sectionId      String
   date           DateTime
   attendanceCode String
+  attendanceCodeExpiresAt DateTime?
   // Relations
   attendanceRecords AttendanceRecord[]
   manualStatusChanges ManualStatusChange[]
