@@ -62,11 +62,11 @@ export default function TeacherProfilePage() {
         <div className="text-lg font-semibold">Your Profile</div>
         <div className="space-y-2">
           <label className="text-sm text-slate-600">First name</label>
-          <TextInput value={firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)} />
+          <TextInput value={firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && firstName.trim() && lastName.trim() && !saving) { e.preventDefault(); onSave(); } }} />
         </div>
         <div className="space-y-2">
           <label className="text-sm text-slate-600">Last name</label>
-          <TextInput value={lastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)} />
+          <TextInput value={lastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && firstName.trim() && lastName.trim() && !saving) { e.preventDefault(); onSave(); } }} />
         </div>
         <div className="space-y-2">
           <label className="text-sm text-slate-600">Email</label>

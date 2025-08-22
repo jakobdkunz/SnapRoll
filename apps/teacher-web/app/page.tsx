@@ -54,16 +54,34 @@ export default function TeacherWelcomePage() {
             type="email"
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onContinue();
+              }
+            }}
           />
           <TextInput
             placeholder="First name"
             value={firstName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onContinue();
+              }
+            }}
           />
           <TextInput
             placeholder="Last name"
             value={lastName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onContinue();
+              }
+            }}
           />
           <Button onClick={onContinue} disabled={!isValid || loading} className="w-full">
             {loading ? 'Continuing...' : 'Continue'}
