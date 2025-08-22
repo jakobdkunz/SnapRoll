@@ -40,6 +40,7 @@ export async function apiFetch<T>(
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
       Pragma: 'no-cache',
+      ...(typeof window !== 'undefined' ? { 'X-TZ-Offset': String(new Date().getTimezoneOffset()) } : {}),
       ...(options.headers || {}),
     },
   };

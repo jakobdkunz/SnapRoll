@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const sectionId = params.id;
   
-  // Get today's class day
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  // Get today's class day, respecting client timezone if provided (minutes offset from UTC)
+  const tzHeader = request.headers.get('x-tz-offset');
+  const tzMinutes = tzHeader ? parseInt(tzHeader, 10) : new Date().getTimezoneOffset();
+  const now = new Date();
+  const localNowMs = now.getTime() - tzMinutes * 60 * 1000;
+  const local = new Date(localNowMs);
+  const startLocal = new Date(local.getFullYear(), local.getMonth(), local.getDate());
+  const start = new Date(startLocal.getTime() + tzMinutes * 60 * 1000);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   
   const classDay = await prisma.classDay.findFirst({
     where: { sectionId, date: { gte: start, lt: end } },

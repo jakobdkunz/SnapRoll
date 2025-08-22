@@ -4,7 +4,7 @@ import { prisma } from '@snaproll/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const studentId = params.id;
   // Sections the student is enrolled in
   const enrollments = await prisma.enrollment.findMany({ where: { studentId }, include: { section: true } });
@@ -14,11 +14,15 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     gradient: e.section.gradient ?? 'gradient-1',
   }));
 
-  // Compute today's date (start of day) to find current classDays
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  // Compute today's date (start of day) respecting client timezone offset if provided
+  const tzHeader = request.headers.get('x-tz-offset');
+  const tzMinutes = tzHeader ? parseInt(tzHeader, 10) : new Date().getTimezoneOffset();
+  const now = new Date();
+  const localNowMs = now.getTime() - tzMinutes * 60 * 1000;
+  const local = new Date(localNowMs);
+  const startLocal = new Date(local.getFullYear(), local.getMonth(), local.getDate());
+  const start = new Date(startLocal.getTime() + tzMinutes * 60 * 1000);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
   const classDays = await prisma.classDay.findMany({
     where: {

@@ -113,6 +113,31 @@ export default function SectionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, studentId]);
 
+  // Schedule a refresh exactly at next local midnight to roll over daily state
+  useEffect(() => {
+    if (!mounted || !studentId) return;
+    const currentStudentId = studentId as string;
+    function msUntilNextMidnight() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return next.getTime() - now.getTime();
+    }
+    let timeout: number | undefined;
+    function schedule() {
+      const ms = msUntilNextMidnight();
+      timeout = window.setTimeout(async () => {
+        setLoading(true);
+        await load(currentStudentId);
+        // schedule again for the following midnight
+        schedule();
+      }, ms + 100); // small buffer
+    }
+    schedule();
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [mounted, studentId]);
+
   // Refetch when navigating back to this route to avoid stale in-memory state
   useEffect(() => {
     if (!mounted || !studentId) return;
