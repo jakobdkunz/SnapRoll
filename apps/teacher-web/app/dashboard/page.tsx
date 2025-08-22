@@ -101,50 +101,52 @@ export default function DashboardPage() {
           }}>Create New Section</Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-          {sections.map((s) => {
-            const gradientClass = s.gradient;
-            
-            return (
-              <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
-                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
-                  <div className="absolute inset-0 bg-black/10"></div>
-                  <div className="relative z-10 text-center">
-                    <div className="font-futuristic font-bold text-lg leading-tight px-2">
-                      {s.title}
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
+            {sections.map((s) => {
+              const gradientClass = s.gradient;
+              
+              return (
+                <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
+                  <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
+                    <div className="absolute inset-0 bg-black/10"></div>
+                    <div className="relative z-10 text-center">
+                      <div className="font-futuristic font-bold text-lg leading-tight px-2">
+                        {s.title}
+                      </div>
+                    </div>
+                    <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
+                    <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
+                    
+                    {/* Pencil icon that appears on hover */}
+                    <button
+                      onClick={() => setCustomizeModal({ open: true, section: s })}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
+                      title="Customize"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                  <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
+                  <div className="mt-auto hidden sm:flex gap-2">
+                    <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
+                    <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
+                    <Button onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
+                  </div>
+                  <div className="mt-auto sm:hidden">
+                    <div className="flex gap-2">
+                      <Button className="flex-1" onClick={() => router.push(`/attendance/${s.id}`)}>Attendance</Button>
+                      <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
+                      <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
                     </div>
                   </div>
-                  <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
-                  <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
-                  
-                  {/* Pencil icon that appears on hover */}
-                  <button
-                    onClick={() => setCustomizeModal({ open: true, section: s })}
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
-                    title="Customize"
-                  >
-                    ✏️
-                  </button>
-                </div>
-                <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
-                <div className="mt-auto hidden sm:flex gap-2">
-                  <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
-                  <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
-                  <Button onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
-                </div>
-                <div className="mt-auto sm:hidden">
-                  <div className="flex gap-2">
-                    <Button className="flex-1" onClick={() => router.push(`/attendance/${s.id}`)}>Attendance</Button>
-                    <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
-                    <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-        {/* Spacer so the floating button doesn't overlap the last row on mobile */}
-        <div className="h-24 sm:hidden" aria-hidden="true" />
+                </Card>
+              );
+            })}
+          </div>
+          {/* Spacer so the floating button doesn't overlap the last row on mobile */}
+          <div className="h-24 sm:hidden" aria-hidden="true" />
+        </>
       )}
       
       <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
