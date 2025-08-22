@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
-import { Card } from '@snaproll/ui';
+import { Card, Badge } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
 type HistoryResponse = {
@@ -82,7 +82,7 @@ export default function MyAttendancePage() {
                     const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'BLANK';
                     const showManual = rec.isManual && rec.status !== rec.originalStatus;
                     const display =
-                      status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : '-';
+                      status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : '–';
                     const tooltipText = showManual && rec.manualChange
                       ? `${rec.manualChange.teacherName} manually changed the status to ${status} on ${formatDateMDY(rec.manualChange.createdAt.slice(0,10))}`
                       : (() => {
@@ -95,9 +95,15 @@ export default function MyAttendancePage() {
                     return (
                       <td key={d.date} className="p-2 text-center align-middle">
                         <div className="relative group inline-block">
-                          <div className="px-2 py-1 rounded-md bg-slate-100 text-slate-800 inline-flex items-center justify-center min-w-[2rem]">
-                            <span>{display}{showManual ? '*' : ''}</span>
-                          </div>
+                          {status === 'PRESENT' ? (
+                            <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
+                          ) : status === 'ABSENT' ? (
+                            <Badge tone="red">{display}{showManual ? '*' : ''}</Badge>
+                          ) : status === 'EXCUSED' ? (
+                            <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
+                          ) : (
+                            <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
+                          )}
                           {tooltipText && (
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
                               {tooltipText}
