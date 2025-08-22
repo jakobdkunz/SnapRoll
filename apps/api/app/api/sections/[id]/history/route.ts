@@ -1,13 +1,25 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const id = params.id;
 
-  // Get all class days for this section
+  const url = new URL(request.url);
+  const offsetParam = url.searchParams.get('offset');
+  const limitParam = url.searchParams.get('limit');
+  const offset = Math.max(0, Number.isFinite(Number(offsetParam)) ? Number(offsetParam) : 0);
+  const rawLimit = Math.max(1, Number.isFinite(Number(limitParam)) ? Number(limitParam) : 30);
+  const limit = Math.min(rawLimit, 60);
+
+  // Count total class days
+  const totalDays = await prisma.classDay.count({ where: { sectionId: id } });
+
+  // Get paged class days for this section
   const classDays = await prisma.classDay.findMany({
     where: { sectionId: id },
     orderBy: { date: 'desc' },
+    skip: offset,
+    take: limit,
   });
 
   // Get all students enrolled in this section
@@ -20,15 +32,15 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     ]
   });
 
-  // Get all attendance records for this section
+  // Get attendance records only for returned class days
+  const classDayIds = classDays.map((cd) => cd.id);
   const attendanceRecords = await prisma.attendanceRecord.findMany({
-    where: { classDay: { sectionId: id } },
-    include: { classDay: true }
+    where: { classDayId: { in: classDayIds } },
   });
 
   // Get all manual status changes for this section
   const manualChanges = await prisma.manualStatusChange.findMany({
-    where: { classDay: { sectionId: id } },
+    where: { classDayId: { in: classDayIds } },
     include: { 
       classDay: true,
       teacher: true
@@ -87,6 +99,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         records: studentRecords,
       };
     }),
+    totalDays,
+    offset,
+    limit,
   };
 
   return NextResponse.json(history);

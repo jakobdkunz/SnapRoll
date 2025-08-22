@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useState } from 'react';
-import { Card, Badge } from '@snaproll/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { Card, Badge, Button } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -30,23 +30,48 @@ export default function HistoryPage() {
   const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [totalDays, setTotalDays] = useState<number>(0);
+  const [offset, setOffset] = useState<number>(0);
+  const [limit, setLimit] = useState<number>(12);
+
+  const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
+    try {
+      const data = await apiFetch<{ 
+        students: Student[]; 
+        days: Day[]; 
+        records: StudentRecord[];
+        totalDays: number;
+        offset: number;
+        limit: number;
+      }>(`/api/sections/${params.id}/history?offset=${currentOffset}&limit=${currentLimit}`);
+      
+      setStudents(data.students);
+      setDays(data.days);
+      setStudentRecords(data.records);
+      setTotalDays(data.totalDays || 0);
+      setOffset(data.offset ?? currentOffset);
+      setLimit(data.limit ?? currentLimit);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
     
-    if (id) {
-      loadHistory();
-    }
+    if (id) loadHistory(offset, limit);
   }, [params.id]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
     function onFocus() {
-      loadHistory();
+      loadHistory(offset, limit);
     }
     function onVisibility() {
-      if (document.visibilityState === 'visible') loadHistory();
+      if (document.visibilityState === 'visible') loadHistory(offset, limit);
     }
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
@@ -54,7 +79,7 @@ export default function HistoryPage() {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [params.id]);
+  }, [params.id, offset, limit, loadHistory]);
 
   // Schedule a reload at next local midnight to add a new day column
   useEffect(() => {
@@ -67,7 +92,7 @@ export default function HistoryPage() {
     function schedule() {
       const ms = msUntilNextMidnight();
       timeout = window.setTimeout(async () => {
-        await loadHistory();
+        await loadHistory(offset, limit);
         schedule();
       }, ms + 100);
     }
@@ -75,25 +100,28 @@ export default function HistoryPage() {
     return () => {
       if (timeout) window.clearTimeout(timeout);
     };
-  }, [params.id]);
+  }, [params.id, offset, limit, loadHistory]);
 
-  async function loadHistory() {
-    try {
-      const data = await apiFetch<{ 
-        students: Student[]; 
-        days: Day[]; 
-        records: StudentRecord[] 
-      }>(`/api/sections/${params.id}/history`);
-      
-      setStudents(data.students);
-      setDays(data.days);
-      setStudentRecords(data.records);
-    } catch (error) {
-      console.error('Failed to load history:', error);
-    } finally {
-      setLoading(false);
+  // (duplicate removed)
+
+  // Recalculate how many columns fit and reload on resize
+  useEffect(() => {
+    function recalcLimit() {
+      const width = typeof window !== 'undefined' ? window.innerWidth : 1024;
+      const leftCol = 260; // student column width
+      const cell = 84; // approx per-day column width
+      const padding = 48; // card padding
+      const cols = Math.max(3, Math.min(60, Math.floor((width - leftCol - padding) / cell)));
+      if (cols !== limit) {
+        setLimit(cols);
+        setLoading(true);
+        loadHistory(offset, cols);
+      }
     }
-  }
+    recalcLimit();
+    window.addEventListener('resize', recalcLimit);
+    return () => window.removeEventListener('resize', recalcLimit);
+  }, [limit, loadHistory, offset]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
@@ -110,7 +138,7 @@ export default function HistoryPage() {
       });
       
       // Reload history to get updated data
-      await loadHistory();
+      await loadHistory(offset, limit);
     } catch (error) {
       console.error('Failed to update status:', error);
     }
@@ -206,7 +234,15 @@ export default function HistoryPage() {
   }
 
   return (
-    <Card className="p-4 overflow-auto">
+    <Card className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-slate-600">Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); setLoading(true); loadHistory(next, limit); }} disabled={offset === 0}>← Previous</Button>
+          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); setLoading(true); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>Next →</Button>
+        </div>
+      </div>
+      <div className="overflow-hidden">
       <table className="min-w-full border-separate border-spacing-0">
         <thead>
           <tr>
@@ -238,6 +274,7 @@ export default function HistoryPage() {
           ))}
         </tbody>
       </table>
+      </div>
     </Card>
   );
 }
