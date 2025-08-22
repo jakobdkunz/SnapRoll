@@ -143,9 +143,11 @@ export default function DashboardPage() {
             );
           })}
         </div>
+        {/* Spacer so the floating button doesn't overlap the last row on mobile */}
+        <div className="h-24 sm:hidden" aria-hidden="true" />
       )}
       
-      <Button className="fixed bottom-6 right-6 rounded-full px-5 py-3 shadow-soft z-50" onClick={async () => {
+      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
         const title = prompt('Section title?');
         if (!title) return;
         await apiFetch<{ section: Section }>(`/api/sections`, {
