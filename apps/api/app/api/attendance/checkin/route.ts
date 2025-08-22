@@ -5,8 +5,15 @@ export async function POST(request: Request) {
   const { code, studentId } = (await request.json()) as { code: string; studentId: string };
   if (!/^[0-9]{4}$/.test(code)) return NextResponse.json({ error: 'Invalid code' }, { status: 400 });
   
-  const classDay = await prisma.classDay.findFirst({ where: { attendanceCode: code } });
-  if (!classDay) return NextResponse.json({ ok: false, error: 'Code not found' }, { status: 404 });
+  const now = new Date();
+  const classDay = await prisma.classDay.findFirst({ 
+    where: { 
+      attendanceCode: code,
+      // Code must be set and not expired
+      attendanceCodeExpiresAt: { gt: now },
+    }
+  });
+  if (!classDay) return NextResponse.json({ ok: false, error: 'Code not found or expired' }, { status: 404 });
 
   const enrollment = await prisma.enrollment.findFirst({ 
     where: { sectionId: classDay.sectionId, studentId } 
@@ -14,7 +21,7 @@ export async function POST(request: Request) {
   
   if (!enrollment) {
     return NextResponse.json(
-      { ok: false, error: 'You are not enrolled in this section. Please join the section first.' },
+      { ok: false, error: 'You are not enrolled in this section. Please ask your teacher to add you first.' },
       { status: 403 }
     );
   }
