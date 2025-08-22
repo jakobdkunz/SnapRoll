@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, Badge } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type HistoryResponse = {
   sections: { id: string; title: string }[];
   days: { date: string }[]; // YYYY-MM-DD
@@ -45,6 +48,29 @@ export default function MyAttendancePage() {
     } else {
       setLoading(false);
     }
+  }, [studentId]);
+
+  // Ensure we always show fresh data when navigating to this page or returning to the tab
+  useEffect(() => {
+    if (!studentId) return;
+    const refetch = () => {
+      void (async () => {
+        try {
+          const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
+          setData(res);
+        } catch {}
+      })();
+    };
+    window.addEventListener('focus', refetch);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') refetch();
+    });
+    window.addEventListener('pageshow', refetch);
+    return () => {
+      window.removeEventListener('focus', refetch);
+      document.removeEventListener('visibilitychange', () => {});
+      window.removeEventListener('pageshow', refetch);
+    };
   }, [studentId]);
 
   const grid = useMemo(() => {

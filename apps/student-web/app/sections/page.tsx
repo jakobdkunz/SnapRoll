@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Card } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 type Section = { id: string; title: string; gradient?: string };
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
@@ -109,6 +112,41 @@ export default function SectionsPage() {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, studentId]);
+
+  // Refresh data when returning to this tab/page (prevents stale titles/gradients after visiting other pages)
+  useEffect(() => {
+    if (!studentId) return;
+    const onFocus = () => load(studentId);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') load(studentId);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pageshow', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pageshow', onFocus);
+    };
+  }, [studentId]);
+
+  // Refresh data when the tab regains focus or becomes visible
+  useEffect(() => {
+    function refreshOnFocus() {
+      if (!mounted || !studentId) return;
+      setLoading(true);
+      load(studentId);
+    }
+    window.addEventListener('focus', refreshOnFocus);
+    function onVisibility() {
+      if (document.visibilityState === 'visible') refreshOnFocus();
+    }
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', refreshOnFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [mounted, studentId]);
 
   if (!mounted) return null;
