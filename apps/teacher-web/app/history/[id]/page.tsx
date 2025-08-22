@@ -333,12 +333,16 @@ export default function HistoryPage() {
     }
 
     return (
-      <div className="relative group" onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }} onMouseLeave={hideTooltip} onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }} onTouchEnd={hideTooltip}>
+      <div className="relative group">
         <select
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
-          className="absolute inset-0 opacity-0 appearance-none bg-transparent border-none cursor-pointer w-full h-full p-2 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          className="absolute inset-0 opacity-0 appearance-none bg-transparent border-none cursor-pointer w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
           aria-label="Change attendance status"
+          onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+          onMouseLeave={hideTooltip}
+          onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+          onTouchEnd={hideTooltip}
         >
           {statusOptions.map(option => (
             <option 
@@ -350,7 +354,7 @@ export default function HistoryPage() {
             </option>
           ))}
         </select>
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center group-hover:brightness-95">
           {statusDisplay}
         </div>
       </div>
@@ -380,7 +384,7 @@ export default function HistoryPage() {
       <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-2 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
@@ -395,7 +399,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student, i) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-2 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
+              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
