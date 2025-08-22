@@ -3,9 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, Badge } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 type HistoryResponse = {
   sections: { id: string; title: string }[];
   days: { date: string }[]; // YYYY-MM-DD
