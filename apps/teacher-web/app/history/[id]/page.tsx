@@ -333,7 +333,13 @@ export default function HistoryPage() {
     }
 
     return (
-      <div className="relative group">
+      <div
+        className="relative group"
+        onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+        onMouseLeave={hideTooltip}
+        onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+        onTouchEnd={hideTooltip}
+      >
         <select
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
@@ -366,7 +372,7 @@ export default function HistoryPage() {
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-slate-600 pl-4">
           {days.length > 0 && totalDays > 0
             ? <>Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</>
             : 'Loading…'}
