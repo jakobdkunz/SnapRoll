@@ -52,6 +52,7 @@ export default function HistoryPage() {
   const [initialized, setInitialized] = useState(false);
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
   const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
+  const hasMeasuredMobileRef = useRef(false);
 
   function formatHeaderDateMD(date: Date) {
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -59,13 +60,15 @@ export default function HistoryPage() {
     return `${m}/${d}`;
   }
 
-  // Measure the width of the longest visible student name on mobile and set student column width
+  // Measure the width of the longest visible student name on mobile and set student column width.
+  // To avoid cumulative drift, measure only once per mobile session and only when entering mobile.
   useEffect(() => {
-    const isSmall = typeof window !== 'undefined' && window.innerWidth < 640;
-    if (!isSmall) {
+    if (!isMobile) {
+      hasMeasuredMobileRef.current = false;
       setStudentColW(STUDENT_COL_BASE);
       return;
     }
+    if (hasMeasuredMobileRef.current) return;
     const measure = () => {
       const container = containerRef.current;
       if (!container) return;
@@ -76,12 +79,15 @@ export default function HistoryPage() {
         if (width > max) max = width;
       });
       // Add small padding so text isn't tight against the first day column
-      const computed = Math.min(320, Math.max(120, Math.ceil(max + 16)));
+      const computedRaw = Math.min(320, Math.max(120, max + 16));
+      // Snap to 4px grid to avoid subpixel rounding oscillations
+      const computed = Math.round(computedRaw / 4) * 4;
       setStudentColW(computed);
+      hasMeasuredMobileRef.current = true;
     };
     if (typeof window !== 'undefined') requestAnimationFrame(measure);
     else measure();
-  }, [students]);
+  }, [isMobile]);
 
   const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
     const reqId = ++requestIdRef.current;
