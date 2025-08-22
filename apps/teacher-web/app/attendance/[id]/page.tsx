@@ -143,30 +143,47 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
   const isDigit = /\d/.test(target);
   const [current, setCurrent] = useState<string>(isDigit ? target : '•');
   const [next, setNext] = useState<string>(isDigit ? target : '•');
-  const [offset, setOffset] = useState<number>(-100); // show current (second row)
+  const [offset, setOffset] = useState<number>(-100); // start hidden above
   const animRef = useRef<number | null>(null);
 
   useEffect(() => {
     const t = isDigit ? target : '•';
-    if (t === current) return;
-    setNext(t);
-    const delay = index * 120; // stagger per digit
-    onStart();
-    const start = window.setTimeout(() => {
-      setOffset(0); // animate down to reveal next
-      const duration = 500;
-      animRef.current = window.setTimeout(() => {
-        setCurrent(t);
-        setOffset(-100); // reset stack to show current again
-        onEnd();
-      }, duration);
-    }, delay);
-    return () => {
-      window.clearTimeout(start);
-      if (animRef.current) {
-        window.clearTimeout(animRef.current);
-      }
-    };
+    if (current === '•' && t !== '•') {
+      // First real code load: slide in from above once
+      setNext(t);
+      onStart();
+      const delay = index * 60;
+      const start = window.setTimeout(() => {
+        setOffset(0);
+        animRef.current = window.setTimeout(() => {
+          setCurrent(t);
+          setOffset(0);
+          onEnd();
+        }, 250);
+      }, delay);
+      return () => {
+        window.clearTimeout(start);
+        if (animRef.current) window.clearTimeout(animRef.current);
+      };
+    }
+    if (t !== current) {
+      // Regenerate: slide the next value up quickly
+      setNext(t);
+      onStart();
+      const delay = index * 80;
+      const start = window.setTimeout(() => {
+        setOffset(-100);
+        animRef.current = window.setTimeout(() => {
+          setCurrent(t);
+          setOffset(0);
+          onEnd();
+        }, 220);
+      }, delay);
+      return () => {
+        window.clearTimeout(start);
+        if (animRef.current) window.clearTimeout(animRef.current);
+      };
+    }
   }, [target]);
 
   return (
@@ -175,7 +192,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
         className="will-change-transform"
         style={{
           transform: `translateY(${offset}%)`,
-          transition: 'transform 500ms ease-in-out',
+          transition: 'transform 250ms ease-in-out',
         }}
       >
         <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{next}</div>

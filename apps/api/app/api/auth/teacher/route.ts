@@ -108,39 +108,45 @@ async function seedDemoData(teacherId: string) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as { email: string; firstName?: string; lastName?: string };
-  const cleanEmail = body.email?.trim().toLowerCase();
-  const firstName = body.firstName?.trim();
-  const lastName = body.lastName?.trim();
-  if (!cleanEmail) {
-    return NextResponse.json({ error: 'Email required' }, { status: 400 });
-  }
+  try {
+    const body = (await request.json()) as { email: string; firstName?: string; lastName?: string };
+    const cleanEmail = body.email?.trim().toLowerCase();
+    const firstName = body.firstName?.trim();
+    const lastName = body.lastName?.trim();
+    if (!cleanEmail) {
+      return NextResponse.json({ error: 'Email required' }, { status: 400 });
+    }
 
-  let teacher = await prisma.user.findFirst({ where: { email: cleanEmail, role: 'TEACHER' } });
-  if (teacher) {
+    let teacher = await prisma.user.findFirst({ where: { email: cleanEmail, role: 'TEACHER' } });
+    if (teacher) {
+      if (cleanEmail === 'demo@example.com') {
+        await seedDemoData(teacher.id);
+      }
+      return NextResponse.json({ teacher });
+    }
+
+    // No teacher found -- if names provided, create; otherwise indicate not found
+    if (!firstName || !lastName) {
+      return NextResponse.json({ found: false }, { status: 200 });
+    }
+
+    teacher = await prisma.user.create({ 
+      data: { 
+        email: cleanEmail, 
+        firstName, 
+        lastName, 
+        role: 'TEACHER' 
+      } 
+    });
+
     if (cleanEmail === 'demo@example.com') {
       await seedDemoData(teacher.id);
     }
+
     return NextResponse.json({ teacher });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal Server Error';
+    console.error('Teacher auth error:', err);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  // No teacher found -- if names provided, create; otherwise indicate not found
-  if (!firstName || !lastName) {
-    return NextResponse.json({ found: false }, { status: 200 });
-  }
-
-  teacher = await prisma.user.create({ 
-    data: { 
-      email: cleanEmail, 
-      firstName, 
-      lastName, 
-      role: 'TEACHER' 
-    } 
-  });
-
-  if (cleanEmail === 'demo@example.com') {
-    await seedDemoData(teacher.id);
-  }
-
-  return NextResponse.json({ teacher });
 }
