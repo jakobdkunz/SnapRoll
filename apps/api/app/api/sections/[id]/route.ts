@@ -4,12 +4,12 @@ import { prisma } from '@snaproll/lib/db';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const section = await prisma.section.findUnique({ where: { id: params.id } });
   if (!section) {
-    return NextResponse.json({ error: 'Section not found' }, { status: 404, headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ error: 'Section not found' }, { status: 404, headers: { 'Cache-Control': 'no-store', 'Pragma': 'no-cache' } });
   }
-  return NextResponse.json({ section }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json({ section }, { headers: { 'Cache-Control': 'no-store', 'Pragma': 'no-cache' } });
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
