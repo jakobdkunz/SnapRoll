@@ -20,6 +20,7 @@ export default function AttendancePage() {
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
   const [animatingCount, setAnimatingCount] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
+  const isStartingRef = useRef(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -31,7 +32,8 @@ export default function AttendancePage() {
   }, [params.id]);
 
   const start = useCallback(async () => {
-    if (isStarting) return;
+    if (isStartingRef.current) return;
+    isStartingRef.current = true;
     setIsStarting(true);
     try {
       const data = await apiFetch<{ classDay: ClassDay }>(
@@ -43,9 +45,10 @@ export default function AttendancePage() {
     } catch (e) {
       console.error('Failed to start attendance:', e);
     } finally {
+      isStartingRef.current = false;
       setIsStarting(false);
     }
-  }, [params.id, loadStatus, isStarting]);
+  }, [params.id, loadStatus]);
 
   useEffect(() => {
     void start();
@@ -166,7 +169,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
           setCurrent(t);
           setOffset(0);
           onEnd();
-        }, 250);
+        }, 500);
       }, delay);
       return () => {
         window.clearTimeout(start);
@@ -184,7 +187,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
           setCurrent(t);
           setOffset(0);
           onEnd();
-        }, 220);
+        }, 500);
       }, delay);
       return () => {
         window.clearTimeout(start);
@@ -199,7 +202,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
         className="will-change-transform"
         style={{
           transform: `translateY(${offset}%)`,
-          transition: 'transform 250ms ease-in-out',
+          transition: 'transform 500ms ease-in-out',
         }}
       >
         <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{next}</div>
