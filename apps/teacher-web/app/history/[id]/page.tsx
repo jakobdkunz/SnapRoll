@@ -37,18 +37,33 @@ export default function HistoryPage() {
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
-  const STUDENT_COL = 220; // tighter fixed px width for student column
-  const DAY_COL_CONTENT = 96; // content width in px to fit MM/DD/YYYY
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const STUDENT_COL_BASE = 220; // desktop/base px width for student column
+  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
-  const [studentColW, setStudentColW] = useState<number>(STUDENT_COL);
+  const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
+  const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
+
+  function formatHeaderDateMD(date: Date) {
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${m}/${d}`;
+  }
 
   // Measure the width of the longest visible student name on mobile and set student column width
   useEffect(() => {
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-    if (!isMobile) {
-      setStudentColW(STUDENT_COL);
+    const isSmall = typeof window !== 'undefined' && window.innerWidth < 640;
+    if (!isSmall) {
+      setStudentColW(STUDENT_COL_BASE);
       return;
     }
     const measure = () => {
@@ -107,7 +122,7 @@ export default function HistoryPage() {
       const el = containerRef.current;
       const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const CARD_INNER_PADDING = 32; // matches Card p-4
-      const studentWidth = (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL;
+      const studentWidth = studentWidthEffective;
       const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
       const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (initialLimit !== limit) setLimit(initialLimit);
@@ -120,7 +135,7 @@ export default function HistoryPage() {
       measure();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, params.id, studentColW]);
+  }, [initialized, params.id, studentWidthEffective, PER_COL]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
@@ -168,7 +183,7 @@ export default function HistoryPage() {
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const CARD_INNER_PADDING = 32;
-      const studentWidth = (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL;
+      const studentWidth = studentWidthEffective;
       const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
@@ -178,7 +193,7 @@ export default function HistoryPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, offset, studentColW]);
+  }, [limit, loadHistory, offset, studentWidthEffective, PER_COL]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
@@ -306,14 +321,14 @@ export default function HistoryPage() {
       <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-2 pr-1 py-2 text-left" style={{ width: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, minWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, maxWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL }}>Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-2 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
                 style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
               >
-                {formatDateMDY(new Date(day.date))}
+                {isMobile ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
               </th>
             ))}
           </tr>
@@ -321,7 +336,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student, i) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-2 pr-1 py-1 text-sm" style={{ width: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, minWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL, maxWidth: (typeof window !== 'undefined' && window.innerWidth < 640) ? studentColW : STUDENT_COL }}>
+              <td className="sticky left-0 z-0 bg-white pl-2 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
