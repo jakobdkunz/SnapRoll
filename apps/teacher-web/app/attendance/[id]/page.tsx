@@ -19,8 +19,7 @@ export default function AttendancePage() {
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
   const [animatingCount, setAnimatingCount] = useState(0);
-
-  const [checking, setChecking] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -31,17 +30,25 @@ export default function AttendancePage() {
     }
   }, [params.id]);
 
-  async function start() {
-    const data = await apiFetch<{ classDay: ClassDay }>(
-      `/api/sections/${params.id}/start-attendance`,
-      { method: 'POST' }
-    );
-    setCode(data.classDay.attendanceCode);
-    loadStatus();
-  }
+  const start = useCallback(async () => {
+    if (isStarting) return;
+    setIsStarting(true);
+    try {
+      const data = await apiFetch<{ classDay: ClassDay }>(
+        `/api/sections/${params.id}/start-attendance`,
+        { method: 'POST' }
+      );
+      setCode(data.classDay.attendanceCode);
+      await loadStatus();
+    } catch (e) {
+      console.error('Failed to start attendance:', e);
+    } finally {
+      setIsStarting(false);
+    }
+  }, [params.id, loadStatus, isStarting]);
 
   useEffect(() => {
-    start();
+    void start();
   }, [start]);
 
   useEffect(() => {
@@ -95,7 +102,7 @@ export default function AttendancePage() {
                 />
               ))}
             </div>
-            <Button className="mt-6" onClick={start} disabled={animatingCount > 0}>Generate New Code</Button>
+            <Button className="mt-6" onClick={start} disabled={animatingCount > 0 || isStarting}>Generate New Code</Button>
           </>
         )}
       </Card>
@@ -184,7 +191,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
         if (animRef.current) window.clearTimeout(animRef.current);
       };
     }
-  }, [target]);
+  }, [target, index, isDigit, current, onStart, onEnd]);
 
   return (
     <div className="w-12 h-16 overflow-hidden rounded-md bg-white/60 shadow-inner border border-slate-200 grid place-items-center">
