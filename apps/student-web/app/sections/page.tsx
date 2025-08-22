@@ -208,6 +208,18 @@ export default function SectionsPage() {
         )}
       </Card>
 
+      {/* My attendance link */}
+      <Card className="p-4">
+        <button
+          className="text-primary font-medium"
+          onClick={() => {
+            if (studentId) window.location.href = '/my-attendance';
+          }}
+        >
+          My attendance ->
+        </button>
+      </Card>
+
       {/* Sections subheading */}
       <div className="text-slate-600 text-sm">Your sections</div>
 
