@@ -81,8 +81,8 @@ export default function HistoryPage() {
     const measure = () => {
       const el = containerRef.current;
       const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const studentW = firstThRef.current?.offsetWidth ?? STUDENT_COL;
-      const available = Math.max(0, containerWidth - studentW);
+      const CARD_INNER_PADDING = 32; // matches Card p-4
+      const available = Math.max(0, containerWidth - STUDENT_COL - CARD_INNER_PADDING);
       const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (initialLimit !== limit) setLimit(initialLimit);
       setInitialized(true);
@@ -141,8 +141,8 @@ export default function HistoryPage() {
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const studentW = firstThRef.current?.offsetWidth ?? STUDENT_COL;
-      const available = Math.max(0, containerWidth - studentW);
+      const CARD_INNER_PADDING = 32;
+      const available = Math.max(0, containerWidth - STUDENT_COL - CARD_INNER_PADDING);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
