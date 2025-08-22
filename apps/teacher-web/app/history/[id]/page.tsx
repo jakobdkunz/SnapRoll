@@ -80,8 +80,7 @@ export default function HistoryPage() {
     if (initialized) return;
     const measure = () => {
       const el = containerRef.current;
-      if (!el) return;
-      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+      const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const studentW = firstThRef.current?.offsetWidth ?? STUDENT_COL;
       const available = Math.max(0, containerWidth - studentW);
       const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
@@ -95,7 +94,7 @@ export default function HistoryPage() {
       measure();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized]);
+  }, [initialized, params.id]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
@@ -260,9 +259,7 @@ export default function HistoryPage() {
     );
   }
 
-  if (loading) {
-    return <div>Loading history...</div>;
-  }
+  // Render shell with loading overlay instead of blank screen
 
   return (
     <Card className="p-4">
