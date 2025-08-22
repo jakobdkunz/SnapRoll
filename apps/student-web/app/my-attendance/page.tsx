@@ -16,12 +16,15 @@ function formatDateMDY(dateStr: string) {
 
 export default function MyAttendancePage() {
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentName, setStudentName] = useState<string | null>(null);
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setStudentId(localStorage.getItem('snaproll.studentId'));
+    const n = localStorage.getItem('snaproll.studentName');
+    if (n) setStudentName(n);
   }, []);
 
   useEffect(() => {
@@ -83,9 +86,10 @@ export default function MyAttendancePage() {
                     const tooltipText = showManual && rec.manualChange
                       ? `${rec.manualChange.teacherName} manually changed the status to ${status} on ${formatDateMDY(rec.manualChange.createdAt.slice(0,10))}`
                       : (() => {
-                          if (status === 'PRESENT') return `${s.title} was Present in class on ${formatDateMDY(d.date)}.`;
-                          if (status === 'ABSENT') return `${s.title} was Absent on ${formatDateMDY(d.date)}.`;
-                          if (status === 'EXCUSED') return `${s.title} was Excused on ${formatDateMDY(d.date)}.`;
+                          const name = studentName || 'Student';
+                          if (status === 'PRESENT') return `${name} was Present in class on ${formatDateMDY(d.date)}.`;
+                          if (status === 'ABSENT') return `${name} was Absent on ${formatDateMDY(d.date)}.`;
+                          if (status === 'EXCUSED') return `${name} was Excused on ${formatDateMDY(d.date)}.`;
                           return '';
                         })();
                     return (
