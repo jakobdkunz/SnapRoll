@@ -13,6 +13,14 @@ body {
   background: rgb(var(--background));
 }
 
+/* iOS Safari address bar / viewport changes: keep header fixed to the top */
+html, body {
+  height: 100%;
+}
+@supports (height: 100dvh) {
+  .min-h-dvh { min-height: 100dvh; }
+}
+
 @layer utilities {
   .font-futuristic {
     font-family: 'Orbitron', monospace;
