@@ -5,7 +5,7 @@ import { WordmarkLink } from './_components/WordmarkLink';
 import { AuthGuard } from './_components/AuthGuard';
 
 export const metadata: Metadata = {
-  title: 'SnapRoll – Teacher',
+  title: 'SnapRoll – Instructor',
   description: 'Attendance made delightful',
 };
 

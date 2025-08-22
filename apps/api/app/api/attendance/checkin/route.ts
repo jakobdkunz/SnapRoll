@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   
   if (!enrollment) {
     return NextResponse.json(
-      { ok: false, error: 'You are not enrolled in this section. Please ask your teacher to add you first.' },
+      { ok: false, error: 'You are not enrolled in this section. Please ask your instructor to add you first.' },
       { status: 403 }
     );
   }

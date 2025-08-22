@@ -298,8 +298,8 @@ export default function SectionsPage() {
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
           <div className="text-slate-500 mt-2">
-            Your teacher hasn&apos;t added you to any sections yet. 
-            Please ask your teacher to add your email address to their section roster.
+            Your instructor hasn&apos;t added you to any sections yet. 
+            Please ask your instructor to add your email address to their section roster.
           </div>
         </Card>
       ) : (
