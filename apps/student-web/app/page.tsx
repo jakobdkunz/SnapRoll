@@ -53,6 +53,12 @@ export default function StudentWelcomePage() {
             type="email"
             value={email}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onContinue();
+              }
+            }}
           />
           <Button onClick={onContinue} disabled={!email.trim() || loading} className="w-full">
             {loading ? 'Continuing...' : 'Continue'}

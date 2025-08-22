@@ -38,7 +38,19 @@ export default function CheckinPage() {
       
       <Card className="p-6 space-y-3">
         <div className="font-medium">Enter Attendance Code</div>
-        <TextInput placeholder="4-digit code" inputMode="numeric" maxLength={4} value={code} onChange={(e) => setCode(e.target.value)} />
+        <TextInput 
+          placeholder="4-digit code" 
+          inputMode="numeric" 
+          maxLength={4} 
+          value={code} 
+          onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Enter' && /^[0-9]{4}$/.test(code)) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
+        />
         <Button onClick={onSubmit} disabled={!/^[0-9]{4}$/.test(code)}>Check In</Button>
       </Card>
       
