@@ -48,6 +48,28 @@ export default function AttendancePage() {
     }
   }, [status?.hasActiveAttendance]);
 
+  // At local midnight, automatically start a new attendance day and reset progress
+  useEffect(() => {
+    function msUntilNextMidnight() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return next.getTime() - now.getTime();
+    }
+    let timeout: number | undefined;
+    function schedule() {
+      const ms = msUntilNextMidnight();
+      timeout = window.setTimeout(async () => {
+        await start();
+        // schedule again for the following midnight
+        schedule();
+      }, ms + 100);
+    }
+    schedule();
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [params.id]);
+
   return (
     <div className="grid place-items-center space-y-6">
       <Card className="p-10 text-center">

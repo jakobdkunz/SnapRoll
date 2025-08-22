@@ -5,11 +5,16 @@ function randomCode() {
   return String(Math.floor(1000 + Math.random() * 9000));
 }
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   const sectionId = params.id;
+  const tzHeader = request.headers.get('x-tz-offset');
+  const tzMinutes = tzHeader ? parseInt(tzHeader, 10) : new Date().getTimezoneOffset();
   const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
+  // Convert to client-local midnight then back to UTC for storage uniqueness
+  const localNowMs = now.getTime() - tzMinutes * 60 * 1000;
+  const localNow = new Date(localNowMs);
+  const localMidnight = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate());
+  const todayStart = new Date(localMidnight.getTime() + tzMinutes * 60 * 1000);
 
   // Generate a code that is globally unique among non-expired codes
   // A code is valid for 3 hours from (re)generation

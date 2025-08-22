@@ -53,17 +53,17 @@ export default function TeacherWelcomePage() {
             placeholder="Email address"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
           />
           <TextInput
             placeholder="First name"
             value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
           />
           <TextInput
             placeholder="Last name"
             value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
           />
           <Button onClick={onContinue} disabled={!isValid || loading} className="w-full">
             {loading ? 'Continuing...' : 'Continue'}

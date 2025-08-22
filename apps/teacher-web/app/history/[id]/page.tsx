@@ -40,6 +40,43 @@ export default function HistoryPage() {
     }
   }, [params.id]);
 
+  // Refresh on focus/visibility to avoid stale columns/statuses
+  useEffect(() => {
+    function onFocus() {
+      loadHistory();
+    }
+    function onVisibility() {
+      if (document.visibilityState === 'visible') loadHistory();
+    }
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [params.id]);
+
+  // Schedule a reload at next local midnight to add a new day column
+  useEffect(() => {
+    function msUntilNextMidnight() {
+      const now = new Date();
+      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      return next.getTime() - now.getTime();
+    }
+    let timeout: number | undefined;
+    function schedule() {
+      const ms = msUntilNextMidnight();
+      timeout = window.setTimeout(async () => {
+        await loadHistory();
+        schedule();
+      }, ms + 100);
+    }
+    schedule();
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [params.id]);
+
   async function loadHistory() {
     try {
       const data = await apiFetch<{ 

@@ -122,9 +122,9 @@ export default function ModifyPage() {
               {editId === s.id ? (
                 <>
                   <div className="flex-1 grid grid-cols-3 gap-2">
-                    <TextInput placeholder="Email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
-                    <TextInput placeholder="First name" value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} />
-                    <TextInput placeholder="Last name" value={editLastName} onChange={(e) => setEditLastName(e.target.value)} />
+                    <TextInput placeholder="Email" value={editEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditEmail(e.target.value)} />
+                    <TextInput placeholder="First name" value={editFirstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFirstName(e.target.value)} />
+                    <TextInput placeholder="Last name" value={editLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditLastName(e.target.value)} />
                   </div>
                   <Button variant="ghost" onClick={cancelEdit}>Cancel</Button>
                   <Button onClick={() => saveEdit(s.id)}>Save</Button>
@@ -144,7 +144,7 @@ export default function ModifyPage() {
         </div>
         <div className="mt-4 space-y-2">
           <div className="font-medium">Add Student</div>
-          <TextInput placeholder="Email" value={newEmail} onChange={(e) => { setNewEmail(e.target.value); setNeedNames(false); setNewFirstName(''); setNewLastName(''); }} />
+          <TextInput placeholder="Email" value={newEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setNewEmail(e.target.value); setNeedNames(false); setNewFirstName(''); setNewLastName(''); }} />
           {needNames && (
             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
               No existing student found. Please enter their name to continue
@@ -152,8 +152,8 @@ export default function ModifyPage() {
           )}
           {needNames && (
             <div className="flex gap-2">
-              <TextInput placeholder="First name" value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)} />
-              <TextInput placeholder="Last name" value={newLastName} onChange={(e) => setNewLastName(e.target.value)} />
+              <TextInput placeholder="First name" value={newFirstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewFirstName(e.target.value)} />
+              <TextInput placeholder="Last name" value={newLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLastName(e.target.value)} />
             </div>
           )}
           <Button onClick={handleAdd}>Add Student</Button>
