@@ -37,7 +37,7 @@ export default function HistoryPage() {
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
-  const DAY_COL_CONTENT = 72; // content width in px
+  const DAY_COL_CONTENT = 96; // content width in px to fit MM/DD/YYYY
   const DAY_COL_PADDING = 16; // Tailwind p-2 adds 8px left + 8px right
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
@@ -253,14 +253,14 @@ export default function HistoryPage() {
         </div>
       </div>
       <div ref={containerRef} className="relative overflow-visible">
-      <table className="min-w-full border-separate border-spacing-0">
+      <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
-                className="p-2 text-sm font-medium text-slate-600 text-center"
+                className="p-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
                 style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
               >
                 {formatDateMDY(new Date(day.date))}
