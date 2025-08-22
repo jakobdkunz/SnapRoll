@@ -234,7 +234,8 @@ export default function HistoryPage() {
         <select
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
-          className="appearance-none bg-transparent border-none cursor-pointer text-center w-full h-full p-2 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          className="absolute inset-0 opacity-0 appearance-none bg-transparent border-none cursor-pointer w-full h-full p-2 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          aria-label="Change attendance status"
         >
           {statusOptions.map(option => (
             <option 
