@@ -11,7 +11,7 @@ export const revalidate = 0;
 //   days: { date: string }[] // ISO date (YYYY-MM-DD) unique across sections, sorted desc
 //   records: Array<{ sectionId: string; byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string } | null }> }>
 // }
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   const studentId = params.id;
 
   // Sections for this student
@@ -36,7 +36,13 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   });
 
   // Build unique date list (YYYY-MM-DD) across these classDays, sorted desc
-  const toYmd = (d: Date) => d.toISOString().slice(0, 10);
+  // Respect client timezone if provided via X-TZ-Offset (minutes offset from UTC)
+  const tzHeader = request.headers.get('x-tz-offset');
+  const tzMinutes = tzHeader ? parseInt(tzHeader, 10) : new Date().getTimezoneOffset();
+  const toYmd = (d: Date) => {
+    const localMs = d.getTime() - tzMinutes * 60 * 1000;
+    return new Date(localMs).toISOString().slice(0, 10);
+  };
   const uniqueDatesDesc = Array.from(
     new Set(classDays.map((cd) => toYmd(cd.date)))
   );

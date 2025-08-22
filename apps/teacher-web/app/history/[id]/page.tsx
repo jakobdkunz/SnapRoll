@@ -211,7 +211,7 @@ export default function HistoryPage() {
         <thead>
           <tr>
             <th className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
-            {days.map((day) => (
+            {[...days].reverse().map((day) => (
               <th key={day.id} className="p-2 text-sm font-medium text-slate-600">
                 {formatDateMDY(new Date(day.date))}
               </th>
@@ -225,8 +225,9 @@ export default function HistoryPage() {
                 <div className="font-medium">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500">{student.email}</div>
               </td>
-              {days.map((day, j) => {
-                const record = studentRecords[i]?.records[j];
+              {[...days].reverse().map((day, j) => {
+                const reversedIndex = days.length - 1 - j;
+                const record = studentRecords[i]?.records[reversedIndex];
                 return (
                   <td key={`${student.id}-${day.id}`} className="p-2 text-center">
                     {record ? renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date) : <span className="text-slate-400">–</span>}
