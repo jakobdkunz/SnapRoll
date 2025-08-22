@@ -61,8 +61,8 @@ export function StudentHeaderRight() {
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-40 rounded-lg border bg-white shadow-md">
-          <Link href="/profile" className="block px-3 py-2 text-sm hover:bg-slate-50">My Profile</Link>
-          <button onClick={logout} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Log Out</button>
+          <Link href="/profile" className="block px-3 py-2 text-sm hover:bg-slate-50" onClick={() => setOpen(false)}>My Profile</Link>
+          <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Log Out</button>
         </div>
       )}
     </div>
