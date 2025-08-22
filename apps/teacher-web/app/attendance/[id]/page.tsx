@@ -21,11 +21,16 @@ export default function AttendancePage() {
   const [animatingCount, setAnimatingCount] = useState(0);
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
+  const prevCodeRef = useRef<string | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
       const data = await apiFetch<AttendanceStatus>(`/api/sections/${params.id}/attendance-status`);
       setStatus(data);
+      if (data.attendanceCode && data.attendanceCode !== prevCodeRef.current) {
+        prevCodeRef.current = data.attendanceCode;
+        setCode(data.attendanceCode);
+      }
     } catch (error) {
       console.error('Failed to load attendance status:', error);
     }
@@ -40,6 +45,7 @@ export default function AttendancePage() {
         `/api/sections/${params.id}/start-attendance`,
         { method: 'POST' }
       );
+      prevCodeRef.current = data.classDay.attendanceCode;
       setCode(data.classDay.attendanceCode);
       await loadStatus();
     } catch (e) {
@@ -51,8 +57,8 @@ export default function AttendancePage() {
   }, [params.id, loadStatus]);
 
   useEffect(() => {
-    void start();
-  }, [start]);
+    void loadStatus();
+  }, [loadStatus]);
 
   useEffect(() => {
     if (status?.hasActiveAttendance) {
@@ -176,7 +182,7 @@ function DigitReel({ target, index, onStart, onEnd }: { target: string; index: n
         if (animRef.current) window.clearTimeout(animRef.current);
       };
     }
-    if (t !== current) {
+    if (t !== current && t !== '•') {
       // Regenerate: slide the next value up quickly
       setNext(t);
       onStart();
