@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const student = await prisma.user.findFirst({ where: { email: cleanEmail, role: 'STUDENT' } });
   if (!student) {
     return NextResponse.json(
-      { error: 'No student found with this email. Please ask your teacher to add you to a section.' },
+      { error: 'No student found with this email. Please ask your instructor to add you to a section.' },
       { status: 404 }
     );
   }

@@ -36,14 +36,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // Is there already a user with this email?
     const existingByEmail = await prisma.user.findUnique({ where: { email: cleanEmail } });
     if (existingByEmail && existingByEmail.role !== 'STUDENT') {
-      return NextResponse.json({ error: 'This email is used by a teacher account. Please use a different email.' }, { status: 400 });
+      return NextResponse.json({ error: 'This email is used by an instructor account. Please use a different email.' }, { status: 400 });
     }
 
     // Find or create student user
     let student = await prisma.user.findFirst({ where: { email: cleanEmail } });
 
     if (student && student.role === 'TEACHER') {
-      return NextResponse.json({ error: 'This email is used by a teacher account and cannot be added as a student.' }, { status: 400 });
+      return NextResponse.json({ error: 'This email is used by an instructor account and cannot be added as a student.' }, { status: 400 });
     }
 
     if (student) {
