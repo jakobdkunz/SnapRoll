@@ -145,7 +145,7 @@ export default function DashboardPage() {
         </div>
       )}
       
-      <Button className="fixed bottom-6 right-6 rounded-full px-5 py-3 shadow-soft" onClick={async () => {
+      <Button className="fixed bottom-6 right-6 rounded-full px-5 py-3 shadow-soft z-50" onClick={async () => {
         const title = prompt('Section title?');
         if (!title) return;
         await apiFetch<{ section: Section }>(`/api/sections`, {

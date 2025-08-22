@@ -118,16 +118,18 @@ export default function ModifyPage() {
         <div className="mb-4 font-medium">Roster</div>
         <div className="space-y-2">
           {students.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 p-2 border rounded">
+            <div key={s.id} className="p-2 border rounded">
               {editId === s.id ? (
                 <>
-                  <div className="flex-1 grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <TextInput placeholder="Email" value={editEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditEmail(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
                     <TextInput placeholder="First name" value={editFirstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFirstName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
                     <TextInput placeholder="Last name" value={editLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
                   </div>
-                  <Button variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                  <Button onClick={() => saveEdit(s.id)}>Save</Button>
+                  <div className="mt-2 sm:mt-0 flex gap-2 flex-wrap">
+                    <Button variant="ghost" onClick={cancelEdit}>Cancel</Button>
+                    <Button onClick={() => saveEdit(s.id)}>Save</Button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -135,8 +137,10 @@ export default function ModifyPage() {
                     <div className="font-medium">{s.firstName} {s.lastName}</div>
                     <div className="text-sm text-slate-500">{s.email}</div>
                   </div>
-                  <Button variant="ghost" onClick={() => beginEdit(s)}>Edit</Button>
-                  <Button variant="ghost" onClick={() => removeStudent(s.id)}>Remove</Button>
+                  <div className="mt-2 sm:mt-0 flex gap-2 flex-wrap">
+                    <Button variant="ghost" onClick={() => beginEdit(s)}>Edit</Button>
+                    <Button variant="ghost" onClick={() => removeStudent(s.id)}>Remove</Button>
+                  </div>
                 </>
               )}
             </div>
