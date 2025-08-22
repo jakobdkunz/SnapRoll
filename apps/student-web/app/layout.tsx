@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { InstallPrompt } from './install-prompt';
+import { AuthGuard } from './_components/AuthGuard';
 import { StudentHeaderRight } from './_components/StudentHeaderRight';
 import { WordmarkLink } from './_components/WordmarkLink';
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <StudentHeaderRight />
           </div>
         </header>
+        <AuthGuard />
         <main className="mx-auto max-w-xl px-4 py-6">{children}</main>
         <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js')); }` }} />
       </body>

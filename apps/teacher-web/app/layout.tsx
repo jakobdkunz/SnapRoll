@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { TeacherHeaderRight } from './_components/TeacherHeaderRight';
 import { WordmarkLink } from './_components/WordmarkLink';
+import { AuthGuard } from './_components/AuthGuard';
 
 export const metadata: Metadata = {
   title: 'SnapRoll – Teacher',
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <TeacherHeaderRight />
             </div>
           </header>
+          <AuthGuard />
           <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
         </div>
       </body>
