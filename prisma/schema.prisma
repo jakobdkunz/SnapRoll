@@ -1,0 +1,94 @@
+// Datasource
+ datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+ }
+
+// Generator
+ generator client {
+  provider = "prisma-client-js"
+ }
+
+model User {
+  id        String @id @default(cuid())
+  email     String @unique
+  firstName String
+  lastName  String
+  role      Role
+  // Relations
+  taughtSections     Section[]         @relation("TeacherSections")
+  enrollments        Enrollment[]
+  attendanceRecords  AttendanceRecord[]
+  manualStatusChanges ManualStatusChange[] @relation("TeacherManualChanges")
+  studentManualChanges ManualStatusChange[] @relation("StudentManualChanges")
+}
+
+model Section {
+  id        String  @id @default(cuid())
+  title     String
+  gradient  String? @default("gradient-1")
+  teacher   User    @relation("TeacherSections", fields: [teacherId], references: [id])
+  teacherId String
+  // Relations
+  enrollments Enrollment[]
+  classDays   ClassDay[]
+}
+
+model Enrollment {
+  id        String @id @default(cuid())
+  section   Section @relation(fields: [sectionId], references: [id])
+  sectionId String
+  student   User    @relation(fields: [studentId], references: [id])
+  studentId String
+  // Unique per section/student
+  @@unique([sectionId, studentId])
+}
+
+model ClassDay {
+  id             String  @id @default(cuid())
+  section        Section @relation(fields: [sectionId], references: [id])
+  sectionId      String
+  date           DateTime
+  attendanceCode String
+  // Relations
+  attendanceRecords AttendanceRecord[]
+  manualStatusChanges ManualStatusChange[]
+  @@unique([sectionId, date])
+}
+
+model AttendanceRecord {
+  id         String   @id @default(cuid())
+  classDay   ClassDay @relation(fields: [classDayId], references: [id])
+  classDayId String
+  student    User     @relation(fields: [studentId], references: [id])
+  studentId  String
+  status     AttendanceStatus
+  @@unique([classDayId, studentId])
+}
+
+model ManualStatusChange {
+  id         String   @id @default(cuid())
+  classDay   ClassDay @relation(fields: [classDayId], references: [id])
+  classDayId String
+  student    User     @relation("StudentManualChanges", fields: [studentId], references: [id])
+  studentId  String
+  teacher    User     @relation("TeacherManualChanges", fields: [teacherId], references: [id])
+  teacherId  String
+  status     AttendanceStatus
+  createdAt  DateTime @default(now())
+  // Unique per classDay/student (only one manual change per student per day)
+  @@unique([classDayId, studentId])
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+  NOT_JOINED
+  BLANK
+}

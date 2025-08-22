@@ -1,0 +1,31 @@
+{
+  "name": "@snaproll/teacher-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@snaproll/ui": "workspace:*",
+    "@snaproll/lib": "workspace:*",
+    "@snaproll/config": "workspace:*",
+    "@snaproll/api-client": "workspace:*",
+    "@prisma/client": "^5.17.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.9",
+    "typescript": "^5.5.4",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.5"
+  }
+}

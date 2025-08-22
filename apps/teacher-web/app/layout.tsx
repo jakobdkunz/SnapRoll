@@ -1,0 +1,27 @@
+import type { Metadata } from 'next';
+import './globals.css';
+import { TeacherHeaderRight } from './_components/TeacherHeaderRight';
+import { WordmarkLink } from './_components/WordmarkLink';
+
+export const metadata: Metadata = {
+  title: 'SnapRoll – Teacher',
+  description: 'Attendance made delightful',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <div className="min-h-dvh">
+          <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+            <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+              <WordmarkLink />
+              <TeacherHeaderRight />
+            </div>
+          </header>
+          <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>
+        </div>
+      </body>
+    </html>
+  );
+}
