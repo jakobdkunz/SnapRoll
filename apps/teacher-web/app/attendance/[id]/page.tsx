@@ -100,18 +100,8 @@ export default function AttendancePage() {
           </div>
         ) : (
           <>
-            <div className="mt-2 flex justify-center gap-2">
-              {Array.from(code).map((ch, i) => (
-                <DigitReel
-                  key={i}
-                  index={i}
-                  target={ch}
-                  onStart={() => setAnimatingCount((c) => c + 1)}
-                  onEnd={() => setAnimatingCount((c) => Math.max(0, c - 1))}
-                />
-              ))}
-            </div>
-            <Button className="mt-6" onClick={start} disabled={animatingCount > 0 || isStarting}>Generate New Code</Button>
+            <div className="mt-2 text-6xl font-bold tracking-widest tabular-nums">{code}</div>
+            <Button className="mt-6" onClick={start} disabled={isStarting}>Generate New Code</Button>
           </>
         )}
       </Card>
@@ -151,69 +141,6 @@ export default function AttendancePage() {
           )}
         </Card>
       )}
-    </div>
-  );
-}
-
-function DigitReel({ target, index, onStart, onEnd }: { target: string; index: number; onStart: () => void; onEnd: () => void }) {
-  const isDigit = /\d/.test(target);
-  const [current, setCurrent] = useState<string>(isDigit ? target : '•');
-  const [next, setNext] = useState<string>(isDigit ? target : '•');
-  const [offset, setOffset] = useState<number>(-100); // start hidden above
-  const animRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const t = isDigit ? target : '•';
-    if (current === '•' && t !== '•') {
-      // First real code load: slide in from above once
-      setNext(t);
-      onStart();
-      const delay = index * 60;
-      const start = window.setTimeout(() => {
-        setOffset(0);
-        animRef.current = window.setTimeout(() => {
-          setCurrent(t);
-          setOffset(0);
-          onEnd();
-        }, 500);
-      }, delay);
-      return () => {
-        window.clearTimeout(start);
-        if (animRef.current) window.clearTimeout(animRef.current);
-      };
-    }
-    if (t !== current && t !== '•') {
-      // Regenerate: slide the next value up quickly
-      setNext(t);
-      onStart();
-      const delay = index * 80;
-      const start = window.setTimeout(() => {
-        setOffset(-100);
-        animRef.current = window.setTimeout(() => {
-          setCurrent(t);
-          setOffset(0);
-          onEnd();
-        }, 500);
-      }, delay);
-      return () => {
-        window.clearTimeout(start);
-        if (animRef.current) window.clearTimeout(animRef.current);
-      };
-    }
-  }, [target, index, isDigit, current, onStart, onEnd]);
-
-  return (
-    <div className="w-12 h-16 overflow-hidden rounded-md bg-white/60 shadow-inner border border-slate-200 grid place-items-center">
-      <div
-        className="will-change-transform"
-        style={{
-          transform: `translateY(${offset}%)`,
-          transition: 'transform 500ms ease-in-out',
-        }}
-      >
-        <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{next}</div>
-        <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{current}</div>
-      </div>
     </div>
   );
 }
