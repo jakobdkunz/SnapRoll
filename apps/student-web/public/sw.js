@@ -1,4 +1,4 @@
-const CACHE = 'snaproll-cache-v1';
+const CACHE = 'snaproll-cache-v2';
 const OFFLINE_URLS = ['/','/manifest.json','/icon.svg','/maskable.svg'];
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -11,13 +11,51 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+
+  // Never cache cross-origin (e.g., API) requests
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // For navigations (HTML pages), use network-first to avoid stale pages
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => (await caches.match(request)) || (await caches.match('/')))
+    );
+    return;
+  }
+
+  // For static assets, use cache-first
+  const isStatic = ['style', 'script', 'image', 'font'].includes(request.destination);
+  if (isStatic || OFFLINE_URLS.includes(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then((cached) =>
+        cached || fetch(request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          return response;
+        })
+      )
+    );
+    return;
+  }
+
+  // Default: network-first
   event.respondWith(
-    caches.match(request).then((cached) =>
-      cached || fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         const copy = response.clone();
         caches.open(CACHE).then((cache) => cache.put(request, copy));
         return response;
-      }).catch(() => caches.match('/'))
-    )
+      })
+      .catch(async () => await caches.match(request))
   );
 });
