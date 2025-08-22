@@ -128,17 +128,12 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
-                  <div className="mt-auto hidden sm:flex gap-2">
-                    <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
-                    <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
-                    <Button onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
-                  </div>
-                  <div className="mt-auto sm:hidden">
+                  <div className="mt-auto space-y-2">
                     <div className="flex gap-2">
-                      <Button className="flex-1" onClick={() => router.push(`/attendance/${s.id}`)}>Attendance</Button>
-                      <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>Report</Button>
-                      <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
+                      <Button variant="ghost" className="flex-1" onClick={() => router.push(`/modify/${s.id}`)}>Edit Roster</Button>
+                      <Button variant="ghost" className="flex-1" onClick={() => router.push(`/history/${s.id}`)}>View Report</Button>
                     </div>
+                    <Button className="w-full" onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
                   </div>
                 </Card>
               );
