@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: Section | null }>({ open: false, section: null });
 
   const gradients = [
@@ -29,14 +30,22 @@ export default function DashboardPage() {
   }, []);
 
   async function load(currentTeacherId: string) {
-    const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
-    setSections(data.sections);
+    try {
+      setLoading(true);
+      const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
+      setSections(data.sections);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     if (!mounted) return;
     if (teacherId) {
+      setLoading(true);
       load(teacherId);
+    } else {
+      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, teacherId]);
@@ -61,6 +70,19 @@ export default function DashboardPage() {
   if (!teacherId) return <div>Please go back and enter your information.</div>;
 
   const hasSections = sections.length > 0;
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-3 gap-6 overflow-hidden">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-4 animate-pulse">
+            <div className="aspect-[3/2] rounded-lg bg-slate-100 mb-4" />
+            <div className="h-4 bg-slate-100 rounded w-2/3" />
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
