@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm install && pnpm build --filter=@snaproll/teacher-web",
-  "installCommand": "cd ../.. && pnpm install",
+  "buildCommand": "cd ../.. && npm install && npm run build:teacher-web",
+  "installCommand": "cd ../.. && npm install",
   "framework": "nextjs"
 }
