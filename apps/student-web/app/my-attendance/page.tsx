@@ -58,17 +58,20 @@ export default function MyAttendancePage() {
         try {
           const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history`);
           setData(res);
-        } catch {}
+        } catch (_e) {
+          /* ignore transient fetch errors */
+        }
       })();
     };
-    window.addEventListener('focus', refetch);
-    document.addEventListener('visibilitychange', () => {
+    const onVisibility = () => {
       if (document.visibilityState === 'visible') refetch();
-    });
+    };
+    window.addEventListener('focus', refetch);
+    document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pageshow', refetch);
     return () => {
       window.removeEventListener('focus', refetch);
-      document.removeEventListener('visibilitychange', () => {});
+      document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pageshow', refetch);
     };
   }, [studentId]);
