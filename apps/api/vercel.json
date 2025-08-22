@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
-  "buildCommand": "cd ../.. && pnpm -w -s install --frozen-lockfile && pnpm dlx prisma migrate deploy --schema=prisma/schema.prisma && pnpm dlx prisma generate --schema=prisma/schema.prisma && pnpm -w -s build:api"
+  "buildCommand": "cd ../.. && pnpm dlx prisma migrate deploy --schema=prisma/schema.prisma && pnpm dlx prisma generate --schema=prisma/schema.prisma && pnpm -w -s build:api"
 }
