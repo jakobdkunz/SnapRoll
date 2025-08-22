@@ -15,7 +15,10 @@
     "typecheck": "turbo run typecheck",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "build:api": "turbo run build --filter=@snaproll/api",
+    "build:teacher-web": "turbo run build --filter=@snaproll/teacher-web",
+    "build:student-web": "turbo run build --filter=@snaproll/student-web"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

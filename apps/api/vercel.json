@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd ../.. && pnpm install && pnpm build --filter=@snaproll/api",
-  "installCommand": "cd ../.. && pnpm install",
+  "buildCommand": "cd ../.. && npm install && npm run build:api",
+  "installCommand": "cd ../.. && npm install",
   "framework": "nextjs"
 }
