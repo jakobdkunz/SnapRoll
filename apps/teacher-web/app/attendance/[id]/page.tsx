@@ -1,6 +1,7 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
+import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
 
@@ -17,6 +18,9 @@ export default function AttendancePage() {
   const params = useParams<{ id: string }>();
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
+  const [animatingCount, setAnimatingCount] = useState(0);
+
+  const [checking, setChecking] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -27,14 +31,14 @@ export default function AttendancePage() {
     }
   }, [params.id]);
 
-  const start = useCallback(async () => {
+  async function start() {
     const data = await apiFetch<{ classDay: ClassDay }>(
       `/api/sections/${params.id}/start-attendance`,
       { method: 'POST' }
     );
     setCode(data.classDay.attendanceCode);
     loadStatus();
-  }, [params.id, loadStatus]);
+  }
 
   useEffect(() => {
     start();
@@ -80,8 +84,18 @@ export default function AttendancePage() {
           </div>
         ) : (
           <>
-            <div className="mt-2 text-6xl font-bold tracking-widest">{code}</div>
-            <Button className="mt-6" onClick={start}>Generate New Code</Button>
+            <div className="mt-2 flex justify-center gap-2">
+              {Array.from(code).map((ch, i) => (
+                <DigitReel
+                  key={i}
+                  index={i}
+                  target={ch}
+                  onStart={() => setAnimatingCount((c) => c + 1)}
+                  onEnd={() => setAnimatingCount((c) => Math.max(0, c - 1))}
+                />
+              ))}
+            </div>
+            <Button className="mt-6" onClick={start} disabled={animatingCount > 0}>Generate New Code</Button>
           </>
         )}
       </Card>
@@ -121,6 +135,52 @@ export default function AttendancePage() {
           )}
         </Card>
       )}
+    </div>
+  );
+}
+
+function DigitReel({ target, index, onStart, onEnd }: { target: string; index: number; onStart: () => void; onEnd: () => void }) {
+  const isDigit = /\d/.test(target);
+  const [current, setCurrent] = useState<string>(isDigit ? target : '•');
+  const [next, setNext] = useState<string>(isDigit ? target : '•');
+  const [offset, setOffset] = useState<number>(-100); // show current (second row)
+  const animRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const t = isDigit ? target : '•';
+    if (t === current) return;
+    setNext(t);
+    const delay = index * 120; // stagger per digit
+    onStart();
+    const start = window.setTimeout(() => {
+      setOffset(0); // animate down to reveal next
+      const duration = 500;
+      animRef.current = window.setTimeout(() => {
+        setCurrent(t);
+        setOffset(-100); // reset stack to show current again
+        onEnd();
+      }, duration);
+    }, delay);
+    return () => {
+      window.clearTimeout(start);
+      if (animRef.current) {
+        window.clearTimeout(animRef.current);
+      }
+    };
+  }, [target]);
+
+  return (
+    <div className="w-12 h-16 overflow-hidden rounded-md bg-white/60 shadow-inner border border-slate-200 grid place-items-center">
+      <div
+        className="will-change-transform"
+        style={{
+          transform: `translateY(${offset}%)`,
+          transition: 'transform 500ms ease-in-out',
+        }}
+      >
+        <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{next}</div>
+        <div className="h-16 flex items-center justify-center text-5xl font-bold tabular-nums text-slate-900">{current}</div>
+      </div>
     </div>
   );
 }
