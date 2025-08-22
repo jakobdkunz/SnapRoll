@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -18,35 +18,34 @@ export default function AttendancePage() {
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
 
-  async function start() {
-    const data = await apiFetch<{ classDay: ClassDay }>(
-      `/api/sections/${params.id}/start-attendance`,
-      { method: 'POST' }
-    );
-    setCode(data.classDay.attendanceCode);
-    loadStatus();
-  }
-
-  async function loadStatus() {
+  const loadStatus = useCallback(async () => {
     try {
       const data = await apiFetch<AttendanceStatus>(`/api/sections/${params.id}/attendance-status`);
       setStatus(data);
     } catch (error) {
       console.error('Failed to load attendance status:', error);
     }
-  }
+  }, [params.id]);
+
+  const start = useCallback(async () => {
+    const data = await apiFetch<{ classDay: ClassDay }>(
+      `/api/sections/${params.id}/start-attendance`,
+      { method: 'POST' }
+    );
+    setCode(data.classDay.attendanceCode);
+    loadStatus();
+  }, [params.id, loadStatus]);
 
   useEffect(() => {
     start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
+  }, [start]);
 
   useEffect(() => {
     if (status?.hasActiveAttendance) {
       const interval = setInterval(loadStatus, 2000); // Refresh every 2 seconds
       return () => clearInterval(interval);
     }
-  }, [status?.hasActiveAttendance]);
+  }, [status?.hasActiveAttendance, loadStatus]);
 
   // At local midnight, automatically start a new attendance day and reset progress
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function AttendancePage() {
     return () => {
       if (timeout) window.clearTimeout(timeout);
     };
-  }, [params.id]);
+  }, [params.id, start]);
 
   return (
     <div className="grid place-items-center space-y-6">
