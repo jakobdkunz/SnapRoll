@@ -37,9 +37,11 @@ export default function HistoryPage() {
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
+  const STUDENT_COL = 260; // fixed px width for student column
   const DAY_COL_CONTENT = 96; // content width in px to fit MM/DD/YYYY
   const DAY_COL_PADDING = 16; // Tailwind p-2 adds 8px left + 8px right
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  const [initialized, setInitialized] = useState(false);
 
   const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
     const reqId = ++requestIdRef.current;
@@ -71,9 +73,22 @@ export default function HistoryPage() {
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
-    
-    if (id) loadHistory(offset, limit);
   }, [params.id]);
+
+  // Compute initial columns based on container before first fetch to avoid overflow
+  useEffect(() => {
+    if (initialized) return;
+    const el = containerRef.current;
+    const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+    const horizontalPadding = 32;
+    const available = Math.max(0, containerWidth - STUDENT_COL - horizontalPadding);
+    const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
+    if (initialLimit !== limit) setLimit(initialLimit);
+    setInitialized(true);
+    // load immediately regardless of teacherId; API route does not require it
+    loadHistory(offset, initialLimit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, containerRef.current]);
 
   // Refresh on focus/visibility to avoid stale columns/statuses
   useEffect(() => {
@@ -114,14 +129,14 @@ export default function HistoryPage() {
 
   // (duplicate removed)
 
-  // Recalculate how many columns fit based on container and first column widths
+  // Recalculate how many columns fit based on container width
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const horizontalPadding = 32; // card/container padding/scrollbar buffer
-      const available = Math.max(0, containerWidth - 260 - horizontalPadding);
+      const available = Math.max(0, containerWidth - STUDENT_COL - horizontalPadding);
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
@@ -130,7 +145,7 @@ export default function HistoryPage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, offset, PER_COL]);
+  }, [limit, loadHistory, offset]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
@@ -251,11 +266,11 @@ export default function HistoryPage() {
           <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>Next →</Button>
         </div>
       </div>
-      <div ref={containerRef} className="relative overflow-visible">
+      <div ref={containerRef} className="relative overflow-hidden">
       <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-10 bg-white p-2 text-left" style={{ width: STUDENT_COL, minWidth: STUDENT_COL, maxWidth: STUDENT_COL }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
@@ -270,7 +285,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student, i) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-10 bg-white px-2 py-1 text-sm">
+              <td className="sticky left-0 z-10 bg-white px-2 py-1 text-sm" style={{ width: STUDENT_COL, minWidth: STUDENT_COL, maxWidth: STUDENT_COL }}>
                 <div className="font-medium">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500">{student.email}</div>
               </td>
