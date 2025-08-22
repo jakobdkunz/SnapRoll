@@ -37,6 +37,9 @@ export default function HistoryPage() {
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
+  const DAY_COL_CONTENT = 72; // content width in px
+  const DAY_COL_PADDING = 16; // Tailwind p-2 adds 8px left + 8px right
+  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
   const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
     const reqId = ++requestIdRef.current;
@@ -118,10 +121,9 @@ export default function HistoryPage() {
     const ro = new ResizeObserver(() => {
       const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
       const firstColWidth = firstThRef.current?.offsetWidth ?? 260;
-      const perCol = 88; // approx width per day column including padding
-      const horizontalPadding = 32; // padding inside card/container
+      const horizontalPadding = 32; // card/container padding/scrollbar buffer
       const available = Math.max(0, containerWidth - firstColWidth - horizontalPadding);
-      const cols = Math.max(3, Math.min(60, Math.floor(available / perCol)));
+      const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
         loadHistory(offset, cols);
@@ -256,7 +258,11 @@ export default function HistoryPage() {
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-10 bg-white p-2 text-left">Student</th>
             {[...days].reverse().map((day) => (
-              <th key={day.id} className="p-2 text-sm font-medium text-slate-600">
+              <th
+                key={day.id}
+                className="p-2 text-sm font-medium text-slate-600 text-center"
+                style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+              >
                 {formatDateMDY(new Date(day.date))}
               </th>
             ))}
@@ -273,7 +279,11 @@ export default function HistoryPage() {
                 const reversedIndex = days.length - 1 - j;
                 const record = studentRecords[i]?.records[reversedIndex];
                 return (
-                  <td key={`${student.id}-${day.id}`} className="p-2 text-center">
+                  <td
+                    key={`${student.id}-${day.id}`}
+                    className="p-2 text-center"
+                    style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                  >
                     {record ? renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date) : <span className="text-slate-400">–</span>}
                   </td>
                 );
