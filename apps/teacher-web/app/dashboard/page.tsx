@@ -107,7 +107,7 @@ export default function DashboardPage() {
                 <div className="font-medium mb-2 text-slate-700">{s.title}</div>
                 <div className="mt-auto flex gap-2">
                   <Button variant="ghost" onClick={() => router.push(`/modify/${s.id}`)}>Roster</Button>
-                  <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>History</Button>
+                  <Button variant="ghost" onClick={() => router.push(`/history/${s.id}`)}>View Report</Button>
                   <Button onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
                 </div>
               </Card>
