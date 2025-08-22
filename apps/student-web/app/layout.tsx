@@ -8,7 +8,6 @@ export const metadata: Metadata = {
   title: 'SnapRoll – Student',
   description: 'Fast, friendly attendance check-in',
   manifest: '/manifest.json',
-  themeColor: '#7C9AFF',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
