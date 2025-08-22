@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Card, Badge } from '@snaproll/ui';
+import { Card, Badge, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
 type HistoryResponse = {
@@ -97,7 +97,20 @@ export default function MyAttendancePage() {
   }, [data]);
 
   if (!studentId) return <div className="p-6">Please go back and enter your email.</div>;
-  if (loading) return <div className="p-6">Loading…</div>;
+  if (loading) return (
+    <div className="space-y-4 p-6">
+      <Card className="p-4">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <div className="flex gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-6 w-16 rounded" />
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!grid) return <div className="p-6">No data.</div>;
 

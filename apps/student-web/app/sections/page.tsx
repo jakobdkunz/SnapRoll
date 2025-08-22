@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { Card } from '@snaproll/ui';
+import { Card, Skeleton } from '@snaproll/ui';
 import { usePathname } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
 
@@ -187,8 +187,28 @@ export default function SectionsPage() {
 
   if (loading) {
     return (
-      <div className="text-center">
-        <div className="text-lg">Loading your sections...</div>
+      <div className="space-y-6">
+        <Card className="p-6 space-y-3">
+          <div className="text-center">
+            <div className="font-medium">Attendance</div>
+            <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="w-12 h-12 rounded-xl" />
+            ))}
+          </div>
+        </Card>
+
+        <div className="text-slate-600 text-sm">Your sections</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-3 sm:p-4">
+              <Skeleton className="aspect-[3/2] w-full rounded-lg mb-3" />
+              <Skeleton className="h-5 w-40" />
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
