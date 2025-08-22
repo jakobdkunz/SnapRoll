@@ -30,7 +30,7 @@ export default function HistoryPage() {
   const [days, setDays] = useState<Day[]>([]);
   const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
   const [teacherId, setTeacherId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // removed unused `loading` state
   const [totalDays, setTotalDays] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [limit, setLimit] = useState<number>(12);
@@ -78,11 +78,11 @@ export default function HistoryPage() {
       const w = el.offsetWidth;
       const h = el.offsetHeight;
       const left = Math.min(vw - margin - w, Math.max(margin, tooltip.anchorX - w / 2));
-      // Prefer above; if not enough room, place below
       let top = tooltip.anchorY - margin - h;
       if (top < margin) top = tooltip.anchorY + margin;
       setPos({ left, top });
-    }, [tooltip.visible, tooltip.anchorX, tooltip.anchorY]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tooltip]);
     if (!tooltip.visible) return null;
     return createPortal(
       <div
@@ -168,7 +168,6 @@ export default function HistoryPage() {
       console.error('Failed to load history:', error);
     } finally {
       if (reqId === requestIdRef.current) setIsFetching(false);
-      setLoading(false);
     }
   }, [params.id]);
 
