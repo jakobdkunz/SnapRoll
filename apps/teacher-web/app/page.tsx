@@ -83,7 +83,16 @@ export default function TeacherWelcomePage() {
             placeholder="Email address"
             type="email"
             value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setEmail(e.target.value);
+              if (needsNames) {
+                // Reset back to email-first flow if user edits email
+                setNeedsNames(false);
+                setFirstName('');
+                setLastName('');
+                setError(null);
+              }
+            }}
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -97,6 +106,9 @@ export default function TeacherWelcomePage() {
           />
           {needsNames && (
             <>
+              <div className="text-sm text-slate-600">
+                We didn’t find an instructor account for that email. Enter your first and last name to create one.
+              </div>
               <TextInput
                 placeholder="First name"
                 value={firstName}
