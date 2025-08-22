@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, Card, TextInput } from '@snaproll/ui';
+import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
@@ -142,7 +142,20 @@ export default function ModifyPage() {
           <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
         </div>
         <div className="space-y-3">
-          {students.map((s) => (
+          {students.length === 0 ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <Skeleton className="h-5 w-48 mb-1" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
+                  <Skeleton className="h-9 w-full rounded-xl" />
+                  <Skeleton className="h-9 w-full rounded-xl" />
+                </div>
+              </div>
+            ))
+          ) : students.map((s) => (
             <div key={s.id} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
               {editId === s.id ? (
                 <>

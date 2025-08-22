@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Card, Badge, Button } from '@snaproll/ui';
+import { Card, Badge, Button, Skeleton } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -367,8 +367,34 @@ export default function HistoryPage() {
     );
   }
 
-  // Render shell with loading overlay instead of blank screen
+  // Render skeleton while initializing table
+  if (!initialized || days.length === 0 || students.length === 0) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-sm text-slate-600 pl-4">Loading…</div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24 rounded-xl" />
+            <Skeleton className="h-9 w-20 rounded-xl" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Skeleton className="h-6 w-56 rounded" />
+              <div className="flex gap-2">
+                {Array.from({ length: 6 }).map((_, j) => (
+                  <Skeleton key={j} className="h-6 w-16 rounded-full" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    );
+  }
 
+  // Render shell with loading overlay instead of blank screen
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
