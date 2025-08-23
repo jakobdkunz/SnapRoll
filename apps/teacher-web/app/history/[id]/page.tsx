@@ -454,8 +454,8 @@ export default function HistoryPage() {
         <div className="text-sm text-slate-600 pl-4">
           {days.length > 0 && totalDays > 0
             ? (() => {
-                const start = Math.min(totalDays, offset + days.length);
-                const end = Math.min(totalDays, offset + 1);
+                const end = Math.min(totalDays, Math.max(1, totalDays - offset));
+                const start = Math.min(totalDays, Math.max(1, totalDays - offset - days.length + 1));
                 return <>Showing {start}–{end} of {totalDays} days</>;
               })()
             : 'Loading…'}
