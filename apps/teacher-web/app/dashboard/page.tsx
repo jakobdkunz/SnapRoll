@@ -22,6 +22,9 @@ export default function DashboardPage() {
     { id: 'gradient-4', name: 'Green Teal', class: 'gradient-4' },
     { id: 'gradient-5', name: 'Pink Yellow', class: 'gradient-5' },
     { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
+    { id: 'gradient-7', name: 'Peach', class: 'gradient-7' },
+    { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
+    { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
   ];
 
   useEffect(() => {
