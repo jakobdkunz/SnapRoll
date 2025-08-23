@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, TextInput, Modal } from '@snaproll/ui';
+import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown } from 'react-icons/hi2';
@@ -46,6 +46,15 @@ export default function ModifyPage() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmWorking, setConfirmWorking] = useState(false);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  type LastAction =
+    | { type: 'remove_one'; students: Student[] }
+    | { type: 'remove_all'; students: Student[] }
+    | { type: 'import'; emails: string[] };
+  const [lastAction, setLastAction] = useState<LastAction | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function validateRolesForImport(roles: ColumnRole[]): { ok: boolean; message?: string } {
     const emailCount = roles.filter((r) => r === 'email').length;
@@ -69,11 +78,14 @@ export default function ModifyPage() {
 
   async function load() {
     try {
+      setLoadingStudents(true);
       const roster = await apiFetch<{ students: Student[] }>(`/api/sections/${params.id}/students`);
       setStudents(roster.students);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to load students';
       alert(errorMessage);
+    } finally {
+      setLoadingStudents(false);
     }
   }
 
@@ -355,12 +367,15 @@ export default function ModifyPage() {
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportCsv} disabled={importing || importWorking} />
             <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking}>{importWorking ? 'Importing…' : 'Import CSV'}</Button>
             {students.length > 0 && (
-              <Button variant="ghost" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All Students</Button>
+              <Button variant="ghost" className="!text-white !bg-rose-600 hover:!bg-rose-500" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All Students</Button>
             )}
           </div>
         </div>
         {importMessage && (
-          <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2 mb-3">{importMessage}</div>
+          <div className="flex items-center justify-between text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2 mb-3">
+            <span>{importMessage}</span>
+            <button className="text-green-700/70 hover:text-green-800 px-2" onClick={() => setImportMessage(null)}>×</button>
+          </div>
         )}
         <div className="space-y-3">
           {students.length === 0 ? (
@@ -434,7 +449,7 @@ export default function ModifyPage() {
                 <div className="text-sm text-slate-600 mt-1 mb-4">What is this column?</div>
                 <div className="mb-4 flex justify-center">
                   <div className="w-[min(520px,88vw)]">
-                    <div className="text-xs text-slate-500 mb-1">{csvColumns[promptColumnIdx] || `Column ${promptColumnIdx + 1}`}</div>
+                    <div className="text-xs text-slate-500 mb-1 text-center">{csvColumns[promptColumnIdx] || `Column ${promptColumnIdx + 1}`}</div>
                     {(() => {
                       const samples = csvRows.slice(dataStartRowIndex, dataStartRowIndex + 20).map((r) => String(r[promptColumnIdx] || ''));
                       const maxChars = samples.reduce((m, v) => Math.max(m, v.length), 0);
@@ -487,7 +502,7 @@ export default function ModifyPage() {
                   >
                     These are last names
                   </Button>
-                  <Button variant="ghost" className="w-full" onClick={() => { const roles = [...columnRoles]; roles[promptColumnIdx] = 'other'; setColumnRoles(roles); setPromptColumnIdx(null); setMappingStep('review'); }}>These are something else</Button>
+                  <Button className="w-full" variant="secondary" onClick={() => { const roles = [...columnRoles]; roles[promptColumnIdx] = 'other'; setColumnRoles(roles); setPromptColumnIdx(null); setMappingStep('review'); }}>These are something else</Button>
                 </div>
                 <div className="flex justify-end mt-4">
                   <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
