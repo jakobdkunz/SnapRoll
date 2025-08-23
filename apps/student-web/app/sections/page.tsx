@@ -17,6 +17,7 @@ export default function SectionsPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
@@ -91,6 +92,7 @@ export default function SectionsPage() {
       console.error('Failed to load sections:', error);
     } finally {
       setLoading(false);
+      setInitialized(true);
     }
   }
 
@@ -139,15 +141,14 @@ export default function SectionsPage() {
     };
   }, [mounted, studentId]);
 
-  // Refetch when navigating back to this route to avoid stale in-memory state
+  // Refetch when navigating back to this route to avoid stale in-memory state (without skeleton)
   useEffect(() => {
     if (!mounted || !studentId) return;
-    setLoading(true);
     load(studentId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Refresh data when returning to this tab/page (prevents stale titles/gradients after visiting other pages)
+  // Refresh data when returning to this tab/page (no skeleton flash)
   useEffect(() => {
     if (!studentId) return;
     const onFocus = () => load(studentId);
@@ -185,7 +186,7 @@ export default function SectionsPage() {
   if (!mounted) return null;
   if (!studentId) return <div>Please go back and enter your email.</div>;
 
-  if (loading) {
+  if (loading && !initialized) {
     return (
       <div className="space-y-6">
         <Card className="p-6 space-y-3">

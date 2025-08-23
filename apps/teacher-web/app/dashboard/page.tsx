@@ -63,7 +63,15 @@ export default function DashboardPage() {
       load(teacherId);
     }
     
-    setCustomizeModal({ open: false, section: null });
+    handleCloseCustomize();
+  }
+
+  function handleCloseCustomize() {
+    // First close (triggers modal exit animation), then clear after transition
+    setCustomizeModal((prev) => ({ ...prev, open: false }));
+    window.setTimeout(() => {
+      setCustomizeModal({ open: false, section: null });
+    }, 180);
   }
 
   if (!mounted) return null;
@@ -154,18 +162,18 @@ export default function DashboardPage() {
         load(teacherId);
       }}>+ Create New Section</Button>
 
-      <Modal open={customizeModal.open && !!customizeModal.section} onClose={() => setCustomizeModal({ open: false, section: null })}>
+      <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
           <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Customize Section</h2>
-              <button onClick={() => setCustomizeModal({ open: false, section: null })} className="text-slate-400 hover:text-slate-600">✕</button>
+              <button onClick={handleCloseCustomize} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             <CustomizeModal 
               section={customizeModal.section}
               gradients={gradients}
               onSave={saveCustomization}
-              onCancel={() => setCustomizeModal({ open: false, section: null })}
+              onCancel={handleCloseCustomize}
             />
           </div>
         )}
