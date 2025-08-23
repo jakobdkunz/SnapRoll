@@ -421,8 +421,8 @@ export default function HistoryPage() {
     );
   }
 
-  // Render skeleton while initializing table
-  if (!initialized || days.length === 0 || students.length === 0) {
+  // Render skeleton while initializing table (do not block on empty arrays)
+  if (!initialized) {
     return (
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
@@ -453,17 +453,18 @@ export default function HistoryPage() {
     <Card className="p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600 pl-4">
-          {days.length > 0 && totalDays > 0
+          {totalDays > 0
             ? (() => {
                 const end = Math.min(totalDays, Math.max(1, totalDays - offset));
                 const start = Math.min(totalDays, Math.max(1, totalDays - offset - days.length + 1));
-                return <>Showing {start}–{end} of {totalDays} days</>;
+                return <>{start}–{end} of {totalDays} class days</>;
               })()
-            : 'Loading…'}
+            : '0 of 0 class days'}
         </div>
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
-            <HiOutlineDocumentArrowDown className="h-5 w-5" /> Export CSV
+            <HiOutlineDocumentArrowDown className="h-5 w-5" />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
           <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>
