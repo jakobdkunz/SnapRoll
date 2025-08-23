@@ -46,7 +46,8 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       aria-modal="true"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="absolute inset-0 bg-black/50" />
+      {/* Oversized overlay to cover iOS toolbars */}
+      <div className="absolute left-0 right-0 bg-black/50" style={{ top: '-60vh', bottom: '-60vh' }} />
       <div
         className={`${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} relative z-10 transition-all duration-150`}
         onClick={(e) => e.stopPropagation()}

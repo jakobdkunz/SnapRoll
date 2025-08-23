@@ -115,7 +115,13 @@ export function TeacherHeaderRight() {
     router.push('/');
   }
 
-  if (!teacherId) return null;
+  if (!teacherId) {
+    return (
+      <div className="opacity-0 pointer-events-none select-none">
+        <button className="text-sm">Profile</button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
