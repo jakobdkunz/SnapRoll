@@ -15,15 +15,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const localMidnight = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate());
     const todayStartUtc = new Date(localMidnight.getTime() + tzMinutes * 60 * 1000);
 
-    // All class days prior to today
-    const classDays = await prisma.classDay.findMany({
+    // Only the most recent class day prior to today
+    const prior = await prisma.classDay.findFirst({
       where: { sectionId, date: { lt: todayStartUtc } },
+      orderBy: { date: 'desc' },
       select: { id: true },
     });
-    if (classDays.length === 0) {
+    if (!prior) {
       return NextResponse.json({ created: 0 });
     }
-    const classDayIds = classDays.map(cd => cd.id);
+    const classDayIds = [prior.id];
 
     // All enrolled students for the section
     const enrollments = await prisma.enrollment.findMany({
