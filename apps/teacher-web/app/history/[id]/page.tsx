@@ -149,6 +149,7 @@ export default function HistoryPage() {
       if (!initializedRightmostRef.current) {
         const total = data.totalDays || 0;
         const lim = data.limit || currentLimit;
+        // Snap to the last page based on computed limit (partial page will be the first page in the window)
         const desiredOffset = Math.max(0, total - lim);
         const current = data.offset ?? currentOffset;
         initializedRightmostRef.current = true;
@@ -404,6 +405,9 @@ export default function HistoryPage() {
             : 'Loading…'}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => exportCsv()}>
+            Export CSV
+          </Button>
           <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
@@ -461,4 +465,39 @@ export default function HistoryPage() {
       <TooltipOverlay />
     </Card>
   );
+}
+
+function exportCsv() {
+  try {
+    const rows: string[] = [];
+    // headers
+    const header = ['Student', 'Email'];
+    // Fallback: pull from table DOM
+    const ths = Array.from(document.querySelectorAll('table thead th')) as HTMLTableCellElement[];
+    const dates = ths.slice(1).map((th) => th.textContent?.trim() || '');
+    rows.push([...header, ...dates].join(','));
+    const trs = Array.from(document.querySelectorAll('table tbody tr')) as HTMLTableRowElement[];
+    for (const tr of trs) {
+      const tds = Array.from(tr.querySelectorAll('td')) as HTMLTableCellElement[];
+      const name = tds[0]?.querySelector('div.font-medium')?.textContent?.trim() || '';
+      const email = tds[0]?.querySelector('div.text-xs')?.textContent?.trim() || '';
+      const vals: string[] = [name, email];
+      for (let i = 1; i < tds.length; i++) {
+        const txt = tds[i].textContent?.trim() || '';
+        vals.push(`"${txt.replace(/"/g, '""')}"`);
+      }
+      rows.push(vals.join(','));
+    }
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'attendance.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error('Export failed', e);
+  }
 }

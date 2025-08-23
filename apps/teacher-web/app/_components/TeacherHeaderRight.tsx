@@ -105,6 +105,7 @@ export function TeacherHeaderRight() {
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
             <TextInput value={email} disabled />
+            <div className="text-xs text-slate-500">To change your email, please contact support.</div>
           </div>
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Cancel</Button>
