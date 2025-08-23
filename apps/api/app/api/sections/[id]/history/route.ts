@@ -48,11 +48,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
   });
 
   // Create a map for quick lookup of manual changes
-  const manualChangeMap = new Map();
-  manualChanges.forEach(change => {
-    const key = `${change.classDayId}-${change.studentId}`;
-    manualChangeMap.set(key, change);
-  });
+  const manualChangeMap = new Map<string, typeof manualChanges[number]>();
+  for (const change of manualChanges) {
+    manualChangeMap.set(`${change.classDayId}-${change.studentId}`, change);
+  }
+  const attendanceMap = new Map<string, typeof attendanceRecords[number]>();
+  for (const ar of attendanceRecords) {
+    attendanceMap.set(`${ar.classDayId}-${ar.studentId}`, ar);
+  }
 
   // Create the history data structure
   const history = {
@@ -69,10 +72,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     })),
     records: enrollments.map(enrollment => {
       const studentRecords = classDays.map(classDay => {
-        const attendanceRecord = attendanceRecords.find(
-          ar => ar.classDayId === classDay.id && ar.studentId === enrollment.studentId
-        );
-        
+        const attendanceRecord = attendanceMap.get(`${classDay.id}-${enrollment.studentId}`);
         const manualChange = manualChangeMap.get(`${classDay.id}-${enrollment.studentId}`);
         
         // Determine effective status: manual change takes precedence

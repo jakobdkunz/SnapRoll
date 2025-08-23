@@ -53,7 +53,8 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
       for (const cd of classDays) {
         const key = `${cd.id}:${e.studentId}`;
         const status = manualMap.get(key) ?? attendanceMap.get(key) ?? 'BLANK';
-        statuses.push(status);
+        const exported = status === 'BLANK' ? 'ABSENT' : status;
+        statuses.push(exported);
       }
       const escaped = [name, email, ...statuses].map(v => `"${String(v).replace(/"/g, '""')}"`);
       rows.push(escaped.join(','));

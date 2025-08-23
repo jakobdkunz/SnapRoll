@@ -295,12 +295,15 @@ export default function HistoryPage() {
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
-        loadHistory(offset, cols);
+        // Keep the latest page fully filled; make partial page the earliest
+        const nextOffset = Math.max(0, Math.max(0, totalDays - cols));
+        setOffset(nextOffset);
+        loadHistory(nextOffset, cols);
       }
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, offset, studentWidthEffective, PER_COL]);
+  }, [limit, loadHistory, totalDays, studentWidthEffective, PER_COL]);
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
