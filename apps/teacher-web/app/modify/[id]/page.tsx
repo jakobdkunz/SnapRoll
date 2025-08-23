@@ -5,6 +5,7 @@ import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare } from 'react-icons/hi2';
+import Papa from 'papaparse';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
 
@@ -22,6 +23,8 @@ export default function ModifyPage() {
   const [needNames, setNeedNames] = useState(false);
   const [sectionTitle, setSectionTitle] = useState<string>('Roster');
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -135,6 +138,86 @@ export default function ModifyPage() {
     }
   }
 
+  function guessNameParts(fullName: string): { firstName: string; lastName: string } {
+    const name = fullName.trim().replace(/\s+/g, ' ');
+    if (!name) return { firstName: 'Student', lastName: 'Unknown' };
+    const parts = name.split(' ');
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    if (parts.length === 2) return { firstName: parts[0], lastName: parts[1] };
+    // Assume last token is last name, rest first name(s)
+    const lastName = parts.pop() as string;
+    return { firstName: parts.join(' '), lastName };
+  }
+
+  async function onImportCsv(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportMessage(null);
+    setImporting(true);
+    try {
+      const parsed = await new Promise<Papa.ParseResult<Record<string, unknown>>>((resolve, reject) => {
+        Papa.parse<Record<string, unknown>>(file, { header: true, skipEmptyLines: true, complete: resolve, error: reject });
+      });
+      const rows: Record<string, string>[] = (parsed.data as Record<string, unknown>[]).map((r) => (r || {} as unknown) as Record<string, string>);
+      if (rows.length === 0) {
+        alert('No rows found in CSV.');
+        return;
+      }
+      // Determine email column: first column where any row contains @
+      const headers = parsed.meta.fields || Object.keys(rows[0] || {});
+      const emailHeader = headers.find((h) => rows.some((r) => String(r[h] || '').includes('@')));
+      if (!emailHeader) {
+        alert('Could not find an email column (no values with @).');
+        return;
+      }
+      // Try to find first and last name columns
+      const lowerHeaders = headers.map((h) => h.toLowerCase());
+      const firstHeader = headers[lowerHeaders.findIndex((h) => /first/.test(h))] || null;
+      const lastHeader = headers[lowerHeaders.findIndex((h) => /last/.test(h))] || null;
+      const nameHeader = headers[lowerHeaders.findIndex((h) => /(name|full)/.test(h))] || null;
+
+      let added = 0;
+      for (const row of rows) {
+        const emailVal = String(row[emailHeader] || '').trim().toLowerCase();
+        if (!isValidEmail(emailVal)) continue;
+        let first = '';
+        let last = '';
+        if (firstHeader && lastHeader) {
+          first = String(row[firstHeader] || '').trim();
+          last = String(row[lastHeader] || '').trim();
+        } else if (nameHeader) {
+          const guess = guessNameParts(String(row[nameHeader] || ''));
+          first = guess.firstName; last = guess.lastName;
+        } else {
+          const beforeAt = emailVal.split('@')[0].replace(/[._-]+/g, ' ');
+          const guess = guessNameParts(beforeAt);
+          first = guess.firstName; last = guess.lastName;
+        }
+        if (!first && !last) {
+          const guess = guessNameParts(emailVal.split('@')[0]);
+          first = guess.firstName; last = guess.lastName;
+        }
+        try {
+          await apiFetch(`/api/sections/${params.id}/students`, {
+            method: 'POST',
+            body: JSON.stringify({ email: emailVal, firstName: first || 'Student', lastName: last || '' }),
+          });
+          added += 1;
+        } catch (_ignored) {
+          // continue with others
+        }
+      }
+      await load();
+      setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
+    } catch (_ignored) {
+      alert('Failed to import CSV.');
+    } finally {
+      setImporting(false);
+      // reset input value so the same file can be chosen again
+      e.target.value = '';
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}> 
@@ -147,8 +230,17 @@ export default function ModifyPage() {
       <Card className="p-4 sm:p-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <div className="font-medium text-lg">Roster</div>
-          <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
+            <label className="relative inline-flex items-center">
+              <input type="file" accept=".csv,text/csv" className="absolute inset-0 opacity-0 cursor-pointer" onChange={onImportCsv} disabled={importing} />
+              <Button variant="ghost" className="pointer-events-none">{importing ? 'Importing…' : 'Import CSV'}</Button>
+            </label>
+          </div>
         </div>
+        {importMessage && (
+          <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2 mb-3">{importMessage}</div>
+        )}
         <div className="space-y-3">
           {students.length === 0 ? (
             <div className="text-sm text-slate-500 p-3 border rounded-lg bg-white/50">No students yet. Add one below.</div>
