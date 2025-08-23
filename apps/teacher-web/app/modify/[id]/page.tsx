@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
-import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown } from 'react-icons/hi2';
+import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
@@ -367,12 +367,18 @@ export default function ModifyPage() {
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}>
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="relative grid place-items-center text-white py-8 sm:py-10">
-          <div className="font-futuristic font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
+      {sectionLoaded ? (
+        <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}>
+          <div className="absolute inset-0 bg-black/10" />
+          <div className="relative grid place-items-center text-white py-8 sm:py-10">
+            <div className="font-futuristic font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="rounded-xl overflow-hidden bg-slate-200">
+          <div className="py-8 sm:py-10" />
+        </div>
+      )}
 
       <Card className="p-4 sm:p-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
@@ -380,9 +386,13 @@ export default function ModifyPage() {
           <div className="flex items-center gap-2">
             <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportCsv} disabled={importing || importWorking} />
-            <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking}>{importWorking ? 'Importing…' : 'Import CSV'}</Button>
+            <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking} className="inline-flex items-center gap-2">
+              <HiOutlineArrowUpTray className="h-5 w-5" /> {importWorking ? 'Importing…' : 'Import CSV'}
+            </Button>
             {students.length > 0 && (
-              <Button variant="ghost" className="!text-white !bg-rose-600 hover:!bg-rose-500" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All</Button>
+              <Button variant="ghost" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking} className="inline-flex items-center gap-2">
+                <HiOutlineTrash className="h-5 w-5" /> Remove All Students
+              </Button>
             )}
           </div>
         </div>
@@ -532,7 +542,7 @@ export default function ModifyPage() {
                   >
                     These are last names
                   </Button>
-                  <Button className="w-full" variant="secondary" onClick={() => { const roles = [...columnRoles]; roles[promptColumnIdx] = 'other'; setColumnRoles(roles); setPromptColumnIdx(null); setMappingStep('review'); }}>These are something else</Button>
+                  <Button className="w-full" onClick={() => { const roles = [...columnRoles]; roles[promptColumnIdx] = 'other'; setColumnRoles(roles); setPromptColumnIdx(null); setMappingStep('review'); }}>These are something else</Button>
                 </div>
                 <div className="flex justify-end mt-4">
                   <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
@@ -637,12 +647,12 @@ export default function ModifyPage() {
       )}
       {confirmClearOpen && (
         <Modal open={confirmClearOpen} onClose={() => { if (!confirmWorking) setConfirmClearOpen(false); }}>
-          <div className="w-[min(92vw,520px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
+          <div className="w-[min(92vw,520px)] bg-white rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
             <div className="text-lg font-semibold mb-1">Remove all students?</div>
             <div className="text-sm text-slate-600 mb-4">This action cannot be undone.</div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmClearOpen(false)} disabled={confirmWorking}>Cancel</Button>
-              <Button onClick={async () => {
+              <Button className="!text-white !bg-rose-600 hover:!bg-rose-500 inline-flex items-center gap-2" onClick={async () => {
                 try {
                   setConfirmWorking(true);
                   for (const s of students) {
@@ -655,7 +665,7 @@ export default function ModifyPage() {
                 } finally {
                   setConfirmWorking(false);
                 }
-              }} disabled={confirmWorking}>{confirmWorking ? 'Removing…' : 'Remove all'}</Button>
+              }} disabled={confirmWorking}><HiOutlineTrash className="h-5 w-5" /> {confirmWorking ? 'Removing…' : 'Remove all'}</Button>
             </div>
           </div>
         </Modal>
