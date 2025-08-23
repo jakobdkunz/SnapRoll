@@ -10,6 +10,7 @@ type StudentProfile = { student: { id: string; email: string; firstName: string;
 
 export function StudentHeaderRight() {
   const router = useRouter();
+  const [studentId, setStudentId] = useState<string | null>(null);
   const [name, setName] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -20,6 +21,14 @@ export function StudentHeaderRight() {
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.studentId');
+    setStudentId(id);
+    const cachedName = localStorage.getItem('snaproll.studentName');
+    const cachedEmail = localStorage.getItem('snaproll.studentEmail');
+    if (cachedName) setName(cachedName);
+    if (cachedEmail) setEmail(cachedEmail);
+  }, []);
+
+  useEffect(() => {
     async function load(idVal: string) {
       try {
         const data = await apiFetch<StudentProfile>(`/api/students/${idVal}`);
@@ -34,8 +43,8 @@ export function StudentHeaderRight() {
         // ignore
       }
     }
-    if (id) load(id);
-  }, []);
+    if (studentId) load(studentId);
+  }, [studentId]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -46,13 +55,28 @@ export function StudentHeaderRight() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') { setOpen(false); setProfileOpen(false); }
     }
+    function handleFocus() {
+      const id = localStorage.getItem('snaproll.studentId');
+      setStudentId(id);
+    }
+    function handleStorage() {
+      const id = localStorage.getItem('snaproll.studentId');
+      setStudentId(id);
+      if (!id) {
+        setName(''); setFirstName(''); setLastName(''); setEmail(''); setOpen(false); setProfileOpen(false);
+      }
+    }
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
     }
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorage);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [open]);
 
@@ -60,8 +84,13 @@ export function StudentHeaderRight() {
     localStorage.removeItem('snaproll.studentId');
     localStorage.removeItem('snaproll.studentName');
     localStorage.removeItem('snaproll.studentEmail');
+    setStudentId(null);
+    setName(''); setFirstName(''); setLastName(''); setEmail('');
+    setOpen(false); setProfileOpen(false);
     router.push('/');
   }
+
+  if (!studentId) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>

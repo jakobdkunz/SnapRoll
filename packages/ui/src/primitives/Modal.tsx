@@ -44,6 +44,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="absolute inset-0 bg-black/50" />
       <div
