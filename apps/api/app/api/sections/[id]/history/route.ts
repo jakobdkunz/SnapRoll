@@ -11,16 +11,34 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const rawLimit = Math.max(1, Number.isFinite(Number(limitParam)) ? Number(limitParam) : 30);
   const limit = Math.min(rawLimit, 60);
 
-  // Count total class days
-  const totalDays = await prisma.classDay.count({ where: { sectionId: id } });
+  // Respect client timezone for day uniqueness (avoid duplicate local days)
+  const tzHeader = request.headers.get('x-tz-offset');
+  const tzMinutes = tzHeader ? parseInt(tzHeader, 10) : new Date().getTimezoneOffset();
+  const toLocalYmd = (d: Date) => {
+    const localMs = d.getTime() - tzMinutes * 60 * 1000;
+    const local = new Date(localMs);
+    const yyyy = local.getFullYear();
+    const mm = String(local.getMonth() + 1).padStart(2, '0');
+    const dd = String(local.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
-  // Get paged class days for this section
-  const classDays = await prisma.classDay.findMany({
+  // Get all class days and group by local day, keeping the latest entry per local day
+  const allClassDays = await prisma.classDay.findMany({
     where: { sectionId: id },
     orderBy: { date: 'desc' },
-    skip: offset,
-    take: limit,
   });
+  const seen = new Set<string>();
+  const uniqueDays: { ymd: string; cd: typeof allClassDays[number] }[] = [];
+  for (const cd of allClassDays) {
+    const ymd = toLocalYmd(cd.date);
+    if (seen.has(ymd)) continue;
+    seen.add(ymd);
+    uniqueDays.push({ ymd, cd });
+  }
+  const totalDays = uniqueDays.length;
+  const page = uniqueDays.slice(offset, offset + limit);
+  const classDays = page.map(p => p.cd);
 
   // Get all students enrolled in this section
   const enrollments = await prisma.enrollment.findMany({
