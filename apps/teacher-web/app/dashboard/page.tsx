@@ -2,6 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
+import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -132,14 +133,18 @@ export default function DashboardPage() {
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
                       title="Customize"
                     >
-                      ✏️
+                      <HiOutlinePencilSquare className="h-5 w-5" />
                     </button>
                   </div>
                   <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
                   <div className="mt-auto space-y-2">
                     <div className="flex gap-2">
-                      <Button variant="ghost" className="flex-1" onClick={() => router.push(`/modify/${s.id}`)}>Edit Roster</Button>
-                      <Button variant="ghost" className="flex-1" onClick={() => router.push(`/history/${s.id}`)}>View Report</Button>
+                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/modify/${s.id}`)}>
+                        <HiOutlineUserGroup className="h-5 w-5" /> Edit Roster
+                      </Button>
+                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/history/${s.id}`)}>
+                        <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
+                      </Button>
                     </div>
                     <Button className="w-full" onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
                   </div>
