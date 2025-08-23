@@ -75,13 +75,14 @@ export function StudentHeaderRight() {
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)}>
         <Card className="p-6 w-[90vw] max-w-md space-y-4">
           <div className="text-lg font-semibold">Your Profile</div>
+          <div className="text-sm text-slate-600">These settings are managed by your organization.</div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">First name</label>
-            <TextInput value={firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)} />
+            <TextInput value={firstName} disabled />
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Last name</label>
-            <TextInput value={lastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)} />
+            <TextInput value={lastName} disabled />
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
