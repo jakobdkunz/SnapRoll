@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
+import { isValidEmail } from '@snaproll/lib';
 
 export default function StudentWelcomePage() {
   const router = useRouter();
@@ -21,7 +22,10 @@ export default function StudentWelcomePage() {
   }, [router]);
 
   async function onContinue() {
-    if (!email.trim()) return;
+    if (!email.trim() || !isValidEmail(email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -60,7 +64,7 @@ export default function StudentWelcomePage() {
               }
             }}
           />
-          <Button onClick={onContinue} disabled={!email.trim() || loading} className="w-full">
+          <Button onClick={onContinue} disabled={!email.trim() || !isValidEmail(email.trim()) || loading} className="w-full">
             {loading ? 'Continuing...' : 'Continue'}
           </Button>
           {error && (

@@ -3,6 +3,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
+import { isValidEmail } from '@snaproll/lib';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
 
@@ -50,7 +51,10 @@ export default function ModifyPage() {
   }, [params.id]);
 
   async function handleAdd() {
-    if (!newEmail.trim()) return;
+    if (!newEmail.trim() || !isValidEmail(newEmail.trim())) {
+      alert('Please enter a valid email address.');
+      return;
+    }
     try {
       if (!needNames) {
         const lookup = await apiFetch<{ found: boolean; student?: { firstName: string; lastName: string } }>(
@@ -103,7 +107,10 @@ export default function ModifyPage() {
   }
 
   async function saveEdit(studentId: string) {
-    if (!editEmail.trim() || !editFirstName.trim() || !editLastName.trim()) return;
+    if (!editEmail.trim() || !isValidEmail(editEmail.trim()) || !editFirstName.trim() || !editLastName.trim()) {
+      alert('Please enter a valid email and name.');
+      return;
+    }
     try {
       await apiFetch(`/api/sections/${params.id}/students/${studentId}`, {
         method: 'PATCH',
@@ -187,6 +194,9 @@ export default function ModifyPage() {
         <div className="mt-6 space-y-3">
           <div className="font-medium">Add Student</div>
           <TextInput placeholder="Email" value={newEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setNewEmail(e.target.value); setNeedNames(false); setNewFirstName(''); setNewLastName(''); }} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
+          {!needNames && newEmail && !isValidEmail(newEmail.trim()) && (
+            <div className="text-xs text-red-600">Please enter a valid email address.</div>
+          )}
           {needNames && (
             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
               No existing student found. Please enter their name to continue
@@ -198,7 +208,7 @@ export default function ModifyPage() {
               <TextInput placeholder="Last name" value={newLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
             </div>
           )}
-          <Button className="w-full sm:w-auto" onClick={handleAdd}>Add Student</Button>
+          <Button className="w-full sm:w-auto" onClick={handleAdd} disabled={!newEmail.trim() || (!needNames && !isValidEmail(newEmail.trim()))}>Add Student</Button>
         </div>
       </Card>
     </div>

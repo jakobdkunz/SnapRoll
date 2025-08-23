@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
+import { isValidEmail } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
 
 export default function TeacherWelcomePage() {
@@ -26,7 +27,10 @@ export default function TeacherWelcomePage() {
   async function onContinue() {
     setError(null);
     const cleanEmail = email.trim();
-    if (!cleanEmail) return;
+    if (!cleanEmail || !isValidEmail(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
     setLoading(true);
     try {
       // Try email-only login
@@ -54,7 +58,10 @@ export default function TeacherWelcomePage() {
   async function onCreate() {
     setError(null);
     const cleanEmail = email.trim();
-    if (!cleanEmail || !firstName.trim() || !lastName.trim()) return;
+    if (!cleanEmail || !isValidEmail(cleanEmail) || !firstName.trim() || !lastName.trim()) {
+      setError('Please enter a valid email and your first and last name.');
+      return;
+    }
     setLoading(true);
     try {
       const { teacher } = await apiFetch<{ teacher: { id: string; email: string; firstName: string; lastName: string } }>(
@@ -135,11 +142,11 @@ export default function TeacherWelcomePage() {
           )}
           {error && <div className="text-sm text-red-600">{error}</div>}
           {!needsNames ? (
-            <Button onClick={onContinue} disabled={loading} className="w-full">
+            <Button onClick={onContinue} disabled={loading || !isValidEmail(email.trim())} className="w-full">
               {loading ? 'Continuing…' : 'Continue'}
             </Button>
           ) : (
-            <Button onClick={onCreate} disabled={loading || !firstName.trim() || !lastName.trim()} className="w-full">
+            <Button onClick={onCreate} disabled={loading || !isValidEmail(email.trim()) || !firstName.trim() || !lastName.trim()} className="w-full">
               {loading ? 'Creating…' : 'Create account'}
             </Button>
           )}

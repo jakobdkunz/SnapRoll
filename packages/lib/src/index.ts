@@ -13,3 +13,5 @@ export function formatDateMDY(date: Date): string {
   const yyyy = date.getFullYear();
   return `${mm}/${dd}/${yyyy}`;
 }
+
+export { isValidEmail } from './email';
