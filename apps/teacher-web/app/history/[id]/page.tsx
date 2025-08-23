@@ -453,7 +453,11 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600 pl-4">
           {days.length > 0 && totalDays > 0
-            ? <>Showing {Math.min(totalDays, offset + 1)}–{Math.min(totalDays, offset + days.length)} of {totalDays} days</>
+            ? (() => {
+                const start = Math.min(totalDays, offset + days.length);
+                const end = Math.min(totalDays, offset + 1);
+                return <>Showing {start}–{end} of {totalDays} days</>;
+              })()
             : 'Loading…'}
         </div>
         <div className="flex items-center gap-2">
