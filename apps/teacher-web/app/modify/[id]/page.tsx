@@ -445,7 +445,13 @@ export default function ModifyPage() {
                     <Button variant="ghost" onClick={async () => {
                       setDeletingIds((prev) => new Set(prev).add(s.id));
                       try {
+                        const snapshot = [...students];
                         await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                        setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
+                        setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
+                        setToastVisible(true);
+                        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                        toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                         await load();
                       } catch (_err) {
                         alert('Failed to remove student');
@@ -655,10 +661,16 @@ export default function ModifyPage() {
               <Button className="!text-white !bg-rose-600 hover:!bg-rose-500 inline-flex items-center gap-2" onClick={async () => {
                 try {
                   setConfirmWorking(true);
+                  const snapshot = [...students];
                   for (const s of students) {
                     await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
                   }
                   await load();
+                  setLastAction({ type: 'remove_all', snapshot, label: 'All students removed.' });
+                  setToastMessage('All students removed.');
+                  setToastVisible(true);
+                  if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                  toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                   setConfirmClearOpen(false);
                 } catch (_e) {
                   alert('Failed to remove all students');
