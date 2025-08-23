@@ -46,11 +46,12 @@ export default function ModifyPage() {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmWorking, setConfirmWorking] = useState(false);
+  const [sectionLoaded, setSectionLoaded] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
   type LastAction =
-    | { type: 'remove_one'; students: Student[] }
-    | { type: 'remove_all'; students: Student[] }
-    | { type: 'import'; emails: string[] };
+    | { type: 'remove_one'; snapshot: Student[]; label: string }
+    | { type: 'remove_all'; snapshot: Student[]; label: string }
+    | { type: 'import'; snapshot: Student[]; label: string };
   const [lastAction, setLastAction] = useState<LastAction | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -100,6 +101,7 @@ export default function ModifyPage() {
         const res = await apiFetch<{ section: { title: string; gradient: string } }>(`/api/sections/${params.id}`);
         setSectionTitle(res.section.title);
         setSectionGradient(res.section.gradient);
+        setSectionLoaded(true);
       } catch (err) {
         console.warn('Failed to load section details', err);
       }
@@ -183,7 +185,13 @@ export default function ModifyPage() {
 
   async function removeStudent(studentId: string) {
     try {
+      const snapshot = [...students];
       await apiFetch(`/api/sections/${params.id}/students/${studentId}`, { method: 'DELETE' });
+      setLastAction({ type: 'remove_one', snapshot, label: 'Student removed.' });
+      setToastMessage('Student removed.');
+      setToastVisible(true);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
       load();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to remove student';
@@ -315,6 +323,7 @@ export default function ModifyPage() {
     const emailIdx = roles.findIndex((r) => r === 'email');
     if (emailIdx < 0) throw new Error('Email column not selected.');
     let added = 0;
+    const addedEmails: string[] = [];
     for (let i = startIndex; i < allRows.length; i += 1) {
       const row = allRows[i] || [];
       const emailVal = String(row[emailIdx] || '').trim().toLowerCase();
@@ -342,17 +351,23 @@ export default function ModifyPage() {
           body: JSON.stringify({ email: emailVal, firstName: first || 'Student', lastName: last || '' }),
         });
         added += 1;
+        addedEmails.push(emailVal);
       } catch (_ignored) {
         // continue
       }
     }
     await load();
     setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
+    setLastAction({ type: 'import', snapshot: [...students], label: `Imported ${added} ${added === 1 ? 'student' : 'students'}.` });
+    setToastMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
+    setToastVisible(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
   }
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}> 
+      <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}>
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative grid place-items-center text-white py-8 sm:py-10">
           <div className="font-futuristic font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
@@ -367,7 +382,7 @@ export default function ModifyPage() {
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportCsv} disabled={importing || importWorking} />
             <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking}>{importWorking ? 'Importing…' : 'Import CSV'}</Button>
             {students.length > 0 && (
-              <Button variant="ghost" className="!text-white !bg-rose-600 hover:!bg-rose-500" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All Students</Button>
+              <Button variant="ghost" className="!text-white !bg-rose-600 hover:!bg-rose-500" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All</Button>
             )}
           </div>
         </div>
@@ -378,7 +393,22 @@ export default function ModifyPage() {
           </div>
         )}
         <div className="space-y-3">
-          {students.length === 0 ? (
+          {(!sectionLoaded || loadingStudents) ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Skeleton className="h-4 w-40 mb-2" />
+                    <Skeleton className="h-3 w-64" />
+                  </div>
+                  <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
+                    <Skeleton className="h-9" />
+                    <Skeleton className="h-9" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : students.length === 0 ? (
             <div className="text-sm text-slate-500 p-3 border rounded-lg bg-white/50">No students yet. Add one below.</div>
           ) : students.map((s) => (
             <div key={s.id} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -441,7 +471,7 @@ export default function ModifyPage() {
       {/* Mapping Modal */}
       {mappingOpen && (
         <Modal open={mappingOpen} onClose={() => { setMappingOpen(false); setImporting(false); }}>
-          <div className="w-[min(92vw,900px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
+          <div className="w-[min(92vw,900px)] bg-white rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
             {mappingStep === 'promptKind' && promptColumnIdx != null && (
               <div>
                 <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
@@ -629,6 +659,43 @@ export default function ModifyPage() {
             </div>
           </div>
         </Modal>
+      )}
+      {toastVisible && (
+        <div className="fixed bottom-4 left-4 z-[60]">
+          <div className="bg-slate-900 text-white rounded-lg shadow-lg px-4 py-3 flex items-center gap-3">
+            <span className="text-sm">{toastMessage}</span>
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                setToastVisible(false);
+                if (!lastAction) return;
+                const snapshot = lastAction.snapshot;
+                try {
+                  const currentIds = new Set(students.map((s) => s.id));
+                  const snapshotIds = new Set(snapshot.map((s) => s.id));
+                  for (const s of students) {
+                    if (!snapshotIds.has(s.id)) {
+                      await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                    }
+                  }
+                  for (const s of snapshot) {
+                    if (!currentIds.has(s.id)) {
+                      await apiFetch(`/api/sections/${params.id}/students`, {
+                        method: 'POST',
+                        body: JSON.stringify({ email: s.email, firstName: s.firstName, lastName: s.lastName }),
+                      });
+                    }
+                  }
+                  await load();
+                } catch (_err) {
+                  alert('Failed to undo.');
+                }
+              }}
+            >
+              Undo
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
