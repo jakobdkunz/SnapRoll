@@ -382,7 +382,7 @@ export default function HistoryPage() {
     let selectEl: HTMLSelectElement | null = null;
     return (
       <div
-        className="relative group cursor-pointer select-none"
+        className="relative group cursor-pointer select-none flex items-center justify-center"
         onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
         onMouseLeave={hideTooltip}
         onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
@@ -413,7 +413,7 @@ export default function HistoryPage() {
             </option>
           ))}
         </select>
-        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center group-hover:brightness-95">
+        <div className="pointer-events-none flex items-center justify-center group-hover:brightness-95">
           {statusDisplay}
         </div>
       </div>
