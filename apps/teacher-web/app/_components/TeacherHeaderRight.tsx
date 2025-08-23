@@ -10,6 +10,7 @@ type TeacherProfile = { teacher: { id: string; email: string; firstName: string;
 
 export function TeacherHeaderRight() {
   const router = useRouter();
+  const [teacherId, setTeacherId] = useState<string | null>(null);
   const [name, setName] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -20,7 +21,16 @@ export function TeacherHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Initialize from localStorage immediately for fast UI fill
     const id = localStorage.getItem('snaproll.teacherId');
+    setTeacherId(id);
+    const cachedName = localStorage.getItem('snaproll.teacherName');
+    const cachedEmail = localStorage.getItem('snaproll.teacherEmail');
+    if (cachedName) setName(cachedName);
+    if (cachedEmail) setEmail(cachedEmail);
+  }, []);
+
+  useEffect(() => {
     async function load(idVal: string) {
       try {
         const data = await apiFetch<TeacherProfile>(`/api/teachers/${idVal}`);
@@ -35,8 +45,8 @@ export function TeacherHeaderRight() {
         // ignore
       }
     }
-    if (id) load(id);
-  }, []);
+    if (teacherId) load(teacherId);
+  }, [teacherId]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -47,13 +57,33 @@ export function TeacherHeaderRight() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') { setOpen(false); setProfileOpen(false); }
     }
+    function handleFocus() {
+      const id = localStorage.getItem('snaproll.teacherId');
+      setTeacherId(id);
+    }
+    function handleStorage() {
+      const id = localStorage.getItem('snaproll.teacherId');
+      setTeacherId(id);
+      if (!id) {
+        setName('');
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setOpen(false);
+        setProfileOpen(false);
+      }
+    }
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
     }
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorage);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [open]);
 
@@ -79,8 +109,13 @@ export function TeacherHeaderRight() {
     localStorage.removeItem('snaproll.teacherId');
     localStorage.removeItem('snaproll.teacherName');
     localStorage.removeItem('snaproll.teacherEmail');
+    setTeacherId(null);
+    setName(''); setFirstName(''); setLastName(''); setEmail('');
+    setOpen(false); setProfileOpen(false);
     router.push('/');
   }
+
+  if (!teacherId) return null;
 
   return (
     <div className="relative" ref={dropdownRef}>

@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar } from 'react-icons/hi2';
+import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
           <div className="text-slate-500">Create your first section to begin.</div>
-          <Button className="mt-4" onClick={async () => {
+          <Button className="mt-4 inline-flex items-center gap-2" onClick={async () => {
             const title = prompt('Section title?');
             if (!title) return;
             await apiFetch<{ section: Section }>(`/api/sections`, {
@@ -107,7 +107,7 @@ export default function DashboardPage() {
               body: JSON.stringify({ title, teacherId }),
             });
             load(teacherId);
-          }}>Create New Section</Button>
+          }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
         <>
@@ -140,7 +140,7 @@ export default function DashboardPage() {
                   <div className="mt-auto space-y-2">
                     <div className="flex gap-2">
                       <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/modify/${s.id}`)}>
-                        <HiOutlineUserGroup className="h-5 w-5" /> Edit Roster
+                        <HiOutlineUserGroup className="h-5 w-5" /> Roster
                       </Button>
                       <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/history/${s.id}`)}>
                         <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         </>
       )}
       
-      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
+      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
         const title = prompt('Section title?');
         if (!title) return;
         await apiFetch<{ section: Section }>(`/api/sections`, {
@@ -165,7 +165,7 @@ export default function DashboardPage() {
           body: JSON.stringify({ title, teacherId }),
         });
         load(teacherId);
-      }}>+ Create New Section</Button>
+      }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (

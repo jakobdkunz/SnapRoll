@@ -143,7 +143,7 @@ export default function TeacherWelcomePage() {
           {error && <div className="text-sm text-red-600">{error}</div>}
           {!needsNames ? (
             <Button onClick={onContinue} disabled={loading || !isValidEmail(email.trim())} className="w-full">
-              {loading ? 'Continuing…' : 'Continue'}
+              {loading ? 'Logging in…' : 'Continue'}
             </Button>
           ) : (
             <Button onClick={onCreate} disabled={loading || !isValidEmail(email.trim()) || !firstName.trim() || !lastName.trim()} className="w-full">

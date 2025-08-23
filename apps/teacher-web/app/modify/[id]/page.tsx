@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
-import { HiOutlineTrash } from 'react-icons/hi2';
+import { HiOutlineTrash, HiOutlinePencilSquare } from 'react-icons/hi2';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
 
@@ -184,7 +184,7 @@ export default function ModifyPage() {
                     <div className="text-sm text-slate-500 truncate">{s.email}</div>
                   </div>
                   <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
-                    <Button variant="ghost" onClick={() => beginEdit(s)}>Edit</Button>
+                    <Button variant="ghost" onClick={() => beginEdit(s)} className="inline-flex items-center justify-center gap-2"><HiOutlinePencilSquare className="h-5 w-5" /> Edit</Button>
                     <Button variant="ghost" onClick={() => removeStudent(s.id)} className="inline-flex items-center justify-center gap-2">
                       <HiOutlineTrash className="h-5 w-5" /> Remove
                     </Button>

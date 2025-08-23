@@ -65,7 +65,7 @@ export default function StudentWelcomePage() {
             }}
           />
           <Button onClick={onContinue} disabled={!email.trim() || !isValidEmail(email.trim()) || loading} className="w-full">
-            {loading ? 'Continuing...' : 'Continue'}
+            {loading ? 'Logging in…' : 'Continue'}
           </Button>
           {error && (
             <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg border border-red-200">
