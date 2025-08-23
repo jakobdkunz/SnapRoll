@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
+import { HiOutlineArrowPath } from 'react-icons/hi2';
 import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -101,7 +102,9 @@ export default function AttendancePage() {
         ) : (
           <>
             <div className="mt-2 text-6xl font-bold tracking-widest tabular-nums">{code}</div>
-            <Button className="mt-6" onClick={start} disabled={isStarting}>Generate New Code</Button>
+            <Button className="mt-6 inline-flex items-center gap-2" onClick={start} disabled={isStarting}>
+              <HiOutlineArrowPath className="h-5 w-5" /> Generate New Code
+            </Button>
           </>
         )}
       </Card>

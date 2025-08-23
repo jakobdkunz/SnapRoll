@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
+import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -461,8 +462,8 @@ export default function HistoryPage() {
             : 'Loading…'}
         </div>
         <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => startExport()}>
-            Export CSV
+          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
+            <HiOutlineDocumentArrowDown className="h-5 w-5" /> Export CSV
           </Button>
           {/* Older page (moves window to older dates) */}
           <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>

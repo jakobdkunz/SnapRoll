@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
+import { HiOutlineTrash } from 'react-icons/hi2';
 
 type Student = { id: string; email: string; firstName: string; lastName: string };
 
@@ -184,7 +185,9 @@ export default function ModifyPage() {
                   </div>
                   <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
                     <Button variant="ghost" onClick={() => beginEdit(s)}>Edit</Button>
-                    <Button variant="ghost" onClick={() => removeStudent(s.id)}>Remove</Button>
+                    <Button variant="ghost" onClick={() => removeStudent(s.id)} className="inline-flex items-center justify-center gap-2">
+                      <HiOutlineTrash className="h-5 w-5" /> Remove
+                    </Button>
                   </div>
                 </>
               )}
@@ -194,9 +197,6 @@ export default function ModifyPage() {
         <div className="mt-6 space-y-3">
           <div className="font-medium">Add Student</div>
           <TextInput placeholder="Email" value={newEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setNewEmail(e.target.value); setNeedNames(false); setNewFirstName(''); setNewLastName(''); }} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
-          {!needNames && newEmail && !isValidEmail(newEmail.trim()) && (
-            <div className="text-xs text-red-600">Please enter a valid email address.</div>
-          )}
           {needNames && (
             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
               No existing student found. Please enter their name to continue
@@ -208,7 +208,7 @@ export default function ModifyPage() {
               <TextInput placeholder="Last name" value={newLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
             </div>
           )}
-          <Button className="w-full sm:w-auto" onClick={handleAdd} disabled={!newEmail.trim() || (!needNames && !isValidEmail(newEmail.trim()))}>Add Student</Button>
+          <Button className="w-full sm:w-auto" onClick={handleAdd}>Add Student</Button>
         </div>
       </Card>
     </div>
