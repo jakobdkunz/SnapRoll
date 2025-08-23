@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react
 import { createPortal } from 'react-dom';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
-import { apiFetch } from '@snaproll/api-client';
+import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };
@@ -258,18 +258,20 @@ export default function HistoryPage() {
       setExportError(null);
       setExportOpen(true);
       setExporting(true);
-      // Use native fetch to retrieve CSV as a Blob
-      const res = await fetch(`/api/sections/${params.id}/export`, { method: 'GET' });
+      // Call API app directly for CSV
+      const base = getApiBaseUrl();
+      const apiUrl = `${base}/api/sections/${params.id}/export?t=${Date.now()}`;
+      const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
+      const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       a.download = 'attendance.csv';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(downloadUrl);
       setExporting(false);
       setExportOpen(false);
     } catch (e: unknown) {
