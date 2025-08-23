@@ -379,18 +379,24 @@ export default function HistoryPage() {
       }
     }
 
+    let selectEl: HTMLSelectElement | null = null;
     return (
       <div
-        className="relative group cursor-pointer"
+        className="relative group cursor-pointer select-none"
         onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
         onMouseLeave={hideTooltip}
         onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
         onTouchEnd={hideTooltip}
+        onClick={() => { try { selectEl?.click(); } catch { /* ignore */ } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { selectEl?.click(); } catch { /* ignore */ } } }}
+        tabIndex={0}
+        title={tooltipText}
       >
         <select
+          ref={(el) => { selectEl = el; }}
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
-          className="absolute inset-0 z-40 opacity-0 appearance-none bg-transparent border-none cursor-pointer pointer-events-auto w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          className="absolute inset-0 z-50 opacity-[0.01] bg-transparent border-none cursor-pointer pointer-events-auto w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
           aria-label="Change attendance status"
           onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
           onMouseLeave={hideTooltip}
