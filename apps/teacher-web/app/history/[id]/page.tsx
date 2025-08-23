@@ -159,16 +159,14 @@ export default function HistoryPage() {
       }>(`/api/sections/${params.id}/history?offset=${currentOffset}&limit=${currentLimit}`);
       if (reqId !== requestIdRef.current) return; // ignore stale
 
-      // Compute desired initial offset before committing state to avoid flicker
+      // Default to the most recent page: offset 0 (API returns days desc),
+      // then reverse for display so newest ends up on the right.
       if (!initializedRightmostRef.current) {
-        const total = data.totalDays || 0;
-        const lim = data.limit || currentLimit;
-        // Snap to the last page based on computed limit (partial page will be the first page in the window)
-        const desiredOffset = Math.max(0, total - lim);
+        const desiredOffset = 0;
         const current = data.offset ?? currentOffset;
         initializedRightmostRef.current = true;
         if (desiredOffset !== current) {
-          await loadHistory(desiredOffset, lim);
+          await loadHistory(desiredOffset, data.limit || currentLimit);
           return; // don't commit intermediate (oldest) page
         }
       }
@@ -295,8 +293,8 @@ export default function HistoryPage() {
       const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
       if (cols !== limit) {
         setLimit(cols);
-        // Keep the latest page fully filled; make partial page the earliest
-        const nextOffset = Math.max(0, Math.max(0, totalDays - cols));
+        // Keep newest page by default after resize
+        const nextOffset = 0;
         setOffset(nextOffset);
         loadHistory(nextOffset, cols);
       }
@@ -456,10 +454,12 @@ export default function HistoryPage() {
           <Button variant="ghost" onClick={() => startExport()}>
             Export CSV
           </Button>
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
+          {/* Older page (moves window to older dates) */}
+          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>
+          {/* Newer page (moves window to more recent dates) */}
+          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
