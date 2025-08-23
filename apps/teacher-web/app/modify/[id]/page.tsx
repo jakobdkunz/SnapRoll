@@ -1,6 +1,6 @@
 "use client";
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
@@ -25,6 +25,7 @@ export default function ModifyPage() {
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importWorking, setImportWorking] = useState(false);
 
   // CSV mapping modal state
   const [mappingOpen, setMappingOpen] = useState(false);
@@ -40,6 +41,11 @@ export default function ModifyPage() {
   const [openDropdownIdx, setOpenDropdownIdx] = useState<number | null>(null);
   const [dropdownBackdropKey, setDropdownBackdropKey] = useState(0);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [confirmWorking, setConfirmWorking] = useState(false);
 
   function validateRolesForImport(roles: ColumnRole[]): { ok: boolean; message?: string } {
     const emailCount = roles.filter((r) => r === 'email').length;
@@ -346,10 +352,11 @@ export default function ModifyPage() {
           <div className="font-medium text-lg">Roster</div>
           <div className="flex items-center gap-2">
             <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
-            <label className="relative inline-flex items-center">
-              <input type="file" accept=".csv,text/csv" className="absolute inset-0 opacity-0 cursor-pointer" onChange={onImportCsv} disabled={importing} />
-              <Button variant="ghost" className="pointer-events-none">{importing ? 'Importing…' : 'Import CSV'}</Button>
-            </label>
+            <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportCsv} disabled={importing || importWorking} />
+            <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking}>{importWorking ? 'Importing…' : 'Import CSV'}</Button>
+            {students.length > 0 && (
+              <Button variant="ghost" onClick={() => setConfirmClearOpen(true)} disabled={confirmWorking}>Remove All Students</Button>
+            )}
           </div>
         </div>
         {importMessage && (
@@ -380,8 +387,18 @@ export default function ModifyPage() {
                   </div>
                   <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
                     <Button variant="ghost" onClick={() => beginEdit(s)} className="inline-flex items-center justify-center gap-2"><HiOutlinePencilSquare className="h-5 w-5" /> Edit</Button>
-                    <Button variant="ghost" onClick={() => removeStudent(s.id)} className="inline-flex items-center justify-center gap-2">
-                      <HiOutlineTrash className="h-5 w-5" /> Remove
+                    <Button variant="ghost" onClick={async () => {
+                      setDeletingIds((prev) => new Set(prev).add(s.id));
+                      try {
+                        await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                        await load();
+                      } catch (_err) {
+                        alert('Failed to remove student');
+                      } finally {
+                        setDeletingIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
+                      }
+                    }} className="inline-flex items-center justify-center gap-2" disabled={deletingIds.has(s.id)}>
+                      <HiOutlineTrash className="h-5 w-5" /> {deletingIds.has(s.id) ? 'Removing…' : 'Remove'}
                     </Button>
                   </div>
                 </>
@@ -418,25 +435,32 @@ export default function ModifyPage() {
                 <div className="mb-4 flex justify-center">
                   <div className="w-[min(520px,88vw)]">
                     <div className="text-xs text-slate-500 mb-1">{csvColumns[promptColumnIdx] || `Column ${promptColumnIdx + 1}`}</div>
-                    <div className="border rounded-lg overflow-hidden">
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 7).map((r, ri) => (
-                            <tr key={ri} className="odd:bg-slate-50">
-                              <td className="px-2 py-1 whitespace-nowrap">{String(r[promptColumnIdx] || '')}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {csvRows.length - dataStartRowIndex > 7 && (
-                        <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white pointer-events-none" />
-                      )}
-                    </div>
+                    {(() => {
+                      const samples = csvRows.slice(dataStartRowIndex, dataStartRowIndex + 20).map((r) => String(r[promptColumnIdx] || ''));
+                      const maxChars = samples.reduce((m, v) => Math.max(m, v.length), 0);
+                      const widthCh = Math.max(10, maxChars * 2);
+                      return (
+                        <div className="border rounded-lg overflow-hidden mx-auto" style={{ width: `${widthCh}ch` }}>
+                          <table className="w-full text-xs">
+                            <tbody>
+                              {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 7).map((r, ri) => (
+                                <tr key={ri} className="odd:bg-slate-50">
+                                  <td className="px-2 py-1 whitespace-nowrap">{String(r[promptColumnIdx] || '')}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {csvRows.length - dataStartRowIndex > 7 && (
+                            <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    className="flex-1 rounded-lg px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700"
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Button
+                    className="w-full"
                     onClick={() => {
                       const roles = [...columnRoles];
                       roles[promptColumnIdx] = 'first';
@@ -450,9 +474,9 @@ export default function ModifyPage() {
                     }}
                   >
                     These are first names
-                  </button>
-                  <button
-                    className="flex-1 rounded-lg px-4 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-500 active:bg-indigo-700"
+                  </Button>
+                  <Button
+                    className="w-full"
                     onClick={() => {
                       const roles = [...columnRoles];
                       roles[promptColumnIdx] = 'last';
@@ -462,7 +486,8 @@ export default function ModifyPage() {
                     }}
                   >
                     These are last names
-                  </button>
+                  </Button>
+                  <Button variant="ghost" className="w-full" onClick={() => { const roles = [...columnRoles]; roles[promptColumnIdx] = 'other'; setColumnRoles(roles); setPromptColumnIdx(null); setMappingStep('review'); }}>These are something else</Button>
                 </div>
                 <div className="flex justify-end mt-4">
                   <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
@@ -546,20 +571,51 @@ export default function ModifyPage() {
                 )}
 
                 <div className="flex justify-end gap-2 pt-3">
-                  <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
+                  <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }} disabled={importWorking}>Cancel</Button>
                   <Button onClick={async () => {
                     const v = validateRolesForImport(columnRoles);
                     if (!v.ok) { setReviewError(v.message || 'Please finish mapping before importing.'); return; }
-                    await performImportWithRoles(csvRows, dataStartRowIndex, columnRoles);
+                    try {
+                      setImportWorking(true);
+                      await performImportWithRoles(csvRows, dataStartRowIndex, columnRoles);
+                    } finally {
+                      setImportWorking(false);
+                    }
                     setMappingOpen(false);
                     setImporting(false);
-                  }} disabled={!validateRolesForImport(columnRoles).ok}>Import</Button>
+                  }} disabled={importWorking || !validateRolesForImport(columnRoles).ok}>{importWorking ? 'Importing…' : 'Import'}</Button>
                 </div>
               </div>
             )}
           </div>
         </Modal>
       )}
+      {confirmClearOpen && (
+        <Modal open={confirmClearOpen} onClose={() => { if (!confirmWorking) setConfirmClearOpen(false); }}>
+          <div className="w-[min(92vw,520px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
+            <div className="text-lg font-semibold mb-1">Remove all students?</div>
+            <div className="text-sm text-slate-600 mb-4">This action cannot be undone.</div>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setConfirmClearOpen(false)} disabled={confirmWorking}>Cancel</Button>
+              <Button onClick={async () => {
+                try {
+                  setConfirmWorking(true);
+                  for (const s of students) {
+                    await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                  }
+                  await load();
+                  setConfirmClearOpen(false);
+                } catch (_e) {
+                  alert('Failed to remove all students');
+                } finally {
+                  setConfirmWorking(false);
+                }
+              }} disabled={confirmWorking}>{confirmWorking ? 'Removing…' : 'Remove all'}</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
+
