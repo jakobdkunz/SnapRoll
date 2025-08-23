@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, TextInput, Skeleton, Modal } from '@snaproll/ui';
+import { useEffect, useState } from 'react';
+import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare } from 'react-icons/hi2';
@@ -32,10 +32,12 @@ export default function ModifyPage() {
   const [csvRows, setCsvRows] = useState<string[][]>([]);
   const [dataStartRowIndex, setDataStartRowIndex] = useState(0);
   const [emailColIndex, setEmailColIndex] = useState<number>(-1);
-  const [useFullName, setUseFullName] = useState(false);
-  const [firstNameColIndex, setFirstNameColIndex] = useState<number | null>(null);
-  const [lastNameColIndex, setLastNameColIndex] = useState<number | null>(null);
-  const [fullNameColIndex, setFullNameColIndex] = useState<number | null>(null);
+  // mapping flow state
+  const [mappingStep, setMappingStep] = useState<'promptKind' | 'review'>('review');
+  const [promptColumnIdx, setPromptColumnIdx] = useState<number | null>(null);
+  type ColumnRole = 'email' | 'first' | 'last' | 'full' | 'other';
+  const [columnRoles, setColumnRoles] = useState<ColumnRole[]>([]);
+  const [openDropdownIdx, setOpenDropdownIdx] = useState<number | null>(null);
 
   async function load() {
     try {
@@ -203,32 +205,63 @@ export default function ModifyPage() {
         }
       }
 
-      // Try to auto-detect names from headers if present
-      const lowerHeaders = inferredColumns.map((h) => String(h).toLowerCase());
-      const autoFirstIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)first(\b|name)/.test(h)) : -1;
-      const autoLastIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)last(\b|name)/.test(h)) : -1;
-      const autoFullIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(full\s*name|name)/.test(h)) : -1;
+      // Name detection per requirements
+      // 1) Exclude columns containing numbers in data (header can have numbers)
+      const dataRows = allRows.slice(startIndex);
+      const containsDigits = (val: string) => /\d/.test(val);
+      const nameCandidates: number[] = [];
+      for (let c = 0; c < maxCols; c += 1) {
+        if (c === bestEmailIdx) continue;
+        const nums = dataRows.reduce((acc, r) => acc + (containsDigits(String(r[c] || '')) ? 1 : 0), 0);
+        const ratio = dataRows.length === 0 ? 0 : nums / dataRows.length;
+        if (ratio <= 0.1) nameCandidates.push(c); // allow a small amount of digits noise
+      }
 
-      // If we have clear first & last, import immediately; if we have clear full name, import immediately; else prompt mapping
-      if (autoFirstIdx >= 0 && autoLastIdx >= 0 && autoFirstIdx !== autoLastIdx) {
-        await performImportFromParsed(allRows, startIndex, bestEmailIdx, { mode: 'separate', firstIdx: autoFirstIdx, lastIdx: autoLastIdx });
-      } else if (autoFullIdx >= 0 && autoFullIdx !== bestEmailIdx) {
-        await performImportFromParsed(allRows, startIndex, bestEmailIdx, { mode: 'full', fullIdx: autoFullIdx });
+      // 2) If spaces between letters in a column, assume full name
+      const spaceRatios = nameCandidates.map((c) => ({
+        c,
+        ratio: dataRows.length === 0 ? 0 : dataRows.reduce((acc, r) => acc + (String(r[c] || '').trim().includes(' ') ? 1 : 0), 0) / (dataRows.length || 1),
+      }));
+      const likelyFull = spaceRatios.filter((x) => x.ratio >= 0.6).sort((a, b) => b.ratio - a.ratio);
+
+      // 3) Use headers hints for first/last if present
+      const lowerHeaders = inferredColumns.map((h) => String(h).toLowerCase());
+      const headerFirstIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)first(\b|name)/.test(h)) : -1;
+      const headerLastIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)last(\b|name)/.test(h)) : -1;
+
+      // Initialize roles
+      const roles: ColumnRole[] = new Array(maxCols).fill('other');
+      roles[bestEmailIdx] = 'email';
+
+      if (likelyFull.length > 0) {
+        roles[likelyFull[0].c] = 'full';
+      } else if (headerFirstIdx >= 0 && headerLastIdx >= 0 && headerFirstIdx !== headerLastIdx) {
+        roles[headerFirstIdx] = 'first';
+        roles[headerLastIdx] = 'last';
       } else {
-        // open modal to map
+        // ambiguous: pick a candidate column to ask user whether it's First or Last
+        const candidateToAsk = nameCandidates.find((c) => c !== headerFirstIdx && c !== headerLastIdx);
         setCsvColumns(inferredColumns);
         setCsvRows(allRows);
         setDataStartRowIndex(startIndex);
         setEmailColIndex(bestEmailIdx);
-        setUseFullName(false);
-        setFirstNameColIndex(null);
-        setLastNameColIndex(null);
-        setFullNameColIndex(null);
+        setColumnRoles(roles);
+        setPromptColumnIdx(candidateToAsk ?? nameCandidates[0] ?? 0);
+        setMappingStep('promptKind');
         setMappingOpen(true);
-        return; // keep importing state true; confirm will continue
+        return; // wait for user input
       }
-      await load();
-      setImportMessage('Import complete.');
+
+      // If we got here, we have either full name or first+last detected. Let user review before import
+      setCsvColumns(inferredColumns);
+      setCsvRows(allRows);
+      setDataStartRowIndex(startIndex);
+      setEmailColIndex(bestEmailIdx);
+      setColumnRoles(roles);
+      setPromptColumnIdx(null);
+      setMappingStep('review');
+      setMappingOpen(true);
+      return;
     } catch (_ignored) {
       alert('Failed to import CSV.');
     } finally {
@@ -238,25 +271,25 @@ export default function ModifyPage() {
     }
   }
 
-  async function performImportFromParsed(
-    allRows: string[][],
-    startIndex: number,
-    emailIdx: number,
-    mapping: { mode: 'separate'; firstIdx: number; lastIdx: number } | { mode: 'full'; fullIdx: number }
-  ) {
+  async function performImportWithRoles(allRows: string[][], startIndex: number, roles: ColumnRole[]) {
+    const emailIdx = roles.findIndex((r) => r === 'email');
+    if (emailIdx < 0) throw new Error('Email column not selected.');
     let added = 0;
     for (let i = startIndex; i < allRows.length; i += 1) {
       const row = allRows[i] || [];
       const emailVal = String(row[emailIdx] || '').trim().toLowerCase();
       if (!isValidEmail(emailVal)) continue;
+      const fullIdx = roles.findIndex((r) => r === 'full');
+      const firstIdx = roles.findIndex((r) => r === 'first');
+      const lastIdx = roles.findIndex((r) => r === 'last');
       let first = '';
       let last = '';
-      if (mapping.mode === 'separate') {
-        first = String(row[mapping.firstIdx] || '').trim();
-        last = String(row[mapping.lastIdx] || '').trim();
-      } else {
-        const guess = guessNameParts(String(row[mapping.fullIdx] || ''));
+      if (fullIdx >= 0) {
+        const guess = guessNameParts(String(row[fullIdx] || ''));
         first = guess.firstName; last = guess.lastName;
+      } else {
+        if (firstIdx >= 0) first = String(row[firstIdx] || '').trim();
+        if (lastIdx >= 0) last = String(row[lastIdx] || '').trim();
       }
       if (!first && !last) {
         const beforeAt = emailVal.split('@')[0].replace(/[._-]+/g, ' ');
@@ -354,111 +387,131 @@ export default function ModifyPage() {
       {/* Mapping Modal */}
       {mappingOpen && (
         <Modal open={mappingOpen} onClose={() => { setMappingOpen(false); setImporting(false); }}>
-          <div className="w-[min(92vw,720px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
-            <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
-            <div className="text-lg font-semibold">Help us map the name columns</div>
-            <div className="text-sm text-slate-600 mt-1 mb-4">
-              We detected the email column automatically. Choose how first and last names are provided.
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                <label className="inline-flex items-center gap-2">
-                  <input type="radio" className="accent-black" checked={!useFullName} onChange={() => setUseFullName(false)} />
-                  <span className="text-sm">Separate columns for first and last name</span>
-                </label>
-                {!useFullName && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex gap-2 items-center">
-                      <label className="text-sm font-medium w-28">First name</label>
-                      <select
-                        className="border rounded px-2 py-1 text-sm flex-1"
-                        value={firstNameColIndex ?? ''}
-                        onChange={(e) => setFirstNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                      >
-                        <option value="">Select column…</option>
-                        {csvColumns.map((c, i) => (
-                          emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <label className="text-sm font-medium w-28">Last name</label>
-                      <select
-                        className="border rounded px-2 py-1 text-sm flex-1"
-                        value={lastNameColIndex ?? ''}
-                        onChange={(e) => setLastNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                      >
-                        <option value="">Select column…</option>
-                        {csvColumns.map((c, i) => (
-                          emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <label className="inline-flex items-center gap-2">
-                  <input type="radio" className="accent-black" checked={useFullName} onChange={() => setUseFullName(true)} />
-                  <span className="text-sm">Single full name column</span>
-                </label>
-                {useFullName && (
-                  <div className="flex gap-2 items-center">
-                    <label className="text-sm font-medium w-28">Full name</label>
-                    <select
-                      className="border rounded px-2 py-1 text-sm flex-1"
-                      value={fullNameColIndex ?? ''}
-                      onChange={(e) => setFullNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                    >
-                      <option value="">Select column…</option>
-                      {csvColumns.map((c, i) => (
-                        emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
+          <div className="w-[min(92vw,900px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
+            {mappingStep === 'promptKind' && promptColumnIdx != null && (
               <div>
-                <div className="text-xs text-slate-500 mb-1">Preview (first few rows)</div>
-                <div className="max-h-48 overflow-auto border rounded">
+                <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
+                <div className="text-lg font-semibold">We’re having trouble detecting columns</div>
+                <div className="text-sm text-slate-600 mt-1 mb-4">What is this column?</div>
+                <div className="border rounded mb-4 overflow-auto">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th className="text-left px-2 py-1 border-b whitespace-nowrap">{csvColumns[promptColumnIdx] || `Column ${promptColumnIdx + 1}`}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 6).map((r, ri) => (
+                        <tr key={ri} className="odd:bg-slate-50">
+                          <td className="px-2 py-1 border-b whitespace-nowrap">{String(r[promptColumnIdx] || '')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50 active:bg-slate-100"
+                    onClick={() => {
+                      const roles = [...columnRoles];
+                      roles[promptColumnIdx] = 'first';
+                      setColumnRoles(roles);
+                      setPromptColumnIdx(null);
+                      setMappingStep('review');
+                    }}
+                  >
+                    First names
+                  </button>
+                  <button
+                    className="flex-1 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-slate-50 active:bg-slate-100"
+                    onClick={() => {
+                      const roles = [...columnRoles];
+                      roles[promptColumnIdx] = 'last';
+                      setColumnRoles(roles);
+                      setPromptColumnIdx(null);
+                      setMappingStep('review');
+                    }}
+                  >
+                    Last names
+                  </button>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {mappingStep === 'review' && (
+              <div>
+                <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
+                <div className="text-lg font-semibold">Does everything look right?</div>
+                <div className="text-sm text-slate-600 mt-1 mb-4">Adjust each column as needed before importing.</div>
+
+                <div className="overflow-auto border rounded">
                   <table className="min-w-full text-xs">
                     <thead>
                       <tr>
                         {csvColumns.map((c, i) => (
-                          i === emailColIndex ? null : <th key={i} className="text-left px-2 py-1 border-b whitespace-nowrap">{c || `Column ${i + 1}`}</th>
+                          <th key={i} className="text-left px-2 py-2 border-b whitespace-nowrap align-bottom">
+                            <div className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">{c || `Column ${i + 1}`}</div>
+                            {/* custom dropdown */}
+                            <div className="relative inline-block">
+                              <button
+                                className="rounded-md border px-2 py-1 bg-white text-[11px] hover:bg-slate-50"
+                                onClick={() => setOpenDropdownIdx(openDropdownIdx === i ? null : i)}
+                              >
+                                {columnRoles[i] === 'email' ? 'Emails' : columnRoles[i] === 'first' ? 'First names' : columnRoles[i] === 'last' ? 'Last names' : columnRoles[i] === 'full' ? 'Full names' : 'Other'}
+                              </button>
+                              {openDropdownIdx === i && (
+                                <div className="absolute z-10 mt-1 w-40 rounded-md border bg-white shadow-lg">
+                                  {(['first','last','full','email','other'] as ColumnRole[]).map((opt) => (
+                                    <div
+                                      key={opt}
+                                      className={`px-3 py-1.5 text-[11px] cursor-pointer hover:bg-slate-50 ${opt === 'email' ? 'text-slate-400 pointer-events-none' : ''}`}
+                                      onClick={() => {
+                                        if (opt === 'email') return; // email role is fixed by detection
+                                        const roles = [...columnRoles];
+                                        roles[i] = opt;
+                                        setColumnRoles(roles);
+                                        setOpenDropdownIdx(null);
+                                      }}
+                                    >
+                                      {opt === 'first' ? 'First names' : opt === 'last' ? 'Last names' : opt === 'full' ? 'Full names' : opt === 'email' ? 'Emails' : 'Other'}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 5).map((r, ri) => (
+                      {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 10).map((r, ri) => (
                         <tr key={ri} className="odd:bg-slate-50">
                           {csvColumns.map((_, ci) => (
-                            ci === emailColIndex ? null : <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
+                            <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
                           ))}
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
-                <Button onClick={async () => {
-                  if (emailColIndex < 0) { alert('We could not detect an email column.'); return; }
-                  if (!useFullName) {
-                    if (firstNameColIndex == null || lastNameColIndex == null) { alert('Please select both first and last name columns.'); return; }
-                    await performImportFromParsed(csvRows, dataStartRowIndex, emailColIndex, { mode: 'separate', firstIdx: firstNameColIndex, lastIdx: lastNameColIndex });
-                  } else {
-                    if (fullNameColIndex == null) { alert('Please select the full name column.'); return; }
-                    await performImportFromParsed(csvRows, dataStartRowIndex, emailColIndex, { mode: 'full', fullIdx: fullNameColIndex });
-                  }
-                  setMappingOpen(false);
-                  setImporting(false);
-                }}>Import</Button>
+                <div className="flex justify-end gap-2 pt-3">
+                  <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
+                  <Button onClick={async () => {
+                    try {
+                      await performImportWithRoles(csvRows, dataStartRowIndex, columnRoles);
+                      setMappingOpen(false);
+                      setImporting(false);
+                    } catch (e) {
+                      alert('Please finish mapping before importing.');
+                    }
+                  }}>Import</Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </Modal>
       )}
