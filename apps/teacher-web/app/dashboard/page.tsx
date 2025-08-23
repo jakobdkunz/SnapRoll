@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Button, Card, TextInput } from '@snaproll/ui';
+import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -154,20 +154,13 @@ export default function DashboardPage() {
         load(teacherId);
       }}>+ Create New Section</Button>
 
-      {/* Customize Modal */}
-      {customizeModal.open && customizeModal.section && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+      <Modal open={customizeModal.open && !!customizeModal.section} onClose={() => setCustomizeModal({ open: false, section: null })}>
+        {customizeModal.section && (
+          <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Customize Section</h2>
-              <button
-                onClick={() => setCustomizeModal({ open: false, section: null })}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                ✕
-              </button>
+              <button onClick={() => setCustomizeModal({ open: false, section: null })} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
-            
             <CustomizeModal 
               section={customizeModal.section}
               gradients={gradients}
@@ -175,8 +168,8 @@ export default function DashboardPage() {
               onCancel={() => setCustomizeModal({ open: false, section: null })}
             />
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
