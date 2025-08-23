@@ -390,7 +390,7 @@ export default function HistoryPage() {
         <select
           value={status}
           onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
-          className="absolute inset-0 opacity-0 appearance-none bg-transparent border-none cursor-pointer w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          className="absolute inset-0 z-10 opacity-0 appearance-none bg-transparent border-none cursor-pointer w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
           aria-label="Change attendance status"
           onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
           onMouseLeave={hideTooltip}
@@ -407,7 +407,7 @@ export default function HistoryPage() {
             </option>
           ))}
         </select>
-        <div className="absolute inset-0 pointer-events-none flex items-center justify-center group-hover:brightness-95">
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center group-hover:brightness-95">
           {statusDisplay}
         </div>
       </div>

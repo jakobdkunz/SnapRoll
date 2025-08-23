@@ -15,16 +15,42 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const localMidnight = new Date(localNow.getFullYear(), localNow.getMonth(), localNow.getDate());
     const todayStartUtc = new Date(localMidnight.getTime() + tzMinutes * 60 * 1000);
 
-    // Only the most recent class day prior to today
-    const prior = await prisma.classDay.findFirst({
+    // All prior class days
+    const priorDays = await prisma.classDay.findMany({
+      where: { sectionId, date: { lt: todayStartUtc } },
+      orderBy: { date: 'asc' },
+      select: { id: true, date: true },
+    });
+    if (priorDays.length === 0) {
+      return NextResponse.json({ created: 0 });
+    }
+
+    const priorIds = priorDays.map(d => d.id);
+    const [existingAttendance, existingManual] = await Promise.all([
+      prisma.attendanceRecord.findMany({ where: { classDayId: { in: priorIds } }, select: { classDayId: true } }),
+      prisma.manualStatusChange.findMany({ where: { classDayId: { in: priorIds } }, select: { classDayId: true } }),
+    ]);
+    const daysWithAttendance = new Set(existingAttendance.map(a => a.classDayId));
+    const daysWithManual = new Set(existingManual.map(m => m.classDayId));
+
+    // Delete any prior day that has no attendance and no manual change (all BLANKs)
+    const blankOnlyIds = priorDays
+      .map(d => d.id)
+      .filter(id => !daysWithAttendance.has(id) && !daysWithManual.has(id));
+    if (blankOnlyIds.length > 0) {
+      await prisma.classDay.deleteMany({ where: { id: { in: blankOnlyIds } } });
+    }
+
+    // Recompute latest remaining prior day after deletions
+    const latestPrior = await prisma.classDay.findFirst({
       where: { sectionId, date: { lt: todayStartUtc } },
       orderBy: { date: 'desc' },
       select: { id: true },
     });
-    if (!prior) {
+    if (!latestPrior) {
       return NextResponse.json({ created: 0 });
     }
-    const classDayIds = [prior.id];
+    const classDayIds = [latestPrior.id];
 
     // All enrolled students for the section
     const enrollments = await prisma.enrollment.findMany({
