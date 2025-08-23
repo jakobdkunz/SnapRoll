@@ -1,7 +1,7 @@
 "use client";
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Button, Card, TextInput, Skeleton } from '@snaproll/ui';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, TextInput, Skeleton, Modal } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare } from 'react-icons/hi2';
@@ -25,6 +25,17 @@ export default function ModifyPage() {
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+
+  // CSV mapping modal state
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [csvColumns, setCsvColumns] = useState<string[]>([]);
+  const [csvRows, setCsvRows] = useState<string[][]>([]);
+  const [dataStartRowIndex, setDataStartRowIndex] = useState(0);
+  const [emailColIndex, setEmailColIndex] = useState<number>(-1);
+  const [useFullName, setUseFullName] = useState(false);
+  const [firstNameColIndex, setFirstNameColIndex] = useState<number | null>(null);
+  const [lastNameColIndex, setLastNameColIndex] = useState<number | null>(null);
+  const [fullNameColIndex, setFullNameColIndex] = useState<number | null>(null);
 
   async function load() {
     try {
@@ -155,60 +166,69 @@ export default function ModifyPage() {
     setImportMessage(null);
     setImporting(true);
     try {
-      const parsed = await new Promise<Papa.ParseResult<Record<string, unknown>>>((resolve, reject) => {
-        Papa.parse<Record<string, unknown>>(file, { header: true, skipEmptyLines: true, complete: resolve, error: reject });
+      const parsed = await new Promise<Papa.ParseResult<string[][]>>((resolve, reject) => {
+        Papa.parse<string[]>(file, { header: false, skipEmptyLines: true, complete: (res) => resolve(res as unknown as Papa.ParseResult<string[][]>), error: reject });
       });
-      const rows: Record<string, string>[] = (parsed.data as Record<string, unknown>[]).map((r) => (r || {} as unknown) as Record<string, string>);
-      if (rows.length === 0) {
+      const allRows: string[][] = (parsed.data as unknown as string[][]).map((r) => (Array.isArray(r) ? r : []));
+      if (allRows.length === 0) {
         alert('No rows found in CSV.');
         return;
       }
-      // Determine email column: first column where any row contains @
-      const headers = parsed.meta.fields || Object.keys(rows[0] || {});
-      const emailHeader = headers.find((h) => rows.some((r) => String(r[h] || '').includes('@')));
-      if (!emailHeader) {
+      const maxCols = allRows.reduce((m, r) => Math.max(m, r.length), 0);
+      // detect email column as the column with the most valid-looking emails
+      const emailScores = new Array(maxCols).fill(0).map((_, c) =>
+        allRows.reduce((count, r) => {
+          const v = String(r[c] || '').trim().toLowerCase();
+          return count + (isValidEmail(v) ? 1 : 0);
+        }, 0)
+      );
+      const bestEmailIdx = emailScores.reduce((best, score, idx) => (score > emailScores[best] ? idx : best), 0);
+      if (emailScores[bestEmailIdx] === 0) {
         alert('Could not find an email column (no values with @).');
         return;
       }
-      // Try to find first and last name columns
-      const lowerHeaders = headers.map((h) => h.toLowerCase());
-      const firstHeader = headers[lowerHeaders.findIndex((h) => /first/.test(h))] || null;
-      const lastHeader = headers[lowerHeaders.findIndex((h) => /last/.test(h))] || null;
-      const nameHeader = headers[lowerHeaders.findIndex((h) => /(name|full)/.test(h))] || null;
-
-      let added = 0;
-      for (const row of rows) {
-        const emailVal = String(row[emailHeader] || '').trim().toLowerCase();
-        if (!isValidEmail(emailVal)) continue;
-        let first = '';
-        let last = '';
-        if (firstHeader && lastHeader) {
-          first = String(row[firstHeader] || '').trim();
-          last = String(row[lastHeader] || '').trim();
-        } else if (nameHeader) {
-          const guess = guessNameParts(String(row[nameHeader] || ''));
-          first = guess.firstName; last = guess.lastName;
-        } else {
-          const beforeAt = emailVal.split('@')[0].replace(/[._-]+/g, ' ');
-          const guess = guessNameParts(beforeAt);
-          first = guess.firstName; last = guess.lastName;
+      const firstRow = allRows[0] || [];
+      const firstRowHasEmail = isValidEmail(String(firstRow[bestEmailIdx] || '').trim().toLowerCase());
+      // If first row has an email, it's data; otherwise, it might be headers
+      const startIndex = firstRowHasEmail ? 0 : 1;
+      // Create column labels
+      const inferredColumns: string[] = [];
+      if (!firstRowHasEmail) {
+        for (let c = 0; c < maxCols; c += 1) {
+          inferredColumns.push(String(firstRow[c] || `Column ${c + 1}`));
         }
-        if (!first && !last) {
-          const guess = guessNameParts(emailVal.split('@')[0]);
-          first = guess.firstName; last = guess.lastName;
-        }
-        try {
-          await apiFetch(`/api/sections/${params.id}/students`, {
-            method: 'POST',
-            body: JSON.stringify({ email: emailVal, firstName: first || 'Student', lastName: last || '' }),
-          });
-          added += 1;
-        } catch (_ignored) {
-          // continue with others
+      } else {
+        for (let c = 0; c < maxCols; c += 1) {
+          inferredColumns.push(`Column ${c + 1}`);
         }
       }
+
+      // Try to auto-detect names from headers if present
+      const lowerHeaders = inferredColumns.map((h) => String(h).toLowerCase());
+      const autoFirstIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)first(\b|name)/.test(h)) : -1;
+      const autoLastIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(^|\b)last(\b|name)/.test(h)) : -1;
+      const autoFullIdx = !firstRowHasEmail ? lowerHeaders.findIndex((h) => /(full\s*name|name)/.test(h)) : -1;
+
+      // If we have clear first & last, import immediately; if we have clear full name, import immediately; else prompt mapping
+      if (autoFirstIdx >= 0 && autoLastIdx >= 0 && autoFirstIdx !== autoLastIdx) {
+        await performImportFromParsed(allRows, startIndex, bestEmailIdx, { mode: 'separate', firstIdx: autoFirstIdx, lastIdx: autoLastIdx });
+      } else if (autoFullIdx >= 0 && autoFullIdx !== bestEmailIdx) {
+        await performImportFromParsed(allRows, startIndex, bestEmailIdx, { mode: 'full', fullIdx: autoFullIdx });
+      } else {
+        // open modal to map
+        setCsvColumns(inferredColumns);
+        setCsvRows(allRows);
+        setDataStartRowIndex(startIndex);
+        setEmailColIndex(bestEmailIdx);
+        setUseFullName(false);
+        setFirstNameColIndex(null);
+        setLastNameColIndex(null);
+        setFullNameColIndex(null);
+        setMappingOpen(true);
+        return; // keep importing state true; confirm will continue
+      }
       await load();
-      setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
+      setImportMessage('Import complete.');
     } catch (_ignored) {
       alert('Failed to import CSV.');
     } finally {
@@ -216,6 +236,45 @@ export default function ModifyPage() {
       // reset input value so the same file can be chosen again
       e.target.value = '';
     }
+  }
+
+  async function performImportFromParsed(
+    allRows: string[][],
+    startIndex: number,
+    emailIdx: number,
+    mapping: { mode: 'separate'; firstIdx: number; lastIdx: number } | { mode: 'full'; fullIdx: number }
+  ) {
+    let added = 0;
+    for (let i = startIndex; i < allRows.length; i += 1) {
+      const row = allRows[i] || [];
+      const emailVal = String(row[emailIdx] || '').trim().toLowerCase();
+      if (!isValidEmail(emailVal)) continue;
+      let first = '';
+      let last = '';
+      if (mapping.mode === 'separate') {
+        first = String(row[mapping.firstIdx] || '').trim();
+        last = String(row[mapping.lastIdx] || '').trim();
+      } else {
+        const guess = guessNameParts(String(row[mapping.fullIdx] || ''));
+        first = guess.firstName; last = guess.lastName;
+      }
+      if (!first && !last) {
+        const beforeAt = emailVal.split('@')[0].replace(/[._-]+/g, ' ');
+        const guess = guessNameParts(beforeAt);
+        first = guess.firstName; last = guess.lastName;
+      }
+      try {
+        await apiFetch(`/api/sections/${params.id}/students`, {
+          method: 'POST',
+          body: JSON.stringify({ email: emailVal, firstName: first || 'Student', lastName: last || '' }),
+        });
+        added += 1;
+      } catch (_ignored) {
+        // continue
+      }
+    }
+    await load();
+    setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
   }
 
   return (
@@ -292,6 +351,125 @@ export default function ModifyPage() {
           <Button className="w-full sm:w-auto" onClick={handleAdd}>Add Student</Button>
         </div>
       </Card>
+      {/* Mapping Modal */}
+      {mappingOpen && (
+        <Modal open={mappingOpen} onClose={() => { setMappingOpen(false); setImporting(false); }}>
+          <div className="w-[min(92vw,680px)]">
+            <div className="text-lg font-medium mb-2">Map name columns</div>
+            <div className="text-sm text-slate-600 mb-4">
+              We found an email column automatically. Please tell us how to read names.
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-2 items-center">
+                <label className="text-sm font-medium w-32">Email</label>
+                <select
+                  className="border rounded px-2 py-1 text-sm flex-1"
+                  value={emailColIndex}
+                  onChange={(e) => setEmailColIndex(Number(e.target.value))}
+                >
+                  {csvColumns.map((c, i) => (
+                    <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4 items-start">
+                <label className="inline-flex items-center gap-2">
+                  <input type="radio" className="accent-black" checked={!useFullName} onChange={() => setUseFullName(false)} />
+                  <span className="text-sm">Separate first and last name columns</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input type="radio" className="accent-black" checked={useFullName} onChange={() => setUseFullName(true)} />
+                  <span className="text-sm">Single full name column</span>
+                </label>
+              </div>
+
+              {!useFullName ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex gap-2 items-center">
+                    <label className="text-sm font-medium w-32">First name</label>
+                    <select
+                      className="border rounded px-2 py-1 text-sm flex-1"
+                      value={firstNameColIndex ?? ''}
+                      onChange={(e) => setFirstNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                    >
+                      <option value="">Select column…</option>
+                      {csvColumns.map((c, i) => (
+                        <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <label className="text-sm font-medium w-32">Last name</label>
+                    <select
+                      className="border rounded px-2 py-1 text-sm flex-1"
+                      value={lastNameColIndex ?? ''}
+                      onChange={(e) => setLastNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                    >
+                      <option value="">Select column…</option>
+                      {csvColumns.map((c, i) => (
+                        <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2 items-center">
+                  <label className="text-sm font-medium w-32">Full name</label>
+                  <select
+                    className="border rounded px-2 py-1 text-sm flex-1"
+                    value={fullNameColIndex ?? ''}
+                    onChange={(e) => setFullNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                  >
+                    <option value="">Select column…</option>
+                    {csvColumns.map((c, i) => (
+                      <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="text-xs text-slate-500">Preview of first few data rows</div>
+              <div className="max-h-48 overflow-auto border rounded">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr>
+                      {csvColumns.map((c, i) => (
+                        <th key={i} className="text-left px-2 py-1 border-b whitespace-nowrap">{c || `Column ${i + 1}`}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 5).map((r, ri) => (
+                      <tr key={ri} className="odd:bg-slate-50">
+                        {csvColumns.map((_, ci) => (
+                          <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
+                <Button onClick={async () => {
+                  if (emailColIndex < 0) { alert('Please select the email column.'); return; }
+                  if (!useFullName) {
+                    if (firstNameColIndex == null || lastNameColIndex == null) { alert('Please select both first and last name columns.'); return; }
+                    await performImportFromParsed(csvRows, dataStartRowIndex, emailColIndex, { mode: 'separate', firstIdx: firstNameColIndex, lastIdx: lastNameColIndex });
+                  } else {
+                    if (fullNameColIndex == null) { alert('Please select the full name column.'); return; }
+                    await performImportFromParsed(csvRows, dataStartRowIndex, emailColIndex, { mode: 'full', fullIdx: fullNameColIndex });
+                  }
+                  setMappingOpen(false);
+                  setImporting(false);
+                }}>Import</Button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
