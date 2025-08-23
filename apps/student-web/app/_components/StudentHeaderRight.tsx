@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
+import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
@@ -64,12 +65,17 @@ export function StudentHeaderRight() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition">
+      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
+        <HiOutlineUserCircle className="h-5 w-5" />
         {name || 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-        <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50" onClick={() => { setOpen(false); setProfileOpen(true); }}>My Profile</button>
-        <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50">Log Out</button>
+        <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
+          <HiOutlineUserCircle className="h-4 w-4" /> My Profile
+        </button>
+        <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
+          <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Log Out
+        </button>
       </div>
 
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)}>
