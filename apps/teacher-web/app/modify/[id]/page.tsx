@@ -354,107 +354,99 @@ export default function ModifyPage() {
       {/* Mapping Modal */}
       {mappingOpen && (
         <Modal open={mappingOpen} onClose={() => { setMappingOpen(false); setImporting(false); }}>
-          <div className="w-[min(92vw,680px)]">
-            <div className="text-lg font-medium mb-2">Map name columns</div>
-            <div className="text-sm text-slate-600 mb-4">
-              We found an email column automatically. Please tell us how to read names.
+          <div className="w-[min(92vw,720px)] bg-white rounded-xl shadow-xl p-4 sm:p-6">
+            <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
+            <div className="text-lg font-semibold">Help us map the name columns</div>
+            <div className="text-sm text-slate-600 mt-1 mb-4">
+              We detected the email column automatically. Choose how first and last names are provided.
             </div>
-            <div className="space-y-3">
-              <div className="flex gap-2 items-center">
-                <label className="text-sm font-medium w-32">Email</label>
-                <select
-                  className="border rounded px-2 py-1 text-sm flex-1"
-                  value={emailColIndex}
-                  onChange={(e) => setEmailColIndex(Number(e.target.value))}
-                >
-                  {csvColumns.map((c, i) => (
-                    <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                  ))}
-                </select>
-              </div>
 
-              <div className="flex gap-4 items-start">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-3">
                 <label className="inline-flex items-center gap-2">
                   <input type="radio" className="accent-black" checked={!useFullName} onChange={() => setUseFullName(false)} />
-                  <span className="text-sm">Separate first and last name columns</span>
+                  <span className="text-sm">Separate columns for first and last name</span>
                 </label>
+                {!useFullName && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex gap-2 items-center">
+                      <label className="text-sm font-medium w-28">First name</label>
+                      <select
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                        value={firstNameColIndex ?? ''}
+                        onChange={(e) => setFirstNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                      >
+                        <option value="">Select column…</option>
+                        {csvColumns.map((c, i) => (
+                          emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex gap-2 items-center">
+                      <label className="text-sm font-medium w-28">Last name</label>
+                      <select
+                        className="border rounded px-2 py-1 text-sm flex-1"
+                        value={lastNameColIndex ?? ''}
+                        onChange={(e) => setLastNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                      >
+                        <option value="">Select column…</option>
+                        {csvColumns.map((c, i) => (
+                          emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <label className="inline-flex items-center gap-2">
                   <input type="radio" className="accent-black" checked={useFullName} onChange={() => setUseFullName(true)} />
                   <span className="text-sm">Single full name column</span>
                 </label>
+                {useFullName && (
+                  <div className="flex gap-2 items-center">
+                    <label className="text-sm font-medium w-28">Full name</label>
+                    <select
+                      className="border rounded px-2 py-1 text-sm flex-1"
+                      value={fullNameColIndex ?? ''}
+                      onChange={(e) => setFullNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
+                    >
+                      <option value="">Select column…</option>
+                      {csvColumns.map((c, i) => (
+                        emailColIndex === i ? null : <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
-              {!useFullName ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex gap-2 items-center">
-                    <label className="text-sm font-medium w-32">First name</label>
-                    <select
-                      className="border rounded px-2 py-1 text-sm flex-1"
-                      value={firstNameColIndex ?? ''}
-                      onChange={(e) => setFirstNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                    >
-                      <option value="">Select column…</option>
-                      {csvColumns.map((c, i) => (
-                        <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <label className="text-sm font-medium w-32">Last name</label>
-                    <select
-                      className="border rounded px-2 py-1 text-sm flex-1"
-                      value={lastNameColIndex ?? ''}
-                      onChange={(e) => setLastNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                    >
-                      <option value="">Select column…</option>
-                      {csvColumns.map((c, i) => (
-                        <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex gap-2 items-center">
-                  <label className="text-sm font-medium w-32">Full name</label>
-                  <select
-                    className="border rounded px-2 py-1 text-sm flex-1"
-                    value={fullNameColIndex ?? ''}
-                    onChange={(e) => setFullNameColIndex(e.target.value === '' ? null : Number(e.target.value))}
-                  >
-                    <option value="">Select column…</option>
-                    {csvColumns.map((c, i) => (
-                      <option key={i} value={i}>{c || `Column ${i + 1}`}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="text-xs text-slate-500">Preview of first few data rows</div>
-              <div className="max-h-48 overflow-auto border rounded">
-                <table className="min-w-full text-xs">
-                  <thead>
-                    <tr>
-                      {csvColumns.map((c, i) => (
-                        <th key={i} className="text-left px-2 py-1 border-b whitespace-nowrap">{c || `Column ${i + 1}`}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 5).map((r, ri) => (
-                      <tr key={ri} className="odd:bg-slate-50">
-                        {csvColumns.map((_, ci) => (
-                          <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
+              <div>
+                <div className="text-xs text-slate-500 mb-1">Preview (first few rows)</div>
+                <div className="max-h-48 overflow-auto border rounded">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr>
+                        {csvColumns.map((c, i) => (
+                          i === emailColIndex ? null : <th key={i} className="text-left px-2 py-1 border-b whitespace-nowrap">{c || `Column ${i + 1}`}</th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 5).map((r, ri) => (
+                        <tr key={ri} className="odd:bg-slate-50">
+                          {csvColumns.map((_, ci) => (
+                            ci === emailColIndex ? null : <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }}>Cancel</Button>
                 <Button onClick={async () => {
-                  if (emailColIndex < 0) { alert('Please select the email column.'); return; }
+                  if (emailColIndex < 0) { alert('We could not detect an email column.'); return; }
                   if (!useFullName) {
                     if (firstNameColIndex == null || lastNameColIndex == null) { alert('Please select both first and last name columns.'); return; }
                     await performImportFromParsed(csvRows, dataStartRowIndex, emailColIndex, { mode: 'separate', firstIdx: firstNameColIndex, lastIdx: lastNameColIndex });
