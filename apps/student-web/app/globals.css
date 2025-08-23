@@ -17,4 +17,7 @@ body { @apply bg-slate-50 text-slate-900; }
   .gradient-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
   .gradient-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
   .gradient-6 { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+  .gradient-7 { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+  .gradient-8 { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); }
+  .gradient-9 { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
 }
