@@ -684,10 +684,10 @@ export default function ModifyPage() {
       )}
       {toastVisible && (
         <div className="fixed bottom-4 left-4 z-[60]">
-          <div className="bg-slate-900 text-white rounded-lg shadow-lg px-4 py-3 flex items-center gap-3">
+          <div className="bg-white text-slate-900 border border-slate-200 rounded-xl shadow-soft px-4 py-3 flex items-center gap-3">
             <span className="text-sm">{toastMessage}</span>
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={async () => {
                 setToastVisible(false);
                 if (!lastAction) return;
