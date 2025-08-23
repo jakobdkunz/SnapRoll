@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Card, Badge, Button, Skeleton } from '@snaproll/ui';
+import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { formatDateMDY } from '@snaproll/lib';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams } from 'next/navigation';
@@ -58,6 +58,10 @@ export default function HistoryPage() {
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
     { visible: false, text: '', anchorX: 0, anchorY: 0 }
   );
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const finalizeOnceRef = useRef(false);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -135,6 +139,16 @@ export default function HistoryPage() {
     const reqId = ++requestIdRef.current;
     setIsFetching(true);
     try {
+      // Ensure blanks are finalized to ABSENT prior to first history load for accurate totals
+      if (!finalizeOnceRef.current) {
+        try {
+          await apiFetch(`/api/sections/${params.id}/finalize-blanks`, { method: 'POST' });
+        } catch {
+          /* ignore finalize errors */
+        } finally {
+          finalizeOnceRef.current = true;
+        }
+      }
       const data = await apiFetch<{ 
         students: Student[]; 
         days: Day[]; 
@@ -215,7 +229,7 @@ export default function HistoryPage() {
     };
   }, [params.id, offset, limit, loadHistory]);
 
-  // Schedule a reload at next local midnight to add a new day column
+  // Schedule finalize + reload at next local midnight to add a new day column
   useEffect(() => {
     function msUntilNextMidnight() {
       const now = new Date();
@@ -226,6 +240,9 @@ export default function HistoryPage() {
     function schedule() {
       const ms = msUntilNextMidnight();
       timeout = window.setTimeout(async () => {
+        try {
+          await apiFetch(`/api/sections/${params.id}/finalize-blanks`, { method: 'POST' });
+        } catch {/* ignore finalize at midnight */}
         await loadHistory(offset, limit);
         schedule();
       }, ms + 100);
@@ -235,6 +252,32 @@ export default function HistoryPage() {
       if (timeout) window.clearTimeout(timeout);
     };
   }, [params.id, offset, limit, loadHistory]);
+
+  const startExport = useCallback(async () => {
+    try {
+      setExportError(null);
+      setExportOpen(true);
+      setExporting(true);
+      // Use native fetch to retrieve CSV as a Blob
+      const res = await fetch(`/api/sections/${params.id}/export`, { method: 'GET' });
+      if (!res.ok) throw new Error(`Export failed (${res.status})`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'attendance.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setExporting(false);
+      setExportOpen(false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      setExportError(message);
+      setExporting(false);
+    }
+  }, [params.id]);
 
   // (duplicate removed)
 
@@ -405,7 +448,7 @@ export default function HistoryPage() {
             : 'Loading…'}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={() => exportCsv()}>
+          <Button variant="ghost" onClick={() => startExport()}>
             Export CSV
           </Button>
           <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
@@ -463,41 +506,23 @@ export default function HistoryPage() {
       )}
       </div>
       <TooltipOverlay />
+      {/* Export modal */}
+      <Modal open={exportOpen} onClose={() => (exporting ? null : setExportOpen(false))}>
+        <Card className="p-6 w-[90vw] max-w-md space-y-4">
+          <div className="text-lg font-semibold">Export Attendance</div>
+          {exportError ? (
+            <div className="text-sm text-red-600">{exportError}</div>
+          ) : (
+            <div className="text-sm text-slate-600">Preparing CSV for all days. This may take a moment…</div>
+          )}
+          <div className="h-2 w-full bg-slate-200 rounded overflow-hidden">
+            <div className={`h-full bg-slate-600 ${exporting ? 'animate-pulse' : ''}`} style={{ width: '60%' }} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setExportOpen(false)} disabled={exporting}>Close</Button>
+          </div>
+        </Card>
+      </Modal>
     </Card>
   );
-}
-
-function exportCsv() {
-  try {
-    const rows: string[] = [];
-    // headers
-    const header = ['Student', 'Email'];
-    // Fallback: pull from table DOM
-    const ths = Array.from(document.querySelectorAll('table thead th')) as HTMLTableCellElement[];
-    const dates = ths.slice(1).map((th) => th.textContent?.trim() || '');
-    rows.push([...header, ...dates].join(','));
-    const trs = Array.from(document.querySelectorAll('table tbody tr')) as HTMLTableRowElement[];
-    for (const tr of trs) {
-      const tds = Array.from(tr.querySelectorAll('td')) as HTMLTableCellElement[];
-      const name = tds[0]?.querySelector('div.font-medium')?.textContent?.trim() || '';
-      const email = tds[0]?.querySelector('div.text-xs')?.textContent?.trim() || '';
-      const vals: string[] = [name, email];
-      for (let i = 1; i < tds.length; i++) {
-        const txt = tds[i].textContent?.trim() || '';
-        vals.push(`"${txt.replace(/"/g, '""')}"`);
-      }
-      rows.push(vals.join(','));
-    }
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'attendance.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (e) {
-    console.error('Export failed', e);
-  }
 }
