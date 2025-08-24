@@ -43,8 +43,13 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     return () => { mounted = false; window.clearInterval(id); };
   }, [sessionId]);
 
-  const base = getApiBaseUrl();
-  const fileUrl = useMemo(() => (details ? `${base}${details.filePath}` : ''), [details, base]);
+  const fileUrl = useMemo(() => {
+    if (!details) return '';
+    let path = details.filePath;
+    if (/^https\/\//i.test(path)) path = path.replace(/^https\/\//i, 'https://');
+    if (/^http\/\//i.test(path)) path = path.replace(/^http\/\//i, 'http://');
+    return /^https?:\/\//i.test(path) ? path : `${getApiBaseUrl()}${path}`;
+  }, [details]);
   const pageUrl = useMemo(() => {
     if (!details) return '';
     const page = Math.max(1, details.currentSlide || 1);
@@ -55,6 +60,12 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
 
   const isPdf = /pdf/i.test(details.mimeType);
+  const isPpt = /(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath);
+  const officeEmbedUrl = useMemo(() => {
+    if (!isPpt) return '';
+    const src = encodeURIComponent(fileUrl);
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${src}`;
+  }, [isPpt, fileUrl]);
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -66,6 +77,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       <div className="flex-1 min-h-0">
         {isPdf ? (
           <iframe title="slides" src={pageUrl} className="w-full h-full border-0" />
+        ) : isPpt ? (
+          <iframe title="slides" src={officeEmbedUrl} className="w-full h-full border-0" />
         ) : (
           <div className="h-full grid place-items-center p-6">
             <Card className="p-6 text-center max-w-lg">
