@@ -58,7 +58,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const palette = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-  const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string; scale: number; targetScale: number }>>({});
+  const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string; scale: number; targetScale: number; count: number }>>({});
   const globalScaleRef = useRef<number>(1);
   const rafId = useRef<number | null>(null);
   const containerSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -88,16 +88,20 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const base = 0.8;
         const amp = 1.8;
         const target = shrink * (base + ratio * amp);
+        // random initial impulse (polar) to avoid vertical-only separation
+        const theta = Math.random() * Math.PI * 2;
+        const speed = 60 + Math.random() * 80; // px/s
         map[w.word] = {
           x: cx + (Math.random() - 0.5) * 6,
           y: cy + (Math.random() - 0.5) * 6,
-          vx: (Math.random() - 0.5) * 2,
-          vy: (Math.random() - 0.5) * 2,
+          vx: Math.cos(theta) * speed,
+          vy: Math.sin(theta) * speed,
           w: 40,
           h: 20,
           color,
           scale: Math.max(0.6, target * 0.7),
           targetScale: target,
+          count: w.count,
         };
       }
     }
@@ -112,7 +116,14 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const ratio = w.count / maxCountLocal;
       const base = 0.8;
       const amp = 1.8;
-      n.targetScale = shrink * (base + ratio * amp);
+      const computed = shrink * (base + ratio * amp);
+      // If this word's count increased, ensure a visible bump above current scale
+      if (w.count > n.count) {
+        n.targetScale = Math.max(computed, n.scale + 0.12);
+      } else {
+        n.targetScale = computed;
+      }
+      n.count = w.count;
     }
   }, [words]);
 
