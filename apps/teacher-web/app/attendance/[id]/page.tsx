@@ -25,6 +25,7 @@ export default function AttendancePage() {
   const prevCodeRef = useRef<string | null>(null);
   const startedOnLoadRef = useRef(false);
   const [codePulse, setCodePulse] = useState(false);
+  const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
 
   const loadStatus = useCallback(async () => {
     try {
@@ -87,6 +88,19 @@ export default function AttendancePage() {
     }
   }, [status?.hasActiveAttendance, loadStatus]);
 
+  // Load section gradient for background
+  useEffect(() => {
+    async function loadSection() {
+      try {
+        const res = await apiFetch<{ section: { gradient: string } }>(`/api/sections/${params.id}`);
+        if (res?.section?.gradient) setSectionGradient(res.section.gradient);
+      } catch (_err) {
+        // ignore, fallback stays
+      }
+    }
+    loadSection();
+  }, [params.id]);
+
   // At local midnight, automatically start a new attendance day and reset progress
   useEffect(() => {
     function msUntilNextMidnight() {
@@ -110,7 +124,19 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="min-h-dvh grid place-items-center px-4 py-8 bg-gradient-to-br from-indigo-50 via-white to-emerald-50">
+    <div className="relative min-h-dvh grid place-items-center px-4 py-8 overflow-hidden">
+      {/* Animated, washed-out section gradient background */}
+      <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.18 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/50" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-20 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.25), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.25), transparent)' }} />
+      <style jsx>{`
+        @keyframes gradient_drift {
+          0% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+          100% { transform: translate3d(0,0,0); }
+        }
+      `}</style>
+      <div className="relative z-10 grid place-items-center gap-6 w-full">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
         <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
         {!status ? (
@@ -138,41 +164,35 @@ export default function AttendancePage() {
         )}
       </Card>
 
-      {(!status || status.hasActiveAttendance) && (
-        <Card className="p-6 w-full max-w-xl">
-          {status ? (
-            <>
-              <div className="text-center mb-4">
-                <div className="text-lg font-medium">Attendance Progress</div>
-                <div className="text-2xl font-bold text-primary">
-                  {status.checkedIn}/{status.totalStudents}
-                </div>
-                <div className="text-sm text-slate-500">students checked in</div>
+      <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
+        {status ? (
+          <>
+            <div className="text-center mb-4">
+              <div className="text-2xl font-bold text-primary">
+                {status.checkedIn}/{status.totalStudents}
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-3 mb-2">
-                <div 
-                  className="bg-primary h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${status.progress}%` }}
-                />
+              <div className="text-sm text-slate-500">students checked in</div>
+            </div>
+            <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
+              <div 
+                className="bg-primary h-5 rounded-full transition-all duration-300"
+                style={{ width: `${status.progress}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-center mb-4">
+              <div className="mt-2 grid place-items-center gap-2">
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-4 w-40" />
               </div>
-              <div className="text-center text-sm text-slate-600">
-                {status.progress}% complete
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-center mb-4">
-                <div className="text-lg font-medium">Attendance Progress</div>
-                <div className="mt-2 grid place-items-center gap-2">
-                  <Skeleton className="h-6 w-24" />
-                  <Skeleton className="h-4 w-40" />
-                </div>
-              </div>
-              <Skeleton className="w-full h-3 rounded-full" />
-            </>
-          )}
-        </Card>
-      )}
+            </div>
+            <Skeleton className="w-full h-5 rounded-full" />
+          </>
+        )}
+      </Card>
+      </div>
     </div>
   );
 }
