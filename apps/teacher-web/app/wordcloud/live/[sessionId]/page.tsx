@@ -152,7 +152,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const wordsList = words.map((w) => w.word);
       const dt = 0.016;
       const baseK = 0.08;
-      const centerK = baseK + 0.04 * Math.min(1, wordsList.length / 20);
+      const centerK = baseK + 0.06 * Math.min(1, wordsList.length / 20);
       const wallMargin = 48;
       const wallK = 0.002;
       const spacing = 6; // extra padding between words
@@ -166,7 +166,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const dxC = cx - a.x;
         const dyC = cy - a.y;
         const distC2 = Math.max(25, dxC * dxC + dyC * dyC);
-        const grav = 28 / distC2;
+        const grav = 36 / distC2;
         a.vx += dxC * centerK * dt + dxC * grav * dt;
         a.vy += dyC * centerK * dt + dyC * grav * dt;
         // Radial outward velocity damping to curb edge drift
@@ -272,6 +272,24 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         n.vy *= 0.9;
         n.x += n.vx * dt * 1.2;
         n.y += n.vy * dt * 1.2;
+        // Hard circular clamp to keep words toward center
+        {
+          const dx = n.x - cx;
+          const dy = n.y - cy;
+          const r = Math.hypot(dx, dy);
+          const Rmax = 0.43 * Math.min(W, H);
+          if (r > Rmax) {
+            const ux = dx / r;
+            const uy = dy / r;
+            n.x = cx + ux * Rmax;
+            n.y = cy + uy * Rmax;
+            const vOut = n.vx * ux + n.vy * uy;
+            if (vOut > 0) {
+              n.vx -= vOut * ux;
+              n.vy -= vOut * uy;
+            }
+          }
+        }
         // Smooth scale animation towards target
         n.scale += (n.targetScale - n.scale) * 0.18;
         // Keep fully inside bounds based on measured size
