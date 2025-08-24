@@ -14,11 +14,17 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
   const [allowMultiple, setAllowMultiple] = useState(false);
 
   async function start() {
-    const { session } = await apiFetch<{ session: { id: string } }>(`/api/sections/${sectionId}/wordcloud/start`, {
-      method: 'POST',
-      body: JSON.stringify({ prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple }),
-    });
-    router.push(`/wordcloud/live/${session.id}`);
+    try {
+      const { session } = await apiFetch<{ session: { id: string } }>(`/api/sections/${sectionId}/wordcloud/start`, {
+        method: 'POST',
+        body: JSON.stringify({ prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple }),
+      });
+      setOpen(false);
+      // delay to allow modal animation to dismiss before navigating
+      setTimeout(() => router.push(`/wordcloud/live/${session.id}`), 120);
+    } catch (e) {
+      alert('Failed to start word cloud. Please try again.');
+    }
   }
 
   return (
