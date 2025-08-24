@@ -210,6 +210,7 @@ export default function DashboardPage() {
                           }}
                           aria-haspopup="menu"
                           aria-expanded={openMenuFor === s.id}
+                          data-activities-trigger={s.id}
                         >
                           <HiOutlineSparkles className="h-5 w-5" /> Activities
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
@@ -223,14 +224,18 @@ export default function DashboardPage() {
                               aria-label="Activities"
                               ref={(el) => {
                                 if (!el) return;
-                                const btn = el.parentElement?.querySelector('[aria-haspopup="menu"]') as HTMLElement | null;
+                                const btn = document.querySelector(`[data-activities-trigger="${s.id}"]`) as HTMLElement | null;
                                 const rect = btn?.getBoundingClientRect();
                                 const vw = window.innerWidth;
                                 const vh = window.innerHeight;
                                 if (rect) {
                                   const spaceBelow = vh - rect.bottom;
-                                  const top = spaceBelow < 220 ? Math.max(8, rect.top - el.offsetHeight - 8) : rect.bottom + 8;
-                                  const left = Math.min(vw - el.offsetWidth - 8, Math.max(8, rect.left));
+                                  // Match width to the button (same as Take Attendance, since they share flex widths)
+                                  el.style.width = `${rect.width}px`;
+                                  // Place below unless not enough space
+                                  const provisionalTop = spaceBelow < 220 ? rect.top - el.offsetHeight - 8 : rect.bottom + 8;
+                                  const top = Math.max(8, Math.min(vh - el.offsetHeight - 8, provisionalTop));
+                                  const left = Math.min(vw - rect.width - 8, Math.max(8, rect.left));
                                   el.style.top = `${top}px`;
                                   el.style.left = `${left}px`;
                                 } else {
@@ -271,7 +276,7 @@ export default function DashboardPage() {
         </>
       )}
       
-      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
+      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 border border-black" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
         const title = prompt('Section title?');
         if (!title) return;
         await apiFetch<{ section: Section }>(`/api/sections`, {
