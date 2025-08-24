@@ -292,6 +292,14 @@ export default function DashboardPage() {
               gradients={gradients}
               onSave={saveCustomization}
               onCancel={handleCloseCustomize}
+              onDelete={async (id: string) => {
+                // Optimistically remove and then refresh
+                setSections((prev) => prev.filter((s) => s.id !== id));
+                handleCloseCustomize();
+                if (teacherId) {
+                  try { await load(teacherId); } catch {/* ignore */}
+                }
+              }}
             />
           </div>
         )}
@@ -356,16 +364,19 @@ function CustomizeModal({
   section, 
   gradients, 
   onSave, 
-  onCancel 
+  onCancel,
+  onDelete,
 }: { 
   section: Section; 
   gradients: Array<{ id: string; name: string; class: string }>;
   onSave: (title: string, gradient: string) => void;
   onCancel: () => void;
+  onDelete: (id: string) => Promise<void> | void;
 }) {
   const [title, setTitle] = useState(section.title);
   const [gradient, setGradient] = useState(section.gradient);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -401,28 +412,40 @@ function CustomizeModal({
         </div>
       </div>
       
-      <div className="flex items-center justify-between pt-4">
-        <div className="flex gap-2">
-          <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
-            Save Changes
-          </Button>
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-        </div>
-        <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
-          <HiOutlineTrash className="h-5 w-5" /> Delete Section
+      <div className="flex gap-2 pt-4">
+        <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
+          Save Changes
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
         </Button>
       </div>
-      {confirmDelete && (
-        <div className="mt-2 p-3 rounded-lg border border-rose-200 bg-rose-50">
-          <div className="text-sm mb-2">Are you sure?</div>
-          <div className="flex gap-2">
-            <Button className="!bg-rose-600" onClick={async () => { await apiFetch(`/api/sections/${section.id}`, { method: 'DELETE' }); onCancel(); }}>Remove</Button>
-            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-          </div>
+
+      {/* Danger Zone */}
+      <div className="mt-6 border border-rose-200 rounded-lg">
+        <div className="px-3 py-2 text-sm font-medium text-rose-700 bg-rose-50 rounded-t-lg">Danger Zone</div>
+        <div className="p-3">
+          <div className="text-sm text-slate-600 mb-2">Deleting a section will remove its roster, attendance, and activities.</div>
+          {!confirmDelete ? (
+            <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
+              <HiOutlineTrash className="h-5 w-5" /> Delete Section
+            </Button>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button className="!bg-rose-600" disabled={deleting} onClick={async () => {
+                try {
+                  setDeleting(true);
+                  await apiFetch(`/api/sections/${section.id}`, { method: 'DELETE' });
+                  await onDelete(section.id);
+                } finally {
+                  setDeleting(false);
+                }
+              }}>{deleting ? 'Removing…' : 'Remove'}</Button>
+              <Button variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
