@@ -138,7 +138,7 @@ export default function DashboardPage() {
               const gradientClass = s.gradient;
               
               return (
-                <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
+                <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="relative z-10 text-center">
