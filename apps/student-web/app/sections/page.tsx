@@ -357,7 +357,7 @@ export default function SectionsPage() {
         {checkinError && (
           <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
         )}
-        <div className="mx-auto my-3 h-px bg-slate-200 w-[14.25rem]" />
+        
         <div className="flex items-center justify-center">
           <button
             className="text-primary font-medium hover:underline"
@@ -489,8 +489,9 @@ export default function SectionsPage() {
                   <div className="absolute inset-0 bg-black/10"></div>
                   {/* Checked-in badge */}
                   {isCheckedIn && (
-                    <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-lg ring-1 ring-black/40">
-                      Checked in ✅
+                    <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-lg ring-1 ring-black/40 inline-flex items-center gap-1">
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                      Checked in
                     </div>
                   )}
                   <div className="relative z-10 text-center">

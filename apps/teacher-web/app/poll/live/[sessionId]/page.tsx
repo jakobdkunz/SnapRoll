@@ -61,7 +61,6 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
           >
             ← Back
           </button>
-          <div className="text-slate-500 w-[160px] text-left">{total} {total === 1 ? 'response' : 'responses'}</div>
           <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
             {session?.prompt ?? 'Loading…'}
           </div>
