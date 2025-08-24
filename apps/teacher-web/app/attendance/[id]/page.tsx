@@ -23,6 +23,8 @@ export default function AttendancePage() {
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
   const prevCodeRef = useRef<string | null>(null);
+  const startedOnLoadRef = useRef(false);
+  const [codePulse, setCodePulse] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -62,6 +64,23 @@ export default function AttendancePage() {
   }, [loadStatus]);
 
   useEffect(() => {
+    // If there is no active attendance or no code yet, start immediately (once)
+    if (status && (!status.hasActiveAttendance || !status.attendanceCode) && !startedOnLoadRef.current) {
+      startedOnLoadRef.current = true;
+      void start();
+    }
+  }, [status, start]);
+
+  useEffect(() => {
+    // Briefly pulse the code when it changes
+    if (prevCodeRef.current) {
+      setCodePulse(true);
+      const t = window.setTimeout(() => setCodePulse(false), 220);
+      return () => window.clearTimeout(t);
+    }
+  }, [code]);
+
+  useEffect(() => {
     if (status?.hasActiveAttendance) {
       const interval = setInterval(loadStatus, 2000); // Refresh every 2 seconds
       return () => clearInterval(interval);
@@ -91,8 +110,8 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="grid place-items-center space-y-6">
-      <Card className="p-10 text-center">
+    <div className="min-h-dvh grid place-items-center px-4 py-8 bg-gradient-to-br from-indigo-50 via-white to-emerald-50">
+      <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
         <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
         {!status ? (
           <div className="mt-4 grid place-items-center gap-4">
@@ -101,16 +120,26 @@ export default function AttendancePage() {
           </div>
         ) : (
           <>
-            <div className="mt-2 text-6xl font-bold tracking-widest tabular-nums">{code}</div>
-            <Button className="mt-6 inline-flex items-center gap-2" onClick={start} disabled={isStarting}>
-              <HiOutlineArrowPath className="h-5 w-5" /> Generate New Code
+            <div className="mt-4 flex items-center justify-center">
+              <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
+                <div className="flex gap-3 sm:gap-4">
+                  {code.split('').map((ch, i) => (
+                    <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
+                      {ch}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Button className="mt-8 inline-flex items-center gap-2" onClick={start} disabled={isStarting}>
+              <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
             </Button>
           </>
         )}
       </Card>
 
       {(!status || status.hasActiveAttendance) && (
-        <Card className="p-6 w-full max-w-md">
+        <Card className="p-6 w-full max-w-xl">
           {status ? (
             <>
               <div className="text-center mb-4">
