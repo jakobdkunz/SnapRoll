@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [wcShowPrompt, setWcShowPrompt] = useState(true);
   const [wcAllowMultiple, setWcAllowMultiple] = useState(false);
   const [wcWorking, setWcWorking] = useState(false);
+  const [wcError, setWcError] = useState<string | null>(null);
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -48,14 +49,16 @@ export default function DashboardPage() {
     }
     try {
       setWcWorking(true);
+      setWcError(null);
       const { session } = await apiFetch<{ session: { id: string } }>(`/api/sections/${wcSectionId}/wordcloud/start`, {
         method: 'POST',
         body: JSON.stringify({ prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple }),
       });
       setWcOpen(false);
       setTimeout(() => router.push(`/wordcloud/live/${session.id}`), 120);
-    } catch (_e) {
-      alert('Failed to start word cloud. Please try again.');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Failed to start word cloud. Please try again.';
+      setWcError(message);
     } finally {
       setWcWorking(false);
     }
@@ -290,6 +293,9 @@ export default function DashboardPage() {
               <input type="checkbox" checked={wcAllowMultiple} onChange={(e) => setWcAllowMultiple(e.target.checked)} />
               <span>Allow multiple answers</span>
             </label>
+            {wcError && (
+              <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{wcError}</div>
+            )}
             <div className="pt-2">
               <Button onClick={startWordCloud} className="w-full inline-flex items-center justify-center gap-2" disabled={wcWorking}>
                 {wcWorking ? 'Starting…' : 'Continue'}
