@@ -170,10 +170,10 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex gap-2 items-stretch flex-wrap">
                       {/* Interact dropdown (controlled) */}
-                      <div className="relative" data-interact-menu={openMenuFor === s.id ? 'open' : undefined}>
+                      <div className="relative flex-1" data-interact-menu={openMenuFor === s.id ? 'open' : undefined}>
                         <Button
                           variant="ghost"
-                          className="inline-flex items-center gap-2"
+                          className="inline-flex items-center gap-2 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             setOpenMenuFor((prev) => (prev === s.id ? null : s.id));
@@ -185,11 +185,12 @@ export default function DashboardPage() {
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s.id && (
-                          <div className="absolute z-30 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1">
+                          <div className="absolute z-30 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1 right-0">
                             <button
                               className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
                               onClick={() => {
                                 setOpenMenuFor(null);
+                                // Open modal route without leaving the page immediately
                                 router.push(`/wordcloud/${s.id}/start`);
                               }}
                               role="menuitem"
