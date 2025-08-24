@@ -125,3 +125,33 @@ model WordCloudAnswer {
   @@index([studentId])
   @@unique([sessionId, studentId, text])
 }
+
+// Poll models
+model PollSession {
+  id                   String   @id @default(cuid())
+  section              Section  @relation(fields: [sectionId], references: [id])
+  sectionId            String
+  prompt               String
+  optionsJson          String   // JSON.stringify([...options])
+  showResults          Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  closedAt             DateTime?
+  instructorLastSeenAt DateTime?
+  answers              PollAnswer[]
+
+  @@index([sectionId])
+}
+
+model PollAnswer {
+  id         String       @id @default(cuid())
+  session    PollSession  @relation(fields: [sessionId], references: [id])
+  sessionId  String
+  student    User         @relation(fields: [studentId], references: [id])
+  studentId  String
+  optionIdx  Int
+  createdAt  DateTime     @default(now())
+
+  @@index([sessionId])
+  @@index([studentId])
+  @@unique([sessionId, studentId])
+}

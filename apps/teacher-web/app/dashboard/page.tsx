@@ -24,6 +24,8 @@ export default function DashboardPage() {
   const [wcAllowMultiple, setWcAllowMultiple] = useState(false);
   const [wcWorking, setWcWorking] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
+  const [pollOpen, setPollOpen] = useState(false);
+  const [pollSectionId, setPollSectionId] = useState<string | null>(null);
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -258,6 +260,19 @@ export default function DashboardPage() {
                               >
                                 <HiOutlineCloud className="h-5 w-5" /> Word Cloud
                               </button>
+                              <button
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuFor(null);
+                                  // open poll modal for this section
+                                  setPollSectionId(s.id);
+                                  setPollOpen(true);
+                                }}
+                                role="menuitem"
+                              >
+                                🗳️ Poll
+                              </button>
                             </div>
                           </div>
                         )}
@@ -356,6 +371,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Start Poll Modal */}
+      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
     </div>
   );
 }
@@ -449,5 +467,66 @@ function CustomizeModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: string | null }) {
+  const [prompt, setPrompt] = useState('Which option do you prefer?');
+  const [options, setOptions] = useState<string[]>(['Option 1', 'Option 2']);
+  const [working, setWorking] = useState(false);
+  function setOptionAt(i: number, val: string) {
+    setOptions((prev) => prev.map((v, idx) => (idx === i ? val : v)));
+  }
+  function addOption() {
+    setOptions((prev) => [...prev, '']);
+  }
+  const visible = open && !!sectionId;
+  return (
+    <Modal open={visible} onClose={onClose}>
+      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md mx-4">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Start Poll</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
+            <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Enter poll prompt" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Options</label>
+            <div className="space-y-2">
+              {options.map((opt, i) => (
+                <TextInput key={i} value={opt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOptionAt(i, e.target.value)} placeholder={`Option ${i + 1}`} />
+              ))}
+              <input
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400 placeholder:text-slate-400/80"
+                placeholder="Add another option..."
+                onFocus={() => {
+                  if (options[options.length - 1] !== '') addOption();
+                }}
+                onChange={() => {
+                  if (options[options.length - 1] !== '') addOption();
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button disabled={working || !sectionId || !prompt.trim() || options.filter((o) => o.trim()).length < 2} onClick={async () => {
+              if (!sectionId) return;
+              try {
+                setWorking(true);
+                const opts = options.map((o) => o.trim()).filter(Boolean);
+                await apiFetch(`/api/sections/${sectionId}/poll/start`, { method: 'POST', body: JSON.stringify({ prompt: prompt.trim(), options: opts }) });
+                onClose();
+              } finally {
+                setWorking(false);
+              }
+            }}>{working ? 'Starting…' : 'Start'}</Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }
