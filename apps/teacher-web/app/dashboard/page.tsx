@@ -149,7 +149,7 @@ export default function DashboardPage() {
                         <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
                       </Button>
                     </div>
-                    <div className="flex gap-2 items-stretch">
+                    <div className="flex gap-2 items-stretch flex-wrap">
                       {/* Interact dropdown */}
                       <div className="relative">
                         <details className="group">
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.currentTarget.closest('details')?.removeAttribute('open');
-                                window.location.href = `/wordcloud/${s.id}/start`;
+                                router.push(`/wordcloud/${s.id}/start`);
                               }}
                             >
                               <HiOutlineCloud className="h-5 w-5" /> Word Cloud
