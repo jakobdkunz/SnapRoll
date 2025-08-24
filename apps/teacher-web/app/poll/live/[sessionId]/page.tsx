@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Card, Button } from '@snaproll/ui';
-import { useRouter } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
 
 type PollSession = { id: string; prompt: string; options: string[]; showResults: boolean };
@@ -50,29 +49,38 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
 
   return (
     <div className="min-h-dvh px-4 py-6">
-      <div className="max-w-3xl mx-auto space-y-4">
-        <div className="text-2xl font-semibold text-center">{session?.prompt ?? 'Loading…'}</div>
-        <Card className="p-4">
-          <div className="space-y-2">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <button
+            className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
+            onClick={async () => { try { await apiFetch(`/api/poll/${sessionId}/close`, { method: 'POST' }); } catch {/* ignore */} history.back(); }}
+          >
+            ← Back
+          </button>
+          <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
+            {session?.prompt ?? 'Loading…'}
+          </div>
+          <div className="w-[120px] text-right text-slate-500">{total} responses</div>
+        </div>
+        <Card className="p-6">
+          <div className="space-y-3">
             {(session?.options ?? []).map((opt, i) => {
               const count = counts ? counts[i] : 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
-                <div key={i} className="border rounded-lg px-3 py-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <div>{opt}</div>
-                    {session?.showResults ? <div className="text-slate-500 text-sm">{count} ({pct}%)</div> : null}
-                  </div>
+                <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
                   {session?.showResults ? (
-                    <div className="h-2 w-full bg-slate-200 rounded">
-                      <div className="h-2 bg-primary rounded" style={{ width: `${pct}%` }} />
-                    </div>
+                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all" style={{ width: `${pct}%` }} />
                   ) : null}
+                  <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
+                    <div className="font-medium">{opt}</div>
+                    {session?.showResults ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
+                  </div>
                 </div>
               );
             })}
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-5">
             <Button disabled={toggling} onClick={async () => {
               try {
                 setToggling(true);
