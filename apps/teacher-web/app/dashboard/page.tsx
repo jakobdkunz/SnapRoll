@@ -471,6 +471,7 @@ function CustomizeModal({
 }
 
 function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: string | null }) {
+  const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [working, setWorking] = useState(false);
@@ -526,6 +527,7 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
                 const res = await apiFetch<{ session: { id: string } }>(`/api/sections/${sectionId}/poll/start`, { method: 'POST', body: JSON.stringify({ prompt: prompt.trim(), options: opts }) });
                 if (res?.session?.id) {
                   onClose();
+                  setTimeout(() => router.push(`/poll/live/${res.session.id}`), 120);
                 }
               } finally {
                 setWorking(false);
