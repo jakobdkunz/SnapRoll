@@ -61,11 +61,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
 
   const isPdf = /pdf/i.test(details.mimeType);
   const isPpt = /(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath);
-  const officeEmbedUrl = useMemo(() => {
-    if (!isPpt) return '';
-    const src = encodeURIComponent(fileUrl);
-    return `https://view.officeapps.live.com/op/embed.aspx?src=${src}`;
-  }, [isPpt, fileUrl]);
+  const officeEmbedUrl = isPpt ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}` : '';
 
   return (
     <div className="min-h-dvh flex flex-col">
