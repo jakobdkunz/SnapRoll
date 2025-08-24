@@ -9,6 +9,7 @@ type Section = { id: string; title: string; gradient?: string };
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 type SectionsResponse = { sections: Section[]; checkedInSectionIds?: string[] };
+type RecentSlidesResponse = { recents: Array<{ id: string; title: string; url: string; allowDownload: boolean; lastSeenAt: string }> };
 
 type CheckinResponse = { ok: boolean; status: string; section?: { id: string; title: string } };
 
@@ -21,6 +22,7 @@ export default function SectionsPage() {
   const [mounted, setMounted] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
+  const [recentSlides, setRecentSlides] = useState<RecentSlidesResponse['recents']>([]);
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   // Interactive state
@@ -162,6 +164,9 @@ export default function SectionsPage() {
       const data = await apiFetch<SectionsResponse>(`/api/students/${currentStudentId}/sections?_=${Date.now()}`);
       setSections(data.sections);
       setCheckedInIds(data.checkedInSectionIds || []);
+      // Load recent presentations for downloads
+      const rec = await apiFetch<RecentSlidesResponse>(`/api/students/${currentStudentId}/recent-slides`);
+      setRecentSlides(rec.recents.filter((r) => r.allowDownload));
     } catch (error) {
       console.error('Failed to load courses:', error);
     } finally {
@@ -493,6 +498,26 @@ export default function SectionsPage() {
           </div>
         ) : null}
       </Card>
+
+      {/* Recent presentations */}
+      {recentSlides.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium inline-flex items-center gap-2">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="1.5" d="M3 4.5h18M3 9.75h18M3 15h18M3 20.25h12"/></svg>
+                Recent presentations
+              </div>
+              <div className="text-slate-500 text-sm">Available to download for 72 hours after class.</div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            {recentSlides.map((r) => (
+              <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className="block px-3 py-2 rounded-lg border hover:bg-slate-50">{r.title}</a>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Courses subheading */}
       <div className="text-slate-600 text-sm">My courses</div>
