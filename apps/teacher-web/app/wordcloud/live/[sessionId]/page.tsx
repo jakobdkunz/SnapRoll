@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card } from '@snaproll/ui';
+import { useEffect, useRef, useState } from 'react';
+import { Card } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
 type Word = { word: string; count: number };
@@ -54,55 +54,144 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   const maxCount = Math.max(1, ...words.map((w) => w.count));
 
-  // Simple force-directed layout towards center with mild repel between words
+  // Real-time physics simulation with per-word DOM refs for measuring size and applying positions imperatively
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [layout, setLayout] = useState<Record<string, { x: number; y: number; vx: number; vy: number; color: string }>>({});
+  const nodeRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string }>>({});
+  const rafId = useRef<number | null>(null);
+  const containerSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
+  // Ensure nodes exist for words; remove stale nodes
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
+    containerSize.current = { w: rect.width, h: rect.height };
     const cx = rect.width / 2;
     const cy = rect.height / 2;
     const colors = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-    const next: Record<string, { x: number; y: number; vx: number; vy: number; color: string }> = { ...layout };
+    const map = nodes.current;
+    // Add new words at center with tiny random push
     for (const w of words) {
-      if (!next[w.word]) {
-        next[w.word] = { x: cx + (Math.random() - 0.5) * 10, y: cy + (Math.random() - 0.5) * 10, vx: 0, vy: 0, color: colors[Math.floor(Math.random() * colors.length)] };
+      if (!map[w.word]) {
+        map[w.word] = {
+          x: cx + (Math.random() - 0.5) * 6,
+          y: cy + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          w: 40,
+          h: 20,
+          color: colors[Math.floor(Math.random() * colors.length)],
+        };
       }
     }
-    // Run a time-based simulation for a short burst to settle positions
-    const dt = 0.016;
-    for (let iter = 0; iter < 45; iter++) {
-      for (const a of words) {
-        const pa = next[a.word];
-        // spring towards center
-        const ax = (cx - pa.x) * 0.05;
-        const ay = (cy - pa.y) * 0.05;
-        pa.vx += ax * dt;
-        pa.vy += ay * dt;
-        for (const b of words) {
-          if (a.word === b.word) continue;
-          const pb = next[b.word];
-          const dx = pa.x - pb.x;
-          const dy = pa.y - pb.y;
-          const dist2 = Math.max(1, dx * dx + dy * dy);
-          const force = 1200 / dist2; // Coulomb-like repulsion
-          const fx = (dx / Math.sqrt(dist2)) * force;
-          const fy = (dy / Math.sqrt(dist2)) * force;
-          pa.vx += fx * dt;
-          pa.vy += fy * dt;
+    // Remove nodes for words that no longer exist
+    for (const key of Object.keys(map)) {
+      if (!words.find((w) => w.word === key)) delete map[key];
+    }
+  }, [words]);
+
+  // Measure word sizes when DOM updates
+  useEffect(() => {
+    for (const w of words) {
+      const el = nodeRefs.current[w.word];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const n = nodes.current[w.word];
+      if (n) {
+        n.w = rect.width;
+        n.h = rect.height;
+      }
+    }
+  });
+
+  // Resize observer to keep bounds updated
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const r = entries[0]?.contentRect;
+      if (r) containerSize.current = { w: r.width, h: r.height };
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Physics loop
+  useEffect(() => {
+    const run = (t: number) => {
+      const map = nodes.current;
+      const { w: W, h: H } = containerSize.current;
+      const cx = W / 2;
+      const cy = H / 2;
+      const wordsList = words.map((w) => w.word);
+      // Integrate forces
+      for (let i = 0; i < wordsList.length; i++) {
+        const aKey = wordsList[i];
+        const a = map[aKey];
+        if (!a) continue;
+        // Spring toward center
+        const k = 0.06;
+        a.vx += (cx - a.x) * k * 0.016;
+        a.vy += (cy - a.y) * k * 0.016;
+      }
+      // Pairwise repulsion with soft collision based on measured size
+      for (let i = 0; i < wordsList.length; i++) {
+        const ai = wordsList[i];
+        const A = map[ai];
+        if (!A) continue;
+        for (let j = i + 1; j < wordsList.length; j++) {
+          const bj = wordsList[j];
+          const B = map[bj];
+          if (!B) continue;
+          const dx = A.x - B.x;
+          const dy = A.y - B.y;
+          const dist = Math.max(1, Math.hypot(dx, dy));
+          // Minimum separation based on half-diagonals
+          const minSep = 0.5 * Math.hypot(A.w, A.h) + 0.5 * Math.hypot(B.w, B.h);
+          const overlap = Math.max(0, minSep - dist);
+          // Strong separation when overlapping, mild repulsion otherwise
+          const strength = overlap > 0 ? 0.15 * overlap : 70 / (dist * dist);
+          const ux = dx / dist;
+          const uy = dy / dist;
+          const fx = ux * strength;
+          const fy = uy * strength;
+          A.vx += fx;
+          A.vy += fy;
+          B.vx -= fx;
+          B.vy -= fy;
         }
-        // damping
-        pa.vx *= 0.92;
-        pa.vy *= 0.92;
-        pa.x += pa.vx;
-        pa.y += pa.vy;
       }
-    }
-    setLayout(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [words.length]);
+      // Integrate velocities, apply damping and boundary bounces for bounciness
+      for (const key of wordsList) {
+        const n = map[key];
+        if (!n) continue;
+        n.vx *= 0.92;
+        n.vy *= 0.92;
+        n.x += n.vx * 0.016;
+        n.y += n.vy * 0.016;
+        const rx = Math.max(20, n.w / 2);
+        const ry = Math.max(12, n.h / 2);
+        // Bounce on bounds with restitution
+        const e = 0.6;
+        if (n.x < rx) { n.x = rx; n.vx = Math.abs(n.vx) * e; }
+        if (n.x > W - rx) { n.x = W - rx; n.vx = -Math.abs(n.vx) * e; }
+        if (n.y < ry) { n.y = ry; n.vy = Math.abs(n.vy) * e; }
+        if (n.y > H - ry) { n.y = H - ry; n.vy = -Math.abs(n.vy) * e; }
+      }
+      // Apply to DOM
+      for (const key of wordsList) {
+        const el = nodeRefs.current[key];
+        const n = map[key];
+        if (!el || !n) continue;
+        el.style.left = `${n.x - n.w / 2}px`;
+        el.style.top = `${n.y - n.h / 2}px`;
+      }
+      rafId.current = requestAnimationFrame(run);
+    };
+    rafId.current = requestAnimationFrame(run);
+    return () => { if (rafId.current) cancelAnimationFrame(rafId.current); };
+  }, [words]);
 
   return (
     <div className="min-h-dvh px-4 py-6">
@@ -134,17 +223,14 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           )}
           {words.map((w) => {
             const scale = 0.9 + (w.count / maxCount) * 1.8;
-            const pos = layout[w.word] || { x: 0, y: 0, vx: 0, vy: 0, color: '#2563eb' };
             return (
               <span
                 key={w.word}
-                className="absolute font-bold select-none"
+                ref={(el) => { nodeRefs.current[w.word] = el; }}
+                className="absolute font-bold select-none will-change-transform"
                 style={{
-                  left: Math.max(0, pos.x - 40),
-                  top: Math.max(0, pos.y - 20),
                   transform: `translateZ(0) scale(${scale})`,
-                  transition: 'transform 300ms cubic-bezier(.34,1.56,.64,1), left 220ms ease-out, top 220ms ease-out',
-                  color: pos.color,
+                  color: (nodes.current[w.word]?.color ?? '#2563eb'),
                 }}
               >
                 {w.word}
