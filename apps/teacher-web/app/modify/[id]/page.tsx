@@ -382,9 +382,11 @@ export default function ModifyPage() {
 
       <Card className="p-4 sm:p-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
-          <div className="font-medium text-lg">Roster</div>
-          <div className="flex items-center gap-2">
+          <div>
+            <div className="font-medium text-lg">Roster</div>
             <div className="text-sm text-slate-500">{students.length} student{students.length === 1 ? '' : 's'}</div>
+          </div>
+          <div className="flex items-center gap-2">
             <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onImportCsv} disabled={importing || importWorking} />
             <Button variant="ghost" onClick={() => fileInputRef.current?.click()} disabled={importing || importWorking} className="inline-flex items-center gap-2">
               <HiOutlineArrowUpTray className="h-5 w-5" /> {importWorking ? 'Importing…' : 'Import CSV'}
@@ -562,9 +564,9 @@ export default function ModifyPage() {
                 <div className="text-lg font-semibold">Does everything look right?</div>
                 <div className="text-sm text-slate-600 mt-1 mb-4">Adjust each column as needed before importing.</div>
                 {openDropdownIdx != null && (
-                  <div key={dropdownBackdropKey} className="fixed inset-0 z-30" onClick={() => setOpenDropdownIdx(null)} />
+                  <div key={dropdownBackdropKey} className="fixed inset-0 z-[60]" onClick={() => setOpenDropdownIdx(null)} />
                 )}
-                <div className="overflow-visible border rounded relative z-10">
+                <div className="overflow-visible border rounded relative">
                   <table className="min-w-full text-xs">
                     <thead>
                       <tr>
@@ -581,7 +583,7 @@ export default function ModifyPage() {
                                 <HiChevronDown className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
                               </button>
                               {openDropdownIdx === i && (
-                                <div className="absolute z-40 mt-1 w-44 rounded-md border bg-white shadow-lg">
+                                <div className="absolute z-[70] mt-1 w-44 rounded-md border bg-white shadow-lg">
                                   {(['first','last','full','email','other'] as ColumnRole[]).map((opt) => (
                                     <div
                                       key={opt}
