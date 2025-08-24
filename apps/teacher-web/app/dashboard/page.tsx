@@ -97,8 +97,8 @@ export default function DashboardPage() {
   async function load(currentTeacherId: string) {
     try {
       setLoading(true);
-      const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
-      setSections(data.sections);
+    const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
+    setSections(data.sections);
     } finally {
       setLoading(false);
     }
@@ -153,7 +153,7 @@ export default function DashboardPage() {
     // First close (triggers modal exit animation), then clear after transition
     setCustomizeModal((prev) => ({ ...prev, open: false }));
     window.setTimeout(() => {
-      setCustomizeModal({ open: false, section: null });
+    setCustomizeModal({ open: false, section: null });
     }, 180);
   }
 
@@ -194,25 +194,25 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-            {sections.map((s) => {
-              const gradientClass = s.gradient;
-              
-              return (
+          {sections.map((s) => {
+            const gradientClass = s.gradient;
+            
+            return (
                 <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-black/10"></div>
-                    <div className="relative z-10 text-center">
-                      <div className="font-futuristic font-bold text-lg leading-tight px-2">
-                        {s.title}
-                      </div>
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative z-10 text-center">
+                    <div className="font-futuristic font-bold text-lg leading-tight px-2">
+                      {s.title}
                     </div>
-                    <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
-                    <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
-                    
-                    {/* Pencil icon that appears on hover */}
-                    <button
-                      onClick={() => setCustomizeModal({ open: true, section: s })}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
+                  </div>
+                  <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
+                  <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
+                  
+                  {/* Pencil icon that appears on hover */}
+                  <button
+                    onClick={() => setCustomizeModal({ open: true, section: s })}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
                       title="Edit Section"
                     >
                       <HiOutlineCog6Tooth className="h-5 w-5" />
@@ -310,8 +310,8 @@ export default function DashboardPage() {
                                 role="menuitem"
                               >
                                 <HiOutlinePlayCircle className="h-5 w-5" /> Present Slideshow
-                              </button>
-                            </div>
+                  </button>
+                </div>
                           </div>
                         )}
                       </div>
@@ -321,11 +321,11 @@ export default function DashboardPage() {
                         <span className="sm:hidden">Attendance</span>
                       </Button>
                     </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
           {/* Spacer so the floating button doesn't overlap the last row on mobile */}
           <div className="h-40" aria-hidden="true" />
         </>
@@ -471,12 +471,7 @@ export default function DashboardPage() {
                 } else if (slideUploadFile) {
                   fd.append('file', slideUploadFile);
                 }
-                const res = await fetch(`${location.origin}/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
-                if (!res.ok) {
-                  const msg = await res.text();
-                  throw new Error(msg || 'Failed to start slideshow');
-                }
-                const data = await res.json();
+                const data = await apiFetch<{ session: { id: string } }>(`/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
                 setSlideOpen(false);
                 setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);
               } catch (e: unknown) {
@@ -562,7 +557,7 @@ function CustomizeModal({
             <div className="flex justify-end">
               <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
                 <HiOutlineTrash className="h-5 w-5" /> Delete Section
-              </Button>
+        </Button>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2 justify-end">
