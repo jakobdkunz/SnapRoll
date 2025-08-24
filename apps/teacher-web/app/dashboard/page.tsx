@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -26,6 +26,18 @@ export default function DashboardPage() {
   const [wcError, setWcError] = useState<string | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollSectionId, setPollSectionId] = useState<string | null>(null);
+  const [slideOpen, setSlideOpen] = useState(false);
+  const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
+  const [slideTeacherAssets, setSlideTeacherAssets] = useState<Array<{ id: string; title: string; filePath: string; mimeType: string }>>([]);
+  const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<string | null>(null);
+  const [slideTitle, setSlideTitle] = useState('');
+  const [slideShowOnDevices, setSlideShowOnDevices] = useState(true);
+  const [slideAllowDownload, setSlideAllowDownload] = useState(true);
+  const [slideRequireStay, setSlideRequireStay] = useState(false);
+  const [slidePreventJump, setSlidePreventJump] = useState(false);
+  const [slideUploadFile, setSlideUploadFile] = useState<File | null>(null);
+  const [slideWorking, setSlideWorking] = useState(false);
+  const [slideError, setSlideError] = useState<string | null>(null);
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -44,6 +56,20 @@ export default function DashboardPage() {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
   }, []);
+
+  useEffect(() => {
+    // Load teacher assets when opening slideshow modal
+    async function loadAssets() {
+      if (!teacherId || !slideOpen) return;
+      try {
+        const res = await apiFetch<{ assets: Array<{ id: string; title: string; filePath: string; mimeType: string }> }>(`/api/teachers/${teacherId}/slideshow-assets`);
+        setSlideTeacherAssets(res.assets);
+      } catch {
+        setSlideTeacherAssets([]);
+      }
+    }
+    loadAssets();
+  }, [teacherId, slideOpen]);
 
   async function startWordCloud() {
     if (!wcSectionId) return;
@@ -273,6 +299,18 @@ export default function DashboardPage() {
                               >
                                 <HiOutlineChartBar className="h-5 w-5" /> Poll
                               </button>
+                              <button
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuFor(null);
+                                  setSlideSectionId(s.id);
+                                  setSlideOpen(true);
+                                }}
+                                role="menuitem"
+                              >
+                                <HiOutlinePlayCircle className="h-5 w-5" /> Present Slideshow
+                              </button>
                             </div>
                           </div>
                         )}
@@ -374,6 +412,82 @@ export default function DashboardPage() {
 
       {/* Start Poll Modal */}
       <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
+
+      {/* Present Slideshow Modal */}
+      <Modal open={slideOpen && !!slideSectionId} onClose={() => setSlideOpen(false)}>
+        <div className="bg-white rounded-lg p-6 w-[92vw] max-w-2xl mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="inline-flex items-center gap-2 text-lg font-semibold"><HiOutlinePlayCircle className="h-6 w-6" /> Present Slideshow</div>
+            <button onClick={() => setSlideOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-sm font-medium text-slate-700 mb-2">Choose an existing slideshow</div>
+              <div className="space-y-2 max-h-56 overflow-auto pr-1">
+                {slideTeacherAssets.length === 0 && (
+                  <div className="text-sm text-slate-500">No uploads yet.</div>
+                )}
+                {slideTeacherAssets.map((a) => (
+                  <button key={a.id} onClick={() => { setSlideSelectedAssetId(a.id); setSlideTitle(a.title || ''); setSlideUploadFile(null); }} className={`w-full text-left px-3 py-2 rounded-lg border ${slideSelectedAssetId === a.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                    <div className="font-medium truncate">{a.title}</div>
+                    <div className="text-xs text-slate-500 truncate">{a.filePath.split('/').pop()}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-slate-700 mb-2">Or upload a new file (PDF or PPTX)</div>
+              <input type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => { const f = e.target.files?.[0] || null; setSlideUploadFile(f); setSlideSelectedAssetId(null); if (f) setSlideTitle(f.name.replace(/\.(pdf|pptx?|PDF|PPTX?)$/, '')); }} />
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                <TextInput value={slideTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} placeholder="Slideshow title" />
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={slideShowOnDevices} onChange={(e) => setSlideShowOnDevices(e.target.checked)} /> <span>Show on Student Devices</span></label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={slideAllowDownload} onChange={(e) => setSlideAllowDownload(e.target.checked)} /> <span>Allow Students to Download Slideshow</span></label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={slideRequireStay} onChange={(e) => { const v = e.target.checked; setSlideRequireStay(v); if (v) setSlidePreventJump(false); }} /> <span>Require Students to Stay on Current Slide</span></label>
+            {!slideRequireStay && (
+              <label className="flex items-center gap-2"><input type="checkbox" checked={slidePreventJump} onChange={(e) => setSlidePreventJump(e.target.checked)} /> <span>Prevent Students from Jumping Ahead</span></label>
+            )}
+          </div>
+          {slideError && <div className="mt-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{slideError}</div>}
+          <div className="mt-6 flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setSlideOpen(false)}>Cancel</Button>
+            <Button disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideUploadFile)} onClick={async () => {
+              if (!slideSectionId) return;
+              setSlideWorking(true);
+              setSlideError(null);
+              try {
+                const fd = new FormData();
+                if (slideTitle.trim()) fd.append('title', slideTitle.trim());
+                fd.append('showOnDevices', String(slideShowOnDevices));
+                fd.append('allowDownload', String(slideAllowDownload));
+                fd.append('requireStay', String(slideRequireStay));
+                fd.append('preventJump', String(slidePreventJump));
+                if (slideSelectedAssetId) {
+                  fd.append('assetId', slideSelectedAssetId);
+                } else if (slideUploadFile) {
+                  fd.append('file', slideUploadFile);
+                }
+                const res = await fetch(`${location.origin}/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
+                if (!res.ok) {
+                  const msg = await res.text();
+                  throw new Error(msg || 'Failed to start slideshow');
+                }
+                const data = await res.json();
+                setSlideOpen(false);
+                setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);
+              } catch (e: unknown) {
+                setSlideError(e instanceof Error ? e.message : 'Failed to start slideshow');
+              } finally {
+                setSlideWorking(false);
+              }
+            }}>{slideShowOnDevices ? (slideWorking ? 'Presenting…' : 'Present Live') : (slideWorking ? 'Starting…' : 'Present')}</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
