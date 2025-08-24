@@ -176,8 +176,9 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const radialVel = -(a.vx * uxC + a.vy * uyC); // positive if moving outward
         if (radialVel > 0) {
           const damp = Math.min(0.25, 0.08 + 0.02 * Math.min(1, wordsList.length / 20));
-          a.vx -= radialVel * uxC * damp;
-          a.vy -= radialVel * uyC * damp;
+          // Reduce outward radial component by adding back along +uxC (toward center)
+          a.vx += radialVel * uxC * damp;
+          a.vy += radialVel * uyC * damp;
         }
         // Outer ring containment: pull back if past 40% of min dimension
         const R = 0.4 * Math.min(W, H);
