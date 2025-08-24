@@ -32,7 +32,7 @@ export default function CheckinPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.push('/sections')}>← Back to Sections</Button>
+        <Button variant="ghost" onClick={() => router.push('/sections')}>← Back to Courses</Button>
         <div className="font-medium">Attendance Check-in</div>
       </div>
       
