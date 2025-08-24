@@ -13,18 +13,26 @@ export async function POST(request: Request, { params }: { params: { sessionId: 
   const session = await prisma.wordCloudSession.findUnique({ where: { id: sessionId } });
   if (!session || session.closedAt) return NextResponse.json({ error: 'Session not active' }, { status: 400 });
 
-  const normalized = text.trim().slice(0, 80);
+  const normalized = text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80);
 
-  // If multiple answers are not allowed, delete previous answers for this session/student
+  // If multiple answers are not allowed, block any subsequent submissions in this session
   if (!session.allowMultipleAnswers) {
-    await prisma.wordCloudAnswer.deleteMany({ where: { sessionId, studentId } });
+    const exists = await prisma.wordCloudAnswer.findFirst({ where: { sessionId, studentId } });
+    if (exists) return NextResponse.json({ error: 'You have already answered.' }, { status: 409 });
   }
 
-  await prisma.wordCloudAnswer.upsert({
+  // Prevent exact duplicate normalized text per student as well
+  const duplicate = await prisma.wordCloudAnswer.findUnique({
     where: { sessionId_studentId_text: { sessionId, studentId, text: normalized } },
-    update: {},
-    create: { sessionId, studentId, text: normalized },
   });
+  if (duplicate) return NextResponse.json({ error: 'You already submitted that answer.' }, { status: 409 });
+
+  await prisma.wordCloudAnswer.create({ data: { sessionId, studentId, text: normalized } });
 
   return NextResponse.json({ ok: true });
 }
@@ -34,7 +42,11 @@ export async function GET(_request: Request, { params }: { params: { sessionId: 
   const answers = await prisma.wordCloudAnswer.findMany({ where: { sessionId }, select: { text: true } });
   const counts = new Map<string, number>();
   for (const a of answers) {
-    const key = a.text.toLowerCase();
+    const key = a.text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     counts.set(key, (counts.get(key) || 0) + 1);
   }
   const words = Array.from(counts.entries()).map(([word, count]) => ({ word, count }));

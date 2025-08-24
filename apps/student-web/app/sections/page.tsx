@@ -357,8 +357,13 @@ export default function SectionsPage() {
                 <div className="text-slate-500 text-sm">{interactive.prompt}</div>
               )}
             </div>
-            <div className="flex gap-2">
-              <TextInput value={answer} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)} placeholder="Your word or phrase" />
+            <div className="flex gap-2 items-center">
+              <TextInput
+                value={answer}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
+                placeholder="Your word or phrase"
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
+              />
               <Button
                 onClick={async () => {
                   if (!studentId || !interactive || !answer.trim()) return;
@@ -367,9 +372,13 @@ export default function SectionsPage() {
                       method: 'POST',
                       body: JSON.stringify({ studentId, text: answer.trim() }),
                     });
-                    if (!interactive.allowMultipleAnswers) setAnswer('');
-                  } catch {
-                    /* ignore transient submit error */
+                    setAnswer('');
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : 'Failed to submit.';
+                    if (/already/i.test(msg)) {
+                      alert('You already submitted that answer.');
+                      setAnswer('');
+                    }
                   }
                 }}
               >Submit</Button>
