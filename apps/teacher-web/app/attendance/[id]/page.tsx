@@ -28,6 +28,8 @@ export default function AttendancePage() {
   const [codePulse, setCodePulse] = useState(false);
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [sectionTitle, setSectionTitle] = useState<string>('');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [topOffset, setTopOffset] = useState<number>(0);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -126,8 +128,23 @@ export default function AttendancePage() {
     };
   }, [params.id, start]);
 
+  // Precisely cancel the layout main padding so content sits snug under the navbar
+  useEffect(() => {
+    function updateOffset() {
+      const container = containerRef.current;
+      if (!container) return;
+      const main = container.closest('main');
+      if (!main) return;
+      const padTop = parseFloat(window.getComputedStyle(main).paddingTop || '0') || 0;
+      setTopOffset(padTop);
+    }
+    updateOffset();
+    window.addEventListener('resize', updateOffset);
+    return () => window.removeEventListener('resize', updateOffset);
+  }, []);
+
   return (
-    <div className="relative min-h-dvh grid px-4 pt-0 overflow-hidden -mt-20 sm:-mt-24">
+    <div ref={containerRef} className="relative min-h-dvh grid px-4 pt-0 overflow-hidden" style={{ marginTop: topOffset ? -topOffset : undefined }}>
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
