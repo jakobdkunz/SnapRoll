@@ -17,6 +17,8 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   });
   if (!session) return NextResponse.json({ interactive: null });
 
+  const answered = await prisma.wordCloudAnswer.findFirst({ where: { sessionId: session.id, studentId } });
+
   return NextResponse.json({
     interactive: {
       kind: 'wordcloud',
@@ -25,6 +27,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       showPromptToStudents: session.showPromptToStudents,
       allowMultipleAnswers: session.allowMultipleAnswers,
       sectionId: session.sectionId,
+      hasAnswered: !!answered,
     },
   });
 }

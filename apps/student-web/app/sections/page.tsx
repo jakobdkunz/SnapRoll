@@ -33,6 +33,7 @@ export default function SectionsPage() {
         showPromptToStudents: boolean;
         allowMultipleAnswers: boolean;
         sectionId: string;
+        hasAnswered?: boolean;
       }
   >(null);
   const [answer, setAnswer] = useState('');
@@ -61,6 +62,13 @@ export default function SectionsPage() {
       window.clearInterval(interval);
     };
   }, [studentId]);
+
+  // Reset local single-submit state when a new session starts
+  useEffect(() => {
+    submittedOnceRef.current = false;
+    setSubmitMsg(null);
+    setAnswer('');
+  }, [interactive?.sessionId]);
 
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
@@ -359,9 +367,9 @@ export default function SectionsPage() {
                 <div className="text-slate-500 text-sm">{interactive.prompt}</div>
               )}
             </div>
-            {(!interactive.allowMultipleAnswers && submittedOnceRef.current) ? (
+            {(!interactive.allowMultipleAnswers && (submittedOnceRef.current || !!interactive.hasAnswered)) ? (
               <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
-                Answer submitted. Waiting for instructor…
+                Answer submitted! Waiting for instructor…
               </div>
             ) : (
               <>
@@ -387,8 +395,11 @@ export default function SectionsPage() {
                         }
                       } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : 'Failed to submit.';
-                        if (/already submitted/i.test(msg) || /already answered/i.test(msg)) {
-                          setSubmitMsg('You already submitted that answer.');
+                        if (/only allowed to submit one answer/i.test(msg)) {
+                          setSubmitMsg('You are only allowed to submit one answer');
+                          setAnswer('');
+                        } else if (/already submitted/i.test(msg)) {
+                          setSubmitMsg('You already submitted that answer');
                           setAnswer('');
                         } else {
                           setSubmitMsg('Submission failed. Try again.');

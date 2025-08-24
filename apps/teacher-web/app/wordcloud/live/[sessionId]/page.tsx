@@ -57,6 +57,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   // Real-time physics simulation with per-word DOM refs for measuring size and applying positions imperatively
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLSpanElement | null>>({});
+  const palette = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
   const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string }>>({});
   const rafId = useRef<number | null>(null);
   const containerSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -69,11 +70,14 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     containerSize.current = { w: rect.width, h: rect.height };
     const cx = rect.width / 2;
     const cy = rect.height / 2;
-    const colors = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
     const map = nodes.current;
     // Add new words at center with tiny random push
     for (const w of words) {
       if (!map[w.word]) {
+        // Choose a color that avoids duplicates where possible
+        const used = new Set(Object.values(map).map((n) => n.color));
+        const choices = palette.filter((c) => !used.has(c));
+        const color = (choices.length ? choices : palette)[Math.floor(Math.random() * (choices.length ? choices.length : palette.length))];
         map[w.word] = {
           x: cx + (Math.random() - 0.5) * 6,
           y: cy + (Math.random() - 0.5) * 6,
@@ -81,7 +85,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           vy: (Math.random() - 0.5) * 2,
           w: 40,
           h: 20,
-          color: colors[Math.floor(Math.random() * colors.length)],
+          color,
         };
       }
     }
@@ -131,7 +135,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const a = map[aKey];
         if (!a) continue;
         // Spring toward center
-        const k = 0.06;
+        const k = 0.08;
         a.vx += (cx - a.x) * k * 0.016;
         a.vy += (cy - a.y) * k * 0.016;
       }
@@ -151,7 +155,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           const minSep = 0.5 * Math.hypot(A.w, A.h) + 0.5 * Math.hypot(B.w, B.h);
           const overlap = Math.max(0, minSep - dist);
           // Strong separation when overlapping, mild repulsion otherwise
-          const strength = overlap > 0 ? 0.15 * overlap : 70 / (dist * dist);
+          const strength = overlap > 0 ? 0.25 * overlap : 120 / (dist * dist);
           const ux = dx / dist;
           const uy = dy / dist;
           const fx = ux * strength;
@@ -166,14 +170,14 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       for (const key of wordsList) {
         const n = map[key];
         if (!n) continue;
-        n.vx *= 0.92;
-        n.vy *= 0.92;
-        n.x += n.vx * 0.016;
-        n.y += n.vy * 0.016;
+        n.vx *= 0.9;
+        n.vy *= 0.9;
+        n.x += n.vx * 0.02;
+        n.y += n.vy * 0.02;
         const rx = Math.max(20, n.w / 2);
         const ry = Math.max(12, n.h / 2);
         // Bounce on bounds with restitution
-        const e = 0.6;
+        const e = 0.7;
         if (n.x < rx) { n.x = rx; n.vx = Math.abs(n.vx) * e; }
         if (n.x > W - rx) { n.x = W - rx; n.vx = -Math.abs(n.vx) * e; }
         if (n.y < ry) { n.y = ry; n.vy = Math.abs(n.vy) * e; }
