@@ -28,8 +28,11 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
 
   const fileUrl = useMemo(() => {
     if (!details) return '';
-    const base = getApiBaseUrl();
-    return `${base}${details.filePath}`;
+    let path = details.filePath;
+    // Normalize accidentally missing colon in protocol (e.g., https//)
+    if (/^https\/\//i.test(path)) path = path.replace(/^https\/\//i, 'https://');
+    if (/^http\/\//i.test(path)) path = path.replace(/^http\/\//i, 'http://');
+    return /^https?:\/\//i.test(path) ? path : `${getApiBaseUrl()}${path}`;
   }, [details]);
 
   const pdfUrlWithPage = useMemo(() => {
@@ -113,6 +116,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   }
 
   const isPdf = /pdf/i.test(details.mimeType);
+  const isPpt = /(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath);
+  const officeEmbedUrl = isPpt ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}` : '';
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -128,6 +133,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       <div className="flex-1 min-h-0">
         {isPdf ? (
           <iframe title="slides" src={pdfUrlWithPage} className="w-full h-full border-0" />
+        ) : isPpt ? (
+          <iframe title="slides" src={officeEmbedUrl} className="w-full h-full border-0" />
         ) : (
           <div className="h-full grid place-items-center p-6">
             <Card className="p-6 text-center max-w-lg">
