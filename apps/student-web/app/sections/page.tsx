@@ -409,7 +409,7 @@ export default function SectionsPage() {
                   >Submit</Button>
                 </div>
                 {submitMsg && (
-                  <div className={`mt-2 text-sm rounded-lg border p-2 ${/submitted/i.test(submitMsg) ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-800 bg-amber-50 border-amber-200'}`}>
+                  <div className={`mt-2 text-sm rounded-lg border p-2 ${/^Answer submitted/i.test(submitMsg) ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-800 bg-amber-50 border-amber-200'}`}>
                     {submitMsg.replace('submitted.', 'submitted!')}
                   </div>
                 )}
