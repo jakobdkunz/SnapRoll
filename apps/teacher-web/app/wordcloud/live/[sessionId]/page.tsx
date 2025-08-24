@@ -74,7 +74,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     const map = nodes.current;
     // dynamic global scale: shrink when many words
     const nWords = words.length;
-    const shrink = nWords <= 20 ? 1 : Math.max(0.6, 1 - (nWords - 20) * 0.01);
+    const shrink = nWords <= 20 ? 1 : Math.max(0.5, 1 - (nWords - 20) * 0.015);
     globalScaleRef.current = shrink;
     const maxCountLocal = Math.max(1, ...words.map((w) => w.count));
     // Add new words at center with tiny random push
@@ -152,9 +152,9 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const wordsList = words.map((w) => w.word);
       const dt = 0.016;
       const baseK = 0.08;
-      const centerK = baseK + 0.02 * Math.min(1, wordsList.length / 25);
+      const centerK = baseK + 0.04 * Math.min(1, wordsList.length / 20);
       const wallMargin = 48;
-      const wallK = 0.0025;
+      const wallK = 0.002;
       const spacing = 6; // extra padding between words
       const shrink = globalScaleRef.current;
       // Integrate forces
@@ -166,9 +166,28 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const dxC = cx - a.x;
         const dyC = cy - a.y;
         const distC2 = Math.max(25, dxC * dxC + dyC * dyC);
-        const grav = 20 / distC2;
+        const grav = 28 / distC2;
         a.vx += dxC * centerK * dt + dxC * grav * dt;
         a.vy += dyC * centerK * dt + dyC * grav * dt;
+        // Radial outward velocity damping to curb edge drift
+        const invLen = 1 / Math.sqrt(distC2);
+        const uxC = dxC * invLen;
+        const uyC = dyC * invLen;
+        const radialVel = -(a.vx * uxC + a.vy * uyC); // positive if moving outward
+        if (radialVel > 0) {
+          const damp = Math.min(0.25, 0.08 + 0.02 * Math.min(1, wordsList.length / 20));
+          a.vx -= radialVel * uxC * damp;
+          a.vy -= radialVel * uyC * damp;
+        }
+        // Outer ring containment: pull back if past 40% of min dimension
+        const R = 0.4 * Math.min(W, H);
+        const r = Math.sqrt(distC2);
+        if (r > R) {
+          const ringK = 0.0015 * (1 + Math.min(1, wordsList.length / 30));
+          const over = r - R;
+          a.vx += (dxC * invLen) * (over * ringK);
+          a.vy += (dyC * invLen) * (over * ringK);
+        }
         // Soft wall push to avoid border pile-up
         if (a.x < wallMargin) a.vx += (wallMargin - a.x) * wallK;
         if (a.x > W - wallMargin) a.vx -= (a.x - (W - wallMargin)) * wallK;
@@ -181,7 +200,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const dr = Math.max(1, (W - rx - a.x));
         const dtp = Math.max(1, (a.y - ry));
         const db = Math.max(1, (H - ry - a.y));
-        const edgeK = 9000;
+        const edgeK = 7000;
         a.vx += (1 / (dl * dl)) * edgeK * dt; // push right from left edge
         a.vx -= (1 / (dr * dr)) * edgeK * dt; // push left from right edge
         a.vy += (1 / (dtp * dtp)) * edgeK * dt; // push down from top
@@ -229,7 +248,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
             const normDx = dx / Math.max(1, rxA + rxB);
             const normDy = dy / Math.max(1, ryA + ryB);
             const normDist = Math.max(0.2, Math.hypot(normDx, normDy));
-            const rep = 90 / (normDist * normDist);
+            const rep = 70 / (normDist * normDist);
             const ux = normDx / normDist;
             const uy = normDy / normDist;
             const fx = ux * rep;
