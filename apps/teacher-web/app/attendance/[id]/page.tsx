@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
-import { HiOutlineArrowPath, HiOutlineArrowLeft } from 'react-icons/hi2';
+import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile } from 'react-icons/hi2';
 import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams, useRouter } from 'next/navigation';
@@ -127,7 +127,7 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="relative min-h-dvh grid px-4 py-6 overflow-hidden">
+    <div className="relative min-h-dvh grid px-4 py-3 overflow-hidden">
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
@@ -140,17 +140,16 @@ export default function AttendancePage() {
         }
       `}</style>
       <div className="relative z-10 grid w-full">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
           <div className="mx-auto text-center">
-            <div className="text-xs uppercase tracking-wide text-slate-500">Taking Attendance For</div>
             <div className="text-lg font-semibold truncate max-w-[80vw]">{sectionTitle || 'Section'}</div>
           </div>
           <div className="w-[88px]" />
         </div>
-      <div className="grid place-items-center gap-6 w-full mt-2">
+      <div className="grid place-items-center gap-4 w-full mt-1">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
         <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
         {!status ? (
@@ -171,9 +170,10 @@ export default function AttendancePage() {
                 </div>
               </div>
             </div>
-            <Button className="mt-8 inline-flex items-center gap-2" onClick={start} disabled={isStarting}>
-              <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
-            </Button>
+            <div className="mt-6 text-slate-600 text-sm flex items-center justify-center gap-4">
+              <span className="inline-flex items-center gap-1"><HiOutlineGlobeAlt className="h-5 w-5" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
+              <span className="inline-flex items-center gap-1"><HiOutlineDevicePhoneMobile className="h-5 w-5" /> or use the SnapRoll app</span>
+            </div>
           </>
         )}
       </Card>
@@ -206,6 +206,12 @@ export default function AttendancePage() {
           </>
         )}
       </Card>
+      {/* Bottom action: Generate new code */}
+      <div className="fixed bottom-5 left-0 right-0 flex justify-center px-4">
+        <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
+          <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
+        </Button>
+      </div>
       </div>
     </div>
     </div>
