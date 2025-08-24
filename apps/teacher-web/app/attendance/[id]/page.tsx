@@ -127,7 +127,7 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="relative min-h-dvh grid px-4 py-3 overflow-hidden">
+    <div className="relative min-h-dvh grid px-4 py-0 overflow-hidden">
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
@@ -139,7 +139,7 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 grid w-full">
+      <div className="relative z-10 grid w-full -mt-2 sm:-mt-3">
         <div className="flex items-center justify-between mb-2">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
