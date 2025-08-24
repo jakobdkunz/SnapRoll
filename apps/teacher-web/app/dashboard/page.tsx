@@ -412,12 +412,12 @@ function CustomizeModal({
         </div>
       </div>
       
-      <div className="flex gap-2 pt-4">
-        <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
-          Save Changes
-        </Button>
+      <div className="flex gap-2 pt-4 justify-end">
         <Button variant="ghost" onClick={onCancel}>
           Cancel
+        </Button>
+        <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
+          Save Changes
         </Button>
       </div>
 
@@ -427,11 +427,14 @@ function CustomizeModal({
         <div className="p-3">
           <div className="text-sm text-slate-600 mb-2">Deleting a section will remove its roster, attendance, and activities.</div>
           {!confirmDelete ? (
-            <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
-              <HiOutlineTrash className="h-5 w-5" /> Delete Section
-            </Button>
+            <div className="flex justify-end">
+              <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
+                <HiOutlineTrash className="h-5 w-5" /> Delete Section
+              </Button>
+            </div>
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 justify-end">
+              <Button variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(false)}>Cancel</Button>
               <Button className="!bg-rose-600" disabled={deleting} onClick={async () => {
                 try {
                   setDeleting(true);
@@ -441,7 +444,6 @@ function CustomizeModal({
                   setDeleting(false);
                 }
               }}>{deleting ? 'Removing…' : 'Remove'}</Button>
-              <Button variant="ghost" disabled={deleting} onClick={() => setConfirmDelete(false)}>Cancel</Button>
             </div>
           )}
         </div>
