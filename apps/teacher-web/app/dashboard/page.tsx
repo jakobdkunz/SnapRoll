@@ -422,8 +422,9 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div className="text-sm font-medium text-slate-700 mb-2">Choose an existing slideshow</div>
-              <div className="space-y-2 max-h-56 overflow-auto pr-1">
+              <div className="text-sm font-medium text-slate-700 mb-1">Recents</div>
+              <div className="text-xs text-slate-500 mb-2">Slides are kept for 72 hours after last use.</div>
+              <div className="space-y-2 max-h-56 overflow-auto pr-1 bg-slate-50 rounded-lg p-2 border">
                 {slideTeacherAssets.length === 0 && (
                   <div className="text-sm text-slate-500">No uploads yet.</div>
                 )}
@@ -437,11 +438,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <div className="text-sm font-medium text-slate-700 mb-2">Or upload a new file (PDF or PPTX)</div>
-              {process.env.NEXT_PUBLIC_DISABLE_UPLOADS === 'true' ? (
-                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">Uploads are disabled on this deployment. Please use an existing asset.</div>
-              ) : (
-                <input type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => { const f = e.target.files?.[0] || null; setSlideUploadFile(f); setSlideSelectedAssetId(null); if (f) setSlideTitle(f.name.replace(/\.(pdf|pptx?|PDF|PPTX?)$/, '')); }} />
-              )}
+              <input type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => { const f = e.target.files?.[0] || null; setSlideUploadFile(f); setSlideSelectedAssetId(null); if (f) setSlideTitle(f.name.replace(/\.(pdf|pptx?|PDF|PPTX?)$/, '')); }} />
               <div className="mt-3">
                 <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                 <TextInput value={slideTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} placeholder="Slideshow title" />
@@ -459,7 +456,7 @@ export default function DashboardPage() {
           {slideError && <div className="mt-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{slideError}</div>}
           <div className="mt-6 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setSlideOpen(false)}>Cancel</Button>
-            <Button disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideUploadFile) || (process.env.NEXT_PUBLIC_DISABLE_UPLOADS === 'true' && !slideSelectedAssetId)} onClick={async () => {
+            <Button disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideUploadFile)} onClick={async () => {
               if (!slideSectionId) return;
               setSlideWorking(true);
               setSlideError(null);

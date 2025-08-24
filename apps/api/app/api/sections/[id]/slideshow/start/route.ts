@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
+import { put } from '@vercel/blob';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,25 +27,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     } else {
       const file = form.get('file') as File | null;
       if (!file) return NextResponse.json({ error: 'File is required' }, { status: 400 });
-      if (process.env.VERCEL) {
-        return NextResponse.json({ error: 'Uploads are not supported on this deployment. Please upload assets ahead of time.' }, { status: 400 });
-      }
       const mime = file.type || 'application/octet-stream';
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const destPath = `/uploads/${Date.now()}-${file.name}`;
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const fs = require('fs');
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const path = require('path');
-      const abs = path.join(process.cwd(), 'public', destPath);
-      try {
-        fs.mkdirSync(path.dirname(abs), { recursive: true });
-        fs.writeFileSync(abs, buffer);
-      } catch (e: unknown) {
-        return NextResponse.json({ error: 'Failed to save upload. This environment may be read-only.' }, { status: 500 });
-      }
-      filePath = destPath;
+      const key = `slides/session/${sectionId}/${Date.now()}-${file.name}`;
+      const { url } = await put(key, buffer, { access: 'public', contentType: mime, addRandomSuffix: false });
+      filePath = url;
       mimeType = mime;
     }
 
