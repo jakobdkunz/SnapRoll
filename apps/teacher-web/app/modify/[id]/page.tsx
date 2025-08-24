@@ -323,11 +323,14 @@ export default function ModifyPage() {
     const emailIdx = roles.findIndex((r) => r === 'email');
     if (emailIdx < 0) throw new Error('Email column not selected.');
     let added = 0;
+    let invalidEmailCount = 0;
+    let missingLastCount = 0;
+    let missingFirstCount = 0;
     const addedEmails: string[] = [];
     for (let i = startIndex; i < allRows.length; i += 1) {
       const row = allRows[i] || [];
       const emailVal = String(row[emailIdx] || '').trim().toLowerCase();
-      if (!isValidEmail(emailVal)) continue;
+      if (!isValidEmail(emailVal)) { invalidEmailCount += 1; continue; }
       const fullIdx = roles.findIndex((r) => r === 'full');
       const firstIdx = roles.findIndex((r) => r === 'first');
       const lastIdx = roles.findIndex((r) => r === 'last');
@@ -336,14 +339,12 @@ export default function ModifyPage() {
       if (fullIdx >= 0) {
         const guess = guessNameParts(String(row[fullIdx] || ''));
         first = guess.firstName; last = guess.lastName;
+        if (!last) { missingLastCount += 1; continue; }
       } else {
         if (firstIdx >= 0) first = String(row[firstIdx] || '').trim();
         if (lastIdx >= 0) last = String(row[lastIdx] || '').trim();
-      }
-      if (!first && !last) {
-        const beforeAt = emailVal.split('@')[0].replace(/[._-]+/g, ' ');
-        const guess = guessNameParts(beforeAt);
-        first = guess.firstName; last = guess.lastName;
+        if (!first) { missingFirstCount += 1; continue; }
+        if (!last) { missingLastCount += 1; continue; }
       }
       try {
         await apiFetch(`/api/sections/${params.id}/students`, {
@@ -357,7 +358,16 @@ export default function ModifyPage() {
       }
     }
     await load();
-    setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
+    const parts: string[] = [];
+    if (invalidEmailCount > 0) parts.push(`${invalidEmailCount} ${invalidEmailCount === 1 ? 'invalid email' : 'invalid emails'}`);
+    const totalMissing = missingLastCount + missingFirstCount;
+    if (totalMissing > 0) {
+      if (missingLastCount > 0 && missingFirstCount === 0) parts.push(`${missingLastCount} ${missingLastCount === 1 ? 'missing last name' : 'missing last names'}`);
+      else if (missingFirstCount > 0 && missingLastCount === 0) parts.push(`${missingFirstCount} ${missingFirstCount === 1 ? 'missing first name' : 'missing first names'}`);
+      else parts.push(`${totalMissing} ${totalMissing === 1 ? 'missing name' : 'missing names'}`);
+    }
+    const rejectMsg = parts.length ? ` ${invalidEmailCount + totalMissing} ${invalidEmailCount + totalMissing === 1 ? 'student was' : 'students were'} not imported because ${parts.join(' and ')}.` : '';
+    setImportMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.${rejectMsg}`);
     setLastAction({ type: 'import', snapshot: [...students], label: `Imported ${added} ${added === 1 ? 'student' : 'students'}.` });
     setToastMessage(`Imported ${added} ${added === 1 ? 'student' : 'students'}.`);
     setToastVisible(true);
@@ -633,7 +643,15 @@ export default function ModifyPage() {
                   <div className="text-xs text-rose-600 mt-2">{reviewError}</div>
                 )}
 
-                <div className="flex justify-end gap-2 pt-3">
+                <div className="flex items-center justify-end gap-3 pt-3">
+                  {!validateRolesForImport(columnRoles).ok && (
+                    <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                      {(() => {
+                        const v = validateRolesForImport(columnRoles);
+                        return v.ok ? '' : v.message || 'Please finish mapping before importing.';
+                      })()}
+                    </div>
+                  )}
                   <Button variant="ghost" onClick={() => { setMappingOpen(false); setImporting(false); }} disabled={importWorking}>Cancel</Button>
                   <Button onClick={async () => {
                     const v = validateRolesForImport(columnRoles);
