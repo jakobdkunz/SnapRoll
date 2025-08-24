@@ -56,6 +56,7 @@ export default function ModifyPage() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [undoWorking, setUndoWorking] = useState(false);
 
   function validateRolesForImport(roles: ColumnRole[]): { ok: boolean; message?: string } {
     const emailCount = roles.filter((r) => r === 'email').length;
@@ -696,8 +697,6 @@ export default function ModifyPage() {
                 try {
                   setConfirmWorking(true);
                   const snapshot = [...students];
-                  // Optimistically clear UI for speed
-                  setStudents([]);
                   await runWithConcurrency(snapshot, 10, async (s) => {
                     await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
                   });
@@ -724,17 +723,17 @@ export default function ModifyPage() {
             <span className="text-sm">{toastMessage}</span>
             <Button
               variant="primary"
+              disabled={undoWorking}
               onClick={async () => {
-                setToastVisible(false);
                 if (!lastAction) return;
+                setUndoWorking(true);
+                if (toastTimerRef.current) { clearTimeout(toastTimerRef.current); toastTimerRef.current = null; }
                 const snapshot = lastAction.snapshot;
                 try {
                   const currentIds = new Set(students.map((s) => s.id));
                   const snapshotIds = new Set(snapshot.map((s) => s.id));
                   const toDelete = students.filter((s) => !snapshotIds.has(s.id));
                   const toAdd = snapshot.filter((s) => !currentIds.has(s.id));
-                  // Optimistic UI
-                  setStudents(snapshot);
                   await Promise.all([
                     runWithConcurrency(toDelete, 10, async (s) => {
                       await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
@@ -747,12 +746,15 @@ export default function ModifyPage() {
                     })
                   ]);
                   await load();
+                  setToastVisible(false);
                 } catch (_err) {
                   alert('Failed to undo.');
+                } finally {
+                  setUndoWorking(false);
                 }
               }}
             >
-              Undo
+              {undoWorking ? 'Undoing…' : 'Undo'}
             </Button>
           </div>
         </div>
