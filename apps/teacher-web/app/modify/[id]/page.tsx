@@ -77,6 +77,20 @@ export default function ModifyPage() {
     return sample.some((v) => /[A-Za-z]\s+[A-Za-z]/.test(v));
   }
 
+  async function runWithConcurrency<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
+    const queue = [...items];
+    const workers: Promise<void>[] = [];
+    for (let i = 0; i < Math.min(limit, queue.length); i += 1) {
+      workers.push((async function loop() {
+        while (queue.length) {
+          const next = queue.shift() as T;
+          try { await worker(next); } catch (_err) { /* continue */ }
+        }
+      })());
+    }
+    await Promise.all(workers);
+  }
+
   async function load() {
     try {
       setLoadingStudents(true);
@@ -682,9 +696,11 @@ export default function ModifyPage() {
                 try {
                   setConfirmWorking(true);
                   const snapshot = [...students];
-                  for (const s of students) {
+                  // Optimistically clear UI for speed
+                  setStudents([]);
+                  await runWithConcurrency(snapshot, 10, async (s) => {
                     await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
-                  }
+                  });
                   await load();
                   setLastAction({ type: 'remove_all', snapshot, label: 'All students removed.' });
                   setToastMessage('All students removed.');
@@ -715,19 +731,21 @@ export default function ModifyPage() {
                 try {
                   const currentIds = new Set(students.map((s) => s.id));
                   const snapshotIds = new Set(snapshot.map((s) => s.id));
-                  for (const s of students) {
-                    if (!snapshotIds.has(s.id)) {
+                  const toDelete = students.filter((s) => !snapshotIds.has(s.id));
+                  const toAdd = snapshot.filter((s) => !currentIds.has(s.id));
+                  // Optimistic UI
+                  setStudents(snapshot);
+                  await Promise.all([
+                    runWithConcurrency(toDelete, 10, async (s) => {
                       await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
-                    }
-                  }
-                  for (const s of snapshot) {
-                    if (!currentIds.has(s.id)) {
+                    }),
+                    runWithConcurrency(toAdd, 8, async (s) => {
                       await apiFetch(`/api/sections/${params.id}/students`, {
                         method: 'POST',
                         body: JSON.stringify({ email: s.email, firstName: s.firstName, lastName: s.lastName }),
                       });
-                    }
-                  }
+                    })
+                  ]);
                   await load();
                 } catch (_err) {
                   alert('Failed to undo.');
