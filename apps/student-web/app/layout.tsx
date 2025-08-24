@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { InstallPrompt } from './install-prompt';
 import { AuthGuard } from './_components/AuthGuard';
 import { StudentHeaderRight } from './_components/StudentHeaderRight';
 import { WordmarkLink } from './_components/WordmarkLink';
@@ -15,7 +14,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <InstallPrompt />
         <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
           <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
             <WordmarkLink />
