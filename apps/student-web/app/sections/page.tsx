@@ -316,7 +316,7 @@ export default function SectionsPage() {
         <div className="text-xl font-semibold">Welcome, {studentName ?? localStorage.getItem('snaproll.studentName')}!</div>
       </div>
 
-      {/* Inline Attendance / Check In */}
+      {/* Attendance / Check In */}
       <Card className="p-6 space-y-3">
         <div className="text-center">
           <div className="font-medium">Attendance</div>
@@ -345,14 +345,23 @@ export default function SectionsPage() {
         {checkinError && (
           <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
         )}
+        <div className="mx-auto my-3 h-px bg-slate-200 w-40" />
+        <div className="flex items-center justify-center">
+          <button
+            className="text-primary font-medium hover:underline"
+            onClick={() => { if (studentId) window.location.href = '/my-attendance'; }}
+          >
+            My attendance →
+          </button>
+        </div>
       </Card>
 
-      {/* Interactive status / answer UI */}
+      {/* Activities status / answer UI */}
       <Card className="p-6">
         {!interactive ? (
           <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
-            <div className="font-medium mb-1">Interactive</div>
-            <div className="text-sm">Your instructor has not created any interactive prompts yet…</div>
+            <div className="font-medium mb-1">Activities</div>
+            <div className="text-sm">Your instructors have not started any live activites yet...</div>
             <div className="mt-3 flex items-center justify-center gap-2 text-slate-400">
               <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
               <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.2s_ease-in-out_infinite]" />
@@ -390,9 +399,7 @@ export default function SectionsPage() {
                         });
                         setAnswer('');
                         setSubmitMsg('Answer submitted.');
-                        if (!interactive.allowMultipleAnswers) {
-                          submittedOnceRef.current = true;
-                        }
+                        if (!interactive.allowMultipleAnswers) submittedOnceRef.current = true;
                       } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : 'Failed to submit.';
                         if (/only allowed to submit one answer/i.test(msg)) {
@@ -417,18 +424,6 @@ export default function SectionsPage() {
             )}
           </div>
         ) : null}
-      </Card>
-
-      {/* My attendance link */}
-      <Card className="p-4">
-        <button
-          className="text-primary font-medium"
-          onClick={() => {
-            if (studentId) window.location.href = '/my-attendance';
-          }}
-        >
-          My attendance →
-        </button>
       </Card>
 
       {/* Courses subheading */}

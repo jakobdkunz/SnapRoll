@@ -199,7 +199,7 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                     <div className="flex gap-2 items-stretch flex-wrap">
-                      {/* Interact dropdown (controlled) */}
+                      {/* Activities dropdown (controlled) */}
                       <div className="relative flex-1" data-interact-menu={openMenuFor === s.id ? 'open' : undefined}>
                         <Button
                           variant="ghost"
@@ -211,20 +211,33 @@ export default function DashboardPage() {
                           aria-haspopup="menu"
                           aria-expanded={openMenuFor === s.id}
                         >
-                          <HiOutlineSparkles className="h-5 w-5" /> Interact
+                          <HiOutlineSparkles className="h-5 w-5" /> Activities
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s.id && (
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setOpenMenuFor(null)}
-                            aria-hidden
-                          >
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuFor(null)} aria-hidden>
+                            {/* anchored menu */}
                             <div
-                              className="absolute z-50 max-h-[60vh] overflow-auto mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1"
-                              style={{ left: 16, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+                              className="absolute z-50 max-h-[60vh] overflow-auto min-w-[12rem] bg-white border rounded-xl shadow-soft p-1"
                               role="menu"
-                              aria-label="Interact"
+                              aria-label="Activities"
+                              ref={(el) => {
+                                if (!el) return;
+                                const btn = el.parentElement?.querySelector('[aria-haspopup="menu"]') as HTMLElement | null;
+                                const rect = btn?.getBoundingClientRect();
+                                const vw = window.innerWidth;
+                                const vh = window.innerHeight;
+                                if (rect) {
+                                  const spaceBelow = vh - rect.bottom;
+                                  const top = spaceBelow < 220 ? Math.max(8, rect.top - el.offsetHeight - 8) : rect.bottom + 8;
+                                  const left = Math.min(vw - el.offsetWidth - 8, Math.max(8, rect.left));
+                                  el.style.top = `${top}px`;
+                                  el.style.left = `${left}px`;
+                                } else {
+                                  el.style.bottom = '96px';
+                                  el.style.left = '16px';
+                                }
+                              }}
                             >
                               <button
                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
