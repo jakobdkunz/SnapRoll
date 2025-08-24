@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                                 }}
                                 role="menuitem"
                               >
-                                🗳️ Poll
+                                <HiOutlineChartBar className="h-5 w-5" /> Poll
                               </button>
                             </div>
                           </div>

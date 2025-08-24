@@ -11,13 +11,17 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const [toggling, setToggling] = useState(false);
   const [counts, setCounts] = useState<number[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [showLocal, setShowLocal] = useState<boolean | null>(null);
 
   useEffect(() => {
     let mounted = true;
     async function load() {
       try {
         const s = await apiFetch<PollSession>(`/api/poll/${sessionId}`);
-        if (mounted) setSession(s);
+        if (mounted) {
+          setSession(s);
+          if (showLocal === null) setShowLocal(s.showResults);
+        }
       } catch {
         /* ignore */
       }
@@ -25,7 +29,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     load();
     const id = window.setInterval(load, 1500);
     return () => { mounted = false; window.clearInterval(id); };
-  }, [sessionId]);
+  }, [sessionId, showLocal]);
 
   // Heartbeat
   useEffect(() => {
@@ -69,12 +73,14 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
-                  {session?.showResults ? (
-                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all" style={{ width: `${pct}%` }} />
-                  ) : null}
+                  {(showLocal ?? session?.showResults) ? (
+                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `${pct}%` }} />
+                  ) : (
+                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `0%` }} />
+                  )}
                   <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
                     <div className="font-medium">{opt}</div>
-                    {session?.showResults ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
+                    {(showLocal ?? session?.showResults) ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
                   </div>
                 </div>
               );
@@ -82,11 +88,14 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
           </div>
           <div className="flex justify-end mt-5">
             <Button disabled={toggling} onClick={async () => {
-              try {
-                setToggling(true);
-                await apiFetch(`/api/poll/${sessionId}/toggle-results`, { method: 'POST' });
-              } finally { setToggling(false); }
-            }}>{session?.showResults ? 'Hide Results' : 'Show Results'}</Button>
+              // Instant UI toggle
+              setShowLocal((prev) => !(prev ?? session?.showResults));
+              // Fire-and-forget server toggle
+              setToggling(true);
+              apiFetch(`/api/poll/${sessionId}/toggle-results`, { method: 'POST' })
+                .catch(() => { /* ignore */ })
+                .finally(() => setToggling(false));
+            }}>{(showLocal ?? session?.showResults) ? 'Hide Results' : 'Show Results'}</Button>
           </div>
         </Card>
       </div>

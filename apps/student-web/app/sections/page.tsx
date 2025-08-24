@@ -441,20 +441,25 @@ export default function SectionsPage() {
               <div className="font-medium">Poll</div>
               <div className="text-slate-500 text-sm">{(interactive as InteractivePoll).prompt}</div>
             </div>
-            <div className="space-y-2">
-              {(interactive as InteractivePoll).options.map((opt: string, i: number) => (
-                <Button key={i} className="w-full justify-start" disabled={(interactive as InteractivePoll).hasAnswered}
-                  onClick={async () => {
-                    if (!studentId || (interactive as InteractivePoll).hasAnswered) return;
-                    try {
-                      await apiFetch(`/api/poll/${(interactive as InteractivePoll).sessionId}/answers`, { method: 'POST', body: JSON.stringify({ studentId, optionIdx: i }) });
-                    } catch {
-                      /* ignore */
-                    }
-                  }}
-                >{opt}</Button>
-              ))}
-            </div>
+            {(interactive as InteractivePoll).hasAnswered ? (
+              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center">Response submitted ✅</div>
+            ) : (
+              <div className="space-y-2">
+                {(interactive as InteractivePoll).options.map((opt: string, i: number) => (
+                  <Button key={i} className="w-full justify-start"
+                    onClick={async () => {
+                      if (!studentId) return;
+                      try {
+                        await apiFetch(`/api/poll/${(interactive as InteractivePoll).sessionId}/answers`, { method: 'POST', body: JSON.stringify({ studentId, optionIdx: i }) });
+                        setInteractive({ ...(interactive as InteractivePoll), hasAnswered: true });
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                  >{opt}</Button>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
       </Card>
