@@ -144,7 +144,7 @@ export default function AttendancePage() {
   }, []);
 
   return (
-    <div ref={containerRef} className="relative min-h-dvh grid px-4 pt-0 overflow-hidden" style={{ marginTop: topOffset ? -topOffset : undefined }}>
+    <div ref={containerRef} className="relative min-h-dvh grid px-4 pt-0 overflow-hidden" style={{ top: topOffset ? -topOffset : undefined, position: 'relative' }}>
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />

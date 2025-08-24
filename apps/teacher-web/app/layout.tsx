@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
           <AuthGuard />
-          <main className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">{children}</main>
+          <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-0 pb-6 sm:pb-8">{children}</main>
         </div>
       </body>
     </html>
