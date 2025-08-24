@@ -15,6 +15,12 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: Section | null }>({ open: false, section: null });
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+  const [wcOpen, setWcOpen] = useState(false);
+  const [wcSectionId, setWcSectionId] = useState<string | null>(null);
+  const [wcPrompt, setWcPrompt] = useState('One word to describe how you feel');
+  const [wcShowPrompt, setWcShowPrompt] = useState(true);
+  const [wcAllowMultiple, setWcAllowMultiple] = useState(false);
+  const [wcWorking, setWcWorking] = useState(false);
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -33,6 +39,27 @@ export default function DashboardPage() {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
   }, []);
+
+  async function startWordCloud() {
+    if (!wcSectionId) return;
+    if (!wcPrompt.trim()) {
+      alert('Please enter a prompt.');
+      return;
+    }
+    try {
+      setWcWorking(true);
+      const { session } = await apiFetch<{ session: { id: string } }>(`/api/sections/${wcSectionId}/wordcloud/start`, {
+        method: 'POST',
+        body: JSON.stringify({ prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple }),
+      });
+      setWcOpen(false);
+      setTimeout(() => router.push(`/wordcloud/live/${session.id}`), 120);
+    } catch (_e) {
+      alert('Failed to start word cloud. Please try again.');
+    } finally {
+      setWcWorking(false);
+    }
+  }
 
   async function load(currentTeacherId: string) {
     try {
@@ -185,13 +212,13 @@ export default function DashboardPage() {
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s.id && (
-                          <div className="absolute z-30 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1 right-0">
+                          <div className="absolute z-30 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1 left-0">
                             <button
                               className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
                               onClick={() => {
                                 setOpenMenuFor(null);
-                                // Open modal route without leaving the page immediately
-                                router.push(`/wordcloud/${s.id}/start`);
+                                setWcSectionId(s.id);
+                                setWcOpen(true);
                               }}
                               role="menuitem"
                             >
@@ -241,6 +268,35 @@ export default function DashboardPage() {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Start Word Cloud Modal (inline on dashboard) */}
+      <Modal open={wcOpen} onClose={() => setWcOpen(false)}>
+        <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md mx-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="inline-flex items-center gap-2 text-lg font-semibold"><HiOutlineCloud className="h-6 w-6" /> Start Word Cloud</div>
+            <button onClick={() => setWcOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
+              <TextInput value={wcPrompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWcPrompt(e.target.value)} placeholder="Enter prompt" />
+            </div>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={wcShowPrompt} onChange={(e) => setWcShowPrompt(e.target.checked)} />
+              <span>Show prompt on student devices</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={wcAllowMultiple} onChange={(e) => setWcAllowMultiple(e.target.checked)} />
+              <span>Allow multiple answers</span>
+            </label>
+            <div className="pt-2">
+              <Button onClick={startWordCloud} className="w-full inline-flex items-center justify-center gap-2" disabled={wcWorking}>
+                {wcWorking ? 'Starting…' : 'Continue'}
+              </Button>
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );
