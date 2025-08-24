@@ -120,7 +120,7 @@ export default function MyAttendancePage() {
         <table className="min-w-full text-sm">
           <thead>
             <tr>
-              <th className="text-left p-2 text-slate-600">Section</th>
+              <th className="text-left p-2 text-slate-600">Course</th>
               {grid.days.map((d) => (
                 <th key={d.date} className="p-2 text-slate-600 whitespace-nowrap">{formatDateMDY(d.date)}</th>
               ))}

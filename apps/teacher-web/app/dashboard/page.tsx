@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus } from 'react-icons/hi2';
+import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -149,7 +149,36 @@ export default function DashboardPage() {
                         <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
                       </Button>
                     </div>
-                    <Button className="w-full" onClick={() => router.push(`/attendance/${s.id}`)}>Take Attendance</Button>
+                    <div className="flex gap-2 items-stretch flex-wrap">
+                      {/* Interact dropdown */}
+                      <div className="relative">
+                        <details className="group">
+                          <summary className="list-none">
+                            <Button variant="ghost" className="inline-flex items-center gap-2">
+                              <HiOutlineSparkles className="h-5 w-5" /> Interact
+                              <HiChevronDown className="h-4 w-4 opacity-70 group-open:rotate-180 transition-transform" />
+                            </Button>
+                          </summary>
+                          <div className="absolute z-20 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1">
+                            <button
+                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.closest('details')?.removeAttribute('open');
+                                router.push(`/wordcloud/${s.id}/start`);
+                              }}
+                            >
+                              <HiOutlineCloud className="h-5 w-5" /> Word Cloud
+                            </button>
+                          </div>
+                        </details>
+                      </div>
+                      {/* Attendance button with responsive label */}
+                      <Button className="flex-1 truncate" onClick={() => router.push(`/attendance/${s.id}`)}>
+                        <span className="hidden sm:inline">Take Attendance</span>
+                        <span className="sm:hidden">Attendance</span>
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );

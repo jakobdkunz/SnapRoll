@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { Card, Skeleton } from '@snaproll/ui';
+import { Card, Skeleton, TextInput, Button } from '@snaproll/ui';
 import { usePathname } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
 
@@ -23,6 +23,43 @@ export default function SectionsPage() {
   const [studentName, setStudentName] = useState<string | null>(null);
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
+  // Interactive state
+  const [interactive, setInteractive] = useState<
+    | null
+    | {
+        kind: 'wordcloud';
+        sessionId: string;
+        prompt: string;
+        showPromptToStudents: boolean;
+        allowMultipleAnswers: boolean;
+        sectionId: string;
+      }
+  >(null);
+  const [answer, setAnswer] = useState('');
+  const lastSeenRef = useRef<number>(Date.now());
+
+  // Poll for interactive activity
+  useEffect(() => {
+    if (!studentId) return;
+    let mounted = true;
+    async function tick() {
+      try {
+        const res = await apiFetch<{ interactive: typeof interactive }>(`/api/students/${studentId}/interactive/active`);
+        if (!mounted) return;
+        setInteractive(res.interactive);
+        lastSeenRef.current = Date.now();
+      } catch {
+        /* ignore */
+      }
+    }
+    tick();
+    const interval = window.setInterval(tick, 2000);
+    return () => {
+      mounted = false;
+      window.clearInterval(interval);
+    };
+  }, [studentId]);
+
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
@@ -89,7 +126,7 @@ export default function SectionsPage() {
       setSections(data.sections);
       setCheckedInIds(data.checkedInSectionIds || []);
     } catch (error) {
-      console.error('Failed to load sections:', error);
+      console.error('Failed to load courses:', error);
     } finally {
       setLoading(false);
       setInitialized(true);
@@ -201,7 +238,7 @@ export default function SectionsPage() {
           </div>
         </Card>
 
-        <div className="text-slate-600 text-sm">Your sections</div>
+        <div className="text-slate-600 text-sm">My courses</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-3 sm:p-4">
@@ -300,6 +337,47 @@ export default function SectionsPage() {
         )}
       </Card>
 
+      {/* Interactive status / answer UI */}
+      <Card className="p-6">
+        {!interactive ? (
+          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
+            <div className="font-medium mb-1">Interactive</div>
+            <div className="text-sm">Your instructor has not created any interactive prompts yet…</div>
+            <div className="mt-3 flex items-center justify-center gap-2 text-slate-400">
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.2s_ease-in-out_infinite]" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.4s_ease-in-out_infinite]" />
+            </div>
+          </div>
+        ) : interactive.kind === 'wordcloud' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Word Cloud</div>
+              {interactive.showPromptToStudents && (
+                <div className="text-slate-500 text-sm">{interactive.prompt}</div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <TextInput value={answer} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)} placeholder="Your word or phrase" />
+              <Button
+                onClick={async () => {
+                  if (!studentId || !interactive || !answer.trim()) return;
+                  try {
+                    await apiFetch(`/api/wordcloud/${interactive.sessionId}/answers`, {
+                      method: 'POST',
+                      body: JSON.stringify({ studentId, text: answer.trim() }),
+                    });
+                    if (!interactive.allowMultipleAnswers) setAnswer('');
+                  } catch {
+                    /* ignore transient submit error */
+                  }
+                }}
+              >Submit</Button>
+            </div>
+          </div>
+        ) : null}
+      </Card>
+
       {/* My attendance link */}
       <Card className="p-4">
         <button
@@ -312,15 +390,15 @@ export default function SectionsPage() {
         </button>
       </Card>
 
-      {/* Sections subheading */}
-      <div className="text-slate-600 text-sm">Your sections</div>
+      {/* Courses subheading */}
+      <div className="text-slate-600 text-sm">My courses</div>
 
       {sections.length === 0 ? (
         <Card className="p-8 text-center">
-          <div className="text-lg font-medium">No sections yet</div>
+          <div className="text-lg font-medium">No courses yet</div>
           <div className="text-slate-500 mt-2">
-            Your instructor hasn&apos;t added you to any sections yet. 
-            Please ask your instructor to add your email address to their section roster.
+            Your instructor hasn&apos;t added you to any courses yet. 
+            Please ask your instructor to add your email address to their course roster.
           </div>
         </Card>
       ) : (
