@@ -129,15 +129,25 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const cx = W / 2;
       const cy = H / 2;
       const wordsList = words.map((w) => w.word);
+      const dt = 0.016;
+      const baseK = 0.08;
+      const centerK = baseK + 0.02 * Math.min(1, wordsList.length / 25);
+      const wallMargin = 48;
+      const wallK = 0.0025;
+      const spacing = 6; // extra padding between words
       // Integrate forces
       for (let i = 0; i < wordsList.length; i++) {
         const aKey = wordsList[i];
         const a = map[aKey];
         if (!a) continue;
         // Spring toward center
-        const k = 0.08;
-        a.vx += (cx - a.x) * k * 0.016;
-        a.vy += (cy - a.y) * k * 0.016;
+        a.vx += (cx - a.x) * centerK * dt;
+        a.vy += (cy - a.y) * centerK * dt;
+        // Soft wall push to avoid border pile-up
+        if (a.x < wallMargin) a.vx += (wallMargin - a.x) * wallK;
+        if (a.x > W - wallMargin) a.vx -= (a.x - (W - wallMargin)) * wallK;
+        if (a.y < wallMargin) a.vy += (wallMargin - a.y) * wallK;
+        if (a.y > H - wallMargin) a.vy -= (a.y - (H - wallMargin)) * wallK;
       }
       // Pairwise repulsion with soft collision based on measured size
       for (let i = 0; i < wordsList.length; i++) {
@@ -150,30 +160,61 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           if (!B) continue;
           const dx = A.x - B.x;
           const dy = A.y - B.y;
-          const dist = Math.max(1, Math.hypot(dx, dy));
-          // Minimum separation based on half-diagonals
-          const minSep = 0.5 * Math.hypot(A.w, A.h) + 0.5 * Math.hypot(B.w, B.h);
-          const overlap = Math.max(0, minSep - dist);
-          // Strong separation when overlapping, mild repulsion otherwise
-          const strength = overlap > 0 ? 0.25 * overlap : 120 / (dist * dist);
-          const ux = dx / dist;
-          const uy = dy / dist;
-          const fx = ux * strength;
-          const fy = uy * strength;
-          A.vx += fx;
-          A.vy += fy;
-          B.vx -= fx;
-          B.vy -= fy;
+          const absDx = Math.abs(dx);
+          const absDy = Math.abs(dy);
+          // AABB overlap with padding
+          const rxA = A.w / 2 + spacing;
+          const ryA = A.h / 2 + spacing;
+          const rxB = B.w / 2 + spacing;
+          const ryB = B.h / 2 + spacing;
+          const overlapX = rxA + rxB - absDx;
+          const overlapY = ryA + ryB - absDy;
+          if (overlapX > 0 && overlapY > 0) {
+            // Resolve along the axis of least overlap (minimal translation vector)
+            if (overlapX < overlapY) {
+              const push = 0.6 * overlapX + 0.5;
+              const s = dx >= 0 ? 1 : -1;
+              A.x += s * (push * 0.5);
+              B.x -= s * (push * 0.5);
+              A.vx += s * push * 0.1;
+              B.vx -= s * push * 0.1;
+            } else {
+              const push = 0.6 * overlapY + 0.5;
+              const s = dy >= 0 ? 1 : -1;
+              A.y += s * (push * 0.5);
+              B.y -= s * (push * 0.5);
+              A.vy += s * push * 0.1;
+              B.vy -= s * push * 0.1;
+            }
+          } else {
+            // Anisotropic repulsion using normalized distance by sizes
+            const normDx = dx / Math.max(1, rxA + rxB);
+            const normDy = dy / Math.max(1, ryA + ryB);
+            const normDist = Math.max(0.2, Math.hypot(normDx, normDy));
+            const rep = 90 / (normDist * normDist);
+            const ux = normDx / normDist;
+            const uy = normDy / normDist;
+            const fx = ux * rep;
+            const fy = uy * rep;
+            A.vx += fx;
+            A.vy += fy;
+            B.vx -= fx;
+            B.vy -= fy;
+          }
         }
       }
       // Integrate velocities, apply damping and boundary bounces for bounciness
       for (const key of wordsList) {
         const n = map[key];
         if (!n) continue;
+        // cap velocities for stability
+        const vmax = 600;
+        n.vx = Math.max(-vmax, Math.min(vmax, n.vx));
+        n.vy = Math.max(-vmax, Math.min(vmax, n.vy));
         n.vx *= 0.9;
         n.vy *= 0.9;
-        n.x += n.vx * 0.02;
-        n.y += n.vy * 0.02;
+        n.x += n.vx * dt * 1.2;
+        n.y += n.vy * dt * 1.2;
         const rx = Math.max(20, n.w / 2);
         const ry = Math.max(12, n.h / 2);
         // Bounce on bounds with restitution
