@@ -22,6 +22,7 @@ model User {
   manualStatusChanges ManualStatusChange[] @relation("TeacherManualChanges")
   studentManualChanges ManualStatusChange[] @relation("StudentManualChanges")
   wordCloudAnswers   WordCloudAnswer[]
+  pollAnswers        PollAnswer[]
 }
 
 model Section {
@@ -34,6 +35,7 @@ model Section {
   enrollments Enrollment[]
   classDays   ClassDay[]
   wordCloudSessions WordCloudSession[]
+  pollSessions PollSession[]
 }
 
 model Enrollment {
