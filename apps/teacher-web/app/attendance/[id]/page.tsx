@@ -127,7 +127,7 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="relative min-h-dvh grid px-4 py-0 overflow-hidden">
+    <div className="relative min-h-dvh grid px-4 py-0 overflow-hidden -mt-6 sm:-mt-8">
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
@@ -140,7 +140,7 @@ export default function AttendancePage() {
         }
       `}</style>
       <div className="relative z-10 grid w-full -mt-2 sm:-mt-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
@@ -149,7 +149,7 @@ export default function AttendancePage() {
           </div>
           <div className="w-[88px]" />
         </div>
-      <div className="grid place-items-center gap-4 w-full mt-1">
+      <div className="grid place-items-center gap-4 w-full mt-0">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
         <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
         {!status ? (
