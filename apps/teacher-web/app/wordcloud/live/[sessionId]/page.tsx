@@ -58,7 +58,8 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const palette = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-  const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string }>>({});
+  const nodes = useRef<Record<string, { x: number; y: number; vx: number; vy: number; w: number; h: number; color: string; scale: number; targetScale: number }>>({});
+  const globalScaleRef = useRef<number>(1);
   const rafId = useRef<number | null>(null);
   const containerSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
 
@@ -71,6 +72,11 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     const cx = rect.width / 2;
     const cy = rect.height / 2;
     const map = nodes.current;
+    // dynamic global scale: shrink when many words
+    const nWords = words.length;
+    const shrink = nWords <= 20 ? 1 : Math.max(0.6, 1 - (nWords - 20) * 0.01);
+    globalScaleRef.current = shrink;
+    const maxCountLocal = Math.max(1, ...words.map((w) => w.count));
     // Add new words at center with tiny random push
     for (const w of words) {
       if (!map[w.word]) {
@@ -78,6 +84,10 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         const used = new Set(Object.values(map).map((n) => n.color));
         const choices = palette.filter((c) => !used.has(c));
         const color = (choices.length ? choices : palette)[Math.floor(Math.random() * (choices.length ? choices.length : palette.length))];
+        const ratio = w.count / maxCountLocal;
+        const base = 0.8;
+        const amp = 1.8;
+        const target = shrink * (base + ratio * amp);
         map[w.word] = {
           x: cx + (Math.random() - 0.5) * 6,
           y: cy + (Math.random() - 0.5) * 6,
@@ -86,12 +96,23 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           w: 40,
           h: 20,
           color,
+          scale: Math.max(0.6, target * 0.7),
+          targetScale: target,
         };
       }
     }
     // Remove nodes for words that no longer exist
     for (const key of Object.keys(map)) {
       if (!words.find((w) => w.word === key)) delete map[key];
+    }
+    // Update target scales for existing nodes when counts change
+    for (const w of words) {
+      const n = map[w.word];
+      if (!n) continue;
+      const ratio = w.count / maxCountLocal;
+      const base = 0.8;
+      const amp = 1.8;
+      n.targetScale = shrink * (base + ratio * amp);
     }
   }, [words]);
 
@@ -135,19 +156,36 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const wallMargin = 48;
       const wallK = 0.0025;
       const spacing = 6; // extra padding between words
+      const shrink = globalScaleRef.current;
       // Integrate forces
       for (let i = 0; i < wordsList.length; i++) {
         const aKey = wordsList[i];
         const a = map[aKey];
         if (!a) continue;
-        // Spring toward center
-        a.vx += (cx - a.x) * centerK * dt;
-        a.vy += (cy - a.y) * centerK * dt;
+        // Spring toward center + mild gravity-like pull
+        const dxC = cx - a.x;
+        const dyC = cy - a.y;
+        const distC2 = Math.max(25, dxC * dxC + dyC * dyC);
+        const grav = 20 / distC2;
+        a.vx += dxC * centerK * dt + dxC * grav * dt;
+        a.vy += dyC * centerK * dt + dyC * grav * dt;
         // Soft wall push to avoid border pile-up
         if (a.x < wallMargin) a.vx += (wallMargin - a.x) * wallK;
         if (a.x > W - wallMargin) a.vx -= (a.x - (W - wallMargin)) * wallK;
         if (a.y < wallMargin) a.vy += (wallMargin - a.y) * wallK;
         if (a.y > H - wallMargin) a.vy -= (a.y - (H - wallMargin)) * wallK;
+        // Edge repellers: approximate with line forces from each edge
+        const rx = Math.max(20, (a.w * 0.5));
+        const ry = Math.max(12, (a.h * 0.5));
+        const dl = Math.max(1, (a.x - rx));
+        const dr = Math.max(1, (W - rx - a.x));
+        const dtp = Math.max(1, (a.y - ry));
+        const db = Math.max(1, (H - ry - a.y));
+        const edgeK = 9000;
+        a.vx += (1 / (dl * dl)) * edgeK * dt; // push right from left edge
+        a.vx -= (1 / (dr * dr)) * edgeK * dt; // push left from right edge
+        a.vy += (1 / (dtp * dtp)) * edgeK * dt; // push down from top
+        a.vy -= (1 / (db * db)) * edgeK * dt; // push up from bottom
       }
       // Pairwise repulsion with soft collision based on measured size
       for (let i = 0; i < wordsList.length; i++) {
@@ -163,10 +201,10 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           const absDx = Math.abs(dx);
           const absDy = Math.abs(dy);
           // AABB overlap with padding
-          const rxA = A.w / 2 + spacing;
-          const ryA = A.h / 2 + spacing;
-          const rxB = B.w / 2 + spacing;
-          const ryB = B.h / 2 + spacing;
+          const rxA = (A.w * 0.5) + spacing;
+          const ryA = (A.h * 0.5) + spacing;
+          const rxB = (B.w * 0.5) + spacing;
+          const ryB = (B.h * 0.5) + spacing;
           const overlapX = rxA + rxB - absDx;
           const overlapY = ryA + ryB - absDy;
           if (overlapX > 0 && overlapY > 0) {
@@ -215,8 +253,11 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         n.vy *= 0.9;
         n.x += n.vx * dt * 1.2;
         n.y += n.vy * dt * 1.2;
-        const rx = Math.max(20, n.w / 2);
-        const ry = Math.max(12, n.h / 2);
+        // Smooth scale animation towards target
+        n.scale += (n.targetScale - n.scale) * 0.18;
+        // Keep fully inside bounds based on measured size
+        const rx = Math.max(20, (n.w * 0.5));
+        const ry = Math.max(12, (n.h * 0.5));
         // Bounce on bounds with restitution
         const e = 0.7;
         if (n.x < rx) { n.x = rx; n.vx = Math.abs(n.vx) * e; }
@@ -231,6 +272,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
         if (!el || !n) continue;
         el.style.left = `${n.x - n.w / 2}px`;
         el.style.top = `${n.y - n.h / 2}px`;
+        el.style.transform = `translateZ(0) scale(${n.scale})`;
       }
       rafId.current = requestAnimationFrame(run);
     };
