@@ -11,7 +11,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const [toggling, setToggling] = useState(false);
   const [counts, setCounts] = useState<number[] | null>(null);
   const [total, setTotal] = useState(0);
-  const [showLocal, setShowLocal] = useState<boolean | null>(null);
+  const [showLocal, setShowLocal] = useState<boolean | null>(true);
 
   useEffect(() => {
     let mounted = true;
@@ -87,7 +87,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               );
             })}
           </div>
-          <div className="flex justify-end mt-5">
+          <div className="flex justify-between items-center mt-5">
+            <div className="text-slate-500">{total} {total === 1 ? 'response' : 'responses'}</div>
             <Button disabled={toggling} onClick={async () => {
               // Instant UI toggle
               setShowLocal((prev) => !(prev ?? session?.showResults));
