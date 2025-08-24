@@ -215,18 +215,30 @@ export default function DashboardPage() {
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s.id && (
-                          <div className="absolute z-30 mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1 left-0">
-                            <button
-                              className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
-                              onClick={() => {
-                                setOpenMenuFor(null);
-                                setWcSectionId(s.id);
-                                setWcOpen(true);
-                              }}
-                              role="menuitem"
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setOpenMenuFor(null)}
+                            aria-hidden
+                          >
+                            <div
+                              className="absolute z-50 max-h-[60vh] overflow-auto mt-2 min-w-[12rem] bg-white border rounded-xl shadow-soft p-1"
+                              style={{ left: 16, bottom: 'calc(env(safe-area-inset-bottom, 0px) + 96px)' }}
+                              role="menu"
+                              aria-label="Interact"
                             >
-                              <HiOutlineCloud className="h-5 w-5" /> Word Cloud
-                            </button>
+                              <button
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuFor(null);
+                                  setWcSectionId(s.id);
+                                  setWcOpen(true);
+                                }}
+                                role="menuitem"
+                              >
+                                <HiOutlineCloud className="h-5 w-5" /> Word Cloud
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

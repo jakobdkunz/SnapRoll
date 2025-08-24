@@ -23,14 +23,14 @@ export async function POST(request: Request, { params }: { params: { sessionId: 
   // If multiple answers are not allowed, block any subsequent submissions in this session
   if (!session.allowMultipleAnswers) {
     const exists = await prisma.wordCloudAnswer.findFirst({ where: { sessionId, studentId } });
-    if (exists) return NextResponse.json({ error: 'You have already answered.' }, { status: 409 });
+    if (exists) return NextResponse.json({ error: 'You are only allowed to submit one answer' }, { status: 409 });
   }
 
   // Prevent exact duplicate normalized text per student as well
   const duplicate = await prisma.wordCloudAnswer.findUnique({
     where: { sessionId_studentId_text: { sessionId, studentId, text: normalized } },
   });
-  if (duplicate) return NextResponse.json({ error: 'You already submitted that answer.' }, { status: 409 });
+  if (duplicate) return NextResponse.json({ error: 'You already submitted that answer' }, { status: 409 });
 
   await prisma.wordCloudAnswer.create({ data: { sessionId, studentId, text: normalized } });
 
