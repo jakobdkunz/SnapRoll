@@ -471,8 +471,8 @@ function CustomizeModal({
 }
 
 function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: string | null }) {
-  const [prompt, setPrompt] = useState('Which option do you prefer?');
-  const [options, setOptions] = useState<string[]>(['Option 1', 'Option 2']);
+  const [prompt, setPrompt] = useState('');
+  const [options, setOptions] = useState<string[]>(['', '']);
   const [working, setWorking] = useState(false);
   function setOptionAt(i: number, val: string) {
     setOptions((prev) => prev.map((v, idx) => (idx === i ? val : v)));
@@ -491,7 +491,7 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
-            <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Enter poll prompt" />
+            <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Type your prompt here..." />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Options</label>
@@ -499,15 +499,20 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
               {options.map((opt, i) => (
                 <TextInput key={i} value={opt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOptionAt(i, e.target.value)} placeholder={`Option ${i + 1}`} />
               ))}
-              <input
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-400 placeholder:text-slate-400/80"
+              <TextInput
+                value={''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  const val = e.target.value;
+                  if (val.length === 0) return;
+                  addOption();
+                  // set the newly created last option value
+                  setOptions((prev) => {
+                    const copy = [...prev];
+                    copy[copy.length - 1] = val;
+                    return copy;
+                  });
+                }}
                 placeholder="Add another option..."
-                onFocus={() => {
-                  if (options[options.length - 1] !== '') addOption();
-                }}
-                onChange={() => {
-                  if (options[options.length - 1] !== '') addOption();
-                }}
               />
             </div>
           </div>
@@ -518,8 +523,10 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
               try {
                 setWorking(true);
                 const opts = options.map((o) => o.trim()).filter(Boolean);
-                await apiFetch(`/api/sections/${sectionId}/poll/start`, { method: 'POST', body: JSON.stringify({ prompt: prompt.trim(), options: opts }) });
-                onClose();
+                const res = await apiFetch<{ session: { id: string } }>(`/api/sections/${sectionId}/poll/start`, { method: 'POST', body: JSON.stringify({ prompt: prompt.trim(), options: opts }) });
+                if (res?.session?.id) {
+                  onClose();
+                }
               } finally {
                 setWorking(false);
               }
