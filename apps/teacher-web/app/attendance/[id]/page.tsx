@@ -127,7 +127,7 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="relative min-h-dvh grid px-4 pt-0 overflow-hidden -mt-12 sm:-mt-16">
+    <div className="relative min-h-dvh grid px-4 pt-0 overflow-hidden -mt-20 sm:-mt-24">
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
