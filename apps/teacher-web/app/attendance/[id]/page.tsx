@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
-import { HiOutlineArrowPath } from 'react-icons/hi2';
+import { HiOutlineArrowPath, HiOutlineArrowLeft } from 'react-icons/hi2';
 import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 type ClassDay = { id: string; attendanceCode: string };
 type AttendanceStatus = {
@@ -17,6 +17,7 @@ type AttendanceStatus = {
 
 export default function AttendancePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
   const [animatingCount, setAnimatingCount] = useState(0);
@@ -26,6 +27,7 @@ export default function AttendancePage() {
   const startedOnLoadRef = useRef(false);
   const [codePulse, setCodePulse] = useState(false);
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
+  const [sectionTitle, setSectionTitle] = useState<string>('');
 
   const loadStatus = useCallback(async () => {
     try {
@@ -88,12 +90,13 @@ export default function AttendancePage() {
     }
   }, [status?.hasActiveAttendance, loadStatus]);
 
-  // Load section gradient for background
+  // Load section gradient and title for background/header
   useEffect(() => {
     async function loadSection() {
       try {
-        const res = await apiFetch<{ section: { gradient: string } }>(`/api/sections/${params.id}`);
+        const res = await apiFetch<{ section: { gradient: string; title: string } }>(`/api/sections/${params.id}`);
         if (res?.section?.gradient) setSectionGradient(res.section.gradient);
+        if (res?.section?.title) setSectionTitle(res.section.title);
       } catch (_err) {
         // ignore, fallback stays
       }
@@ -124,11 +127,11 @@ export default function AttendancePage() {
   }, [params.id, start]);
 
   return (
-    <div className="relative min-h-dvh grid place-items-center px-4 py-8 overflow-hidden">
+    <div className="relative min-h-dvh grid px-4 py-6 overflow-hidden">
       {/* Animated, washed-out section gradient background */}
-      <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.18 }} />
-      <div className="pointer-events-none fixed inset-0 bg-white/50" />
-      <div className="pointer-events-none fixed -inset-[20%] opacity-20 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.25), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.25), transparent)' }} />
+      <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/35" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
       <style jsx>{`
         @keyframes gradient_drift {
           0% { transform: translate3d(0,0,0); }
@@ -136,7 +139,18 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 grid place-items-center gap-6 w-full">
+      <div className="relative z-10 grid w-full">
+        <div className="flex items-center justify-between mb-4">
+          <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
+            <HiOutlineArrowLeft className="h-5 w-5" /> Back
+          </Button>
+          <div className="mx-auto text-center">
+            <div className="text-xs uppercase tracking-wide text-slate-500">Taking Attendance For</div>
+            <div className="text-lg font-semibold truncate max-w-[80vw]">{sectionTitle || 'Section'}</div>
+          </div>
+          <div className="w-[88px]" />
+        </div>
+      <div className="grid place-items-center gap-6 w-full mt-2">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
         <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
         {!status ? (
@@ -193,6 +207,7 @@ export default function AttendancePage() {
         )}
       </Card>
       </div>
+    </div>
     </div>
   );
 }
