@@ -36,6 +36,8 @@ export default function SectionsPage() {
       }
   >(null);
   const [answer, setAnswer] = useState('');
+  const [submitMsg, setSubmitMsg] = useState<string | null>(null);
+  const submittedOnceRef = useRef<boolean>(false);
   const lastSeenRef = useRef<number>(Date.now());
 
   // Poll for interactive activity
@@ -357,32 +359,47 @@ export default function SectionsPage() {
                 <div className="text-slate-500 text-sm">{interactive.prompt}</div>
               )}
             </div>
-            <div className="flex gap-2 items-center">
-              <TextInput
-                value={answer}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
-                placeholder="Your word or phrase"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
-              />
-              <Button
-                onClick={async () => {
-                  if (!studentId || !interactive || !answer.trim()) return;
-                  try {
-                    await apiFetch(`/api/wordcloud/${interactive.sessionId}/answers`, {
-                      method: 'POST',
-                      body: JSON.stringify({ studentId, text: answer.trim() }),
-                    });
-                    setAnswer('');
-                  } catch (e: unknown) {
-                    const msg = e instanceof Error ? e.message : 'Failed to submit.';
-                    if (/already/i.test(msg)) {
-                      alert('You already submitted that answer.');
-                      setAnswer('');
-                    }
-                  }
-                }}
-              >Submit</Button>
-            </div>
+            {(!interactive.allowMultipleAnswers && submittedOnceRef.current) ? (
+              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                Answer submitted. Waiting for instructor…
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2 items-center">
+                  <TextInput
+                    value={answer}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
+                    placeholder="Your word or phrase"
+                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!studentId || !interactive || !answer.trim()) return;
+                      try {
+                        await apiFetch(`/api/wordcloud/${interactive.sessionId}/answers`, {
+                          method: 'POST',
+                          body: JSON.stringify({ studentId, text: answer.trim() }),
+                        });
+                        setAnswer('');
+                        setSubmitMsg('Answer submitted.');
+                        if (!interactive.allowMultipleAnswers) {
+                          submittedOnceRef.current = true;
+                        }
+                      } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : 'Failed to submit.';
+                        if (/already submitted/i.test(msg) || /already answered/i.test(msg)) {
+                          setSubmitMsg('You already submitted that answer.');
+                          setAnswer('');
+                        } else {
+                          setSubmitMsg('Submission failed. Try again.');
+                        }
+                      }
+                    }}
+                  >Submit</Button>
+                </div>
+                {submitMsg && <div className="text-xs text-slate-600 mt-1">{submitMsg}</div>}
+              </>
+            )}
           </div>
         ) : null}
       </Card>

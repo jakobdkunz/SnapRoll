@@ -56,7 +56,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   // Simple force-directed layout towards center with mild repel between words
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [layout, setLayout] = useState<Record<string, { x: number; y: number; color: string }>>({});
+  const [layout, setLayout] = useState<Record<string, { x: number; y: number; vx: number; vy: number; color: string }>>({});
 
   useEffect(() => {
     const el = containerRef.current;
@@ -65,29 +65,39 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     const cx = rect.width / 2;
     const cy = rect.height / 2;
     const colors = ['#2563eb', '#16a34a', '#db2777', '#f59e0b', '#0ea5e9', '#8b5cf6'];
-    const next: Record<string, { x: number; y: number; color: string }> = { ...layout };
+    const next: Record<string, { x: number; y: number; vx: number; vy: number; color: string }> = { ...layout };
     for (const w of words) {
       if (!next[w.word]) {
-        next[w.word] = { x: cx + (Math.random() - 0.5) * 40, y: cy + (Math.random() - 0.5) * 40, color: colors[Math.floor(Math.random() * colors.length)] };
+        next[w.word] = { x: cx + (Math.random() - 0.5) * 10, y: cy + (Math.random() - 0.5) * 10, vx: 0, vy: 0, color: colors[Math.floor(Math.random() * colors.length)] };
       }
     }
-    // N iterations of gentle physics
-    for (let iter = 0; iter < 20; iter++) {
+    // Run a time-based simulation for a short burst to settle positions
+    const dt = 0.016;
+    for (let iter = 0; iter < 45; iter++) {
       for (const a of words) {
         const pa = next[a.word];
-        // attract to center
-        pa.x += (cx - pa.x) * 0.02;
-        pa.y += (cy - pa.y) * 0.02;
+        // spring towards center
+        const ax = (cx - pa.x) * 0.05;
+        const ay = (cy - pa.y) * 0.05;
+        pa.vx += ax * dt;
+        pa.vy += ay * dt;
         for (const b of words) {
           if (a.word === b.word) continue;
           const pb = next[b.word];
           const dx = pa.x - pb.x;
           const dy = pa.y - pb.y;
-          const dist2 = Math.max(25, dx * dx + dy * dy);
-          const rep = 40 / dist2; // repel
-          pa.x += dx * rep;
-          pa.y += dy * rep;
+          const dist2 = Math.max(1, dx * dx + dy * dy);
+          const force = 1200 / dist2; // Coulomb-like repulsion
+          const fx = (dx / Math.sqrt(dist2)) * force;
+          const fy = (dy / Math.sqrt(dist2)) * force;
+          pa.vx += fx * dt;
+          pa.vy += fy * dt;
         }
+        // damping
+        pa.vx *= 0.92;
+        pa.vy *= 0.92;
+        pa.x += pa.vx;
+        pa.y += pa.vy;
       }
     }
     setLayout(next);
@@ -112,7 +122,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
             )}
             {words.map((w) => {
               const scale = 0.9 + (w.count / maxCount) * 1.8;
-              const pos = layout[w.word] || { x: 0, y: 0, color: '#2563eb' };
+              const pos = layout[w.word] || { x: 0, y: 0, vx: 0, vy: 0, color: '#2563eb' };
               return (
                 <span
                   key={w.word}
@@ -121,7 +131,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
                     left: Math.max(0, pos.x - 40),
                     top: Math.max(0, pos.y - 20),
                     transform: `scale(${scale})`,
-                    transition: 'transform 300ms cubic-bezier(.34,1.56,.64,1), left 300ms, top 300ms',
+                    transition: 'transform 300ms cubic-bezier(.34,1.56,.64,1), left 220ms ease-out, top 220ms ease-out',
                     color: pos.color,
                   }}
                 >
