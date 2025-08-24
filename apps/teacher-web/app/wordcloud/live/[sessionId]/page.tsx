@@ -106,41 +106,52 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   return (
     <div className="min-h-dvh px-4 py-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-4 text-center">
-          <div className="text-sm uppercase tracking-wide text-slate-500">Word Cloud</div>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button
+            className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
+            onClick={async () => {
+              try {
+                await apiFetch(`/api/wordcloud/${sessionId}/close`, { method: 'POST' });
+              } catch {/* ignore */}
+              history.back();
+            }}
+          >
+            ← Back
+          </button>
           {session ? (
-            <div className="text-lg font-medium text-slate-700">{session.prompt}</div>
+            <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
+              {session.prompt}
+            </div>
           ) : (
-            <div className="text-slate-400">Loading…</div>
+            <div className="text-slate-400 flex-1 text-center">Loading…</div>
           )}
+          <div className="w-[64px]" />
         </div>
-        <Card className="p-4 sm:p-6 min-h-[60vh]">
-          <div ref={containerRef} className="relative w-full min-h-[50vh]">
-            {words.length === 0 && (
-              <div className="absolute inset-0 grid place-items-center text-slate-400">Waiting for answers…</div>
-            )}
-            {words.map((w) => {
-              const scale = 0.9 + (w.count / maxCount) * 1.8;
-              const pos = layout[w.word] || { x: 0, y: 0, vx: 0, vy: 0, color: '#2563eb' };
-              return (
-                <span
-                  key={w.word}
-                  className="absolute font-bold select-none"
-                  style={{
-                    left: Math.max(0, pos.x - 40),
-                    top: Math.max(0, pos.y - 20),
-                    transform: `scale(${scale})`,
-                    transition: 'transform 300ms cubic-bezier(.34,1.56,.64,1), left 220ms ease-out, top 220ms ease-out',
-                    color: pos.color,
-                  }}
-                >
-                  {w.word}
-                </span>
-              );
-            })}
-          </div>
-        </Card>
+        <div ref={containerRef} className="relative w-full min-h-[70vh]">
+          {words.length === 0 && (
+            <div className="absolute inset-0 grid place-items-center text-slate-400">Waiting for answers…</div>
+          )}
+          {words.map((w) => {
+            const scale = 0.9 + (w.count / maxCount) * 1.8;
+            const pos = layout[w.word] || { x: 0, y: 0, vx: 0, vy: 0, color: '#2563eb' };
+            return (
+              <span
+                key={w.word}
+                className="absolute font-bold select-none"
+                style={{
+                  left: Math.max(0, pos.x - 40),
+                  top: Math.max(0, pos.y - 20),
+                  transform: `translateZ(0) scale(${scale})`,
+                  transition: 'transform 300ms cubic-bezier(.34,1.56,.64,1), left 220ms ease-out, top 220ms ease-out',
+                  color: pos.color,
+                }}
+              >
+                {w.word}
+              </span>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
