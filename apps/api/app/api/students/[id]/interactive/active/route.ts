@@ -10,7 +10,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   const sectionIds = enrollments.map((e) => e.sectionId);
   if (sectionIds.length === 0) return NextResponse.json({ interactive: null });
 
-  const cutoff = new Date(Date.now() - 10_000);
+  const cutoff = new Date(Date.now() - 15_000);
   const session = await prisma.wordCloudSession.findFirst({
     where: { sectionId: { in: sectionIds }, closedAt: null, instructorLastSeenAt: { gt: cutoff } },
     orderBy: { createdAt: 'desc' },
