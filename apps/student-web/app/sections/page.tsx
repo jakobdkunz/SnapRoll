@@ -89,7 +89,7 @@ export default function SectionsPage() {
       setSections(data.sections);
       setCheckedInIds(data.checkedInSectionIds || []);
     } catch (error) {
-      console.error('Failed to load sections:', error);
+      console.error('Failed to load courses:', error);
     } finally {
       setLoading(false);
       setInitialized(true);
@@ -201,7 +201,7 @@ export default function SectionsPage() {
           </div>
         </Card>
 
-        <div className="text-slate-600 text-sm">Your sections</div>
+        <div className="text-slate-600 text-sm">My courses</div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-3 sm:p-4">
@@ -312,15 +312,15 @@ export default function SectionsPage() {
         </button>
       </Card>
 
-      {/* Sections subheading */}
-      <div className="text-slate-600 text-sm">Your sections</div>
+      {/* Courses subheading */}
+      <div className="text-slate-600 text-sm">My courses</div>
 
       {sections.length === 0 ? (
         <Card className="p-8 text-center">
-          <div className="text-lg font-medium">No sections yet</div>
+          <div className="text-lg font-medium">No courses yet</div>
           <div className="text-slate-500 mt-2">
-            Your instructor hasn&apos;t added you to any sections yet. 
-            Please ask your instructor to add your email address to their section roster.
+            Your instructor hasn&apos;t added you to any courses yet. 
+            Please ask your instructor to add your email address to their course roster.
           </div>
         </Card>
       ) : (
