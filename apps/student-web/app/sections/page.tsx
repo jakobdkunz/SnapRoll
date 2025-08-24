@@ -442,7 +442,10 @@ export default function SectionsPage() {
               <div className="text-slate-500 text-sm">{(interactive as InteractivePoll).prompt}</div>
             </div>
             {(interactive as InteractivePoll).hasAnswered ? (
-              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center">Response submitted ✅</div>
+              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center inline-flex items-center justify-center gap-2">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                Response submitted
+              </div>
             ) : (
               <div className="space-y-2">
                 {(interactive as InteractivePoll).options.map((opt: string, i: number) => (
