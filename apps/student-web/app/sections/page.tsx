@@ -24,17 +24,29 @@ export default function SectionsPage() {
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   // Interactive state
+  type InteractiveWordCloud = {
+    kind: 'wordcloud';
+    sessionId: string;
+    prompt: string;
+    showPromptToStudents: boolean;
+    allowMultipleAnswers: boolean;
+    sectionId: string;
+    hasAnswered?: boolean;
+  };
+  type InteractivePoll = {
+    kind: 'poll';
+    sessionId: string;
+    prompt: string;
+    options: string[];
+    showResults: boolean;
+    sectionId: string;
+    hasAnswered?: boolean;
+  };
+
   const [interactive, setInteractive] = useState<
     | null
-    | {
-        kind: 'wordcloud';
-        sessionId: string;
-        prompt: string;
-        showPromptToStudents: boolean;
-        allowMultipleAnswers: boolean;
-        sectionId: string;
-        hasAnswered?: boolean;
-      }
+    | InteractiveWordCloud
+    | InteractivePoll
   >(null);
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
@@ -47,7 +59,7 @@ export default function SectionsPage() {
     let mounted = true;
     async function tick() {
       try {
-        const res = await apiFetch<{ interactive: typeof interactive }>(`/api/students/${studentId}/interactive/active`);
+        const res = await apiFetch<{ interactive: InteractiveWordCloud | InteractivePoll | null }>(`/api/students/${studentId}/interactive/active`);
         if (!mounted) return;
         setInteractive(res.interactive);
         lastSeenRef.current = Date.now();
@@ -422,6 +434,27 @@ export default function SectionsPage() {
                 )}
               </>
             )}
+          </div>
+        ) : interactive.kind === 'poll' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Poll</div>
+              <div className="text-slate-500 text-sm">{(interactive as InteractivePoll).prompt}</div>
+            </div>
+            <div className="space-y-2">
+              {(interactive as InteractivePoll).options.map((opt: string, i: number) => (
+                <Button key={i} className="w-full justify-start" disabled={(interactive as InteractivePoll).hasAnswered}
+                  onClick={async () => {
+                    if (!studentId || (interactive as InteractivePoll).hasAnswered) return;
+                    try {
+                      await apiFetch(`/api/poll/${(interactive as InteractivePoll).sessionId}/answers`, { method: 'POST', body: JSON.stringify({ studentId, optionIdx: i }) });
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >{opt}</Button>
+              ))}
+            </div>
           </div>
         ) : null}
       </Card>
