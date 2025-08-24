@@ -42,11 +42,26 @@ export default function SectionsPage() {
     sectionId: string;
     hasAnswered?: boolean;
   };
+  type InteractiveSlideshow = {
+    kind: 'slideshow';
+    sessionId: string;
+    title: string;
+    filePath: string;
+    mimeType: string;
+    currentSlide: number;
+    totalSlides: number | null;
+    showOnDevices: boolean;
+    allowDownload: boolean;
+    requireStay: boolean;
+    preventJump: boolean;
+    sectionId: string;
+  };
 
   const [interactive, setInteractive] = useState<
     | null
     | InteractiveWordCloud
     | InteractivePoll
+    | InteractiveSlideshow
   >(null);
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
@@ -462,6 +477,18 @@ export default function SectionsPage() {
                   >{opt}</Button>
                 ))}
               </div>
+            )}
+          </div>
+        ) : interactive.kind === 'slideshow' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Activities</div>
+              <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
+            </div>
+            {(interactive as InteractiveSlideshow).showOnDevices ? (
+              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${(interactive as InteractiveSlideshow).sessionId}`; }}>View Slides Live →</Button>
+            ) : (
+              <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
             )}
           </div>
         ) : null}
