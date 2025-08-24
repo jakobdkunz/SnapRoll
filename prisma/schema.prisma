@@ -23,6 +23,7 @@ model User {
   studentManualChanges ManualStatusChange[] @relation("StudentManualChanges")
   wordCloudAnswers   WordCloudAnswer[]
   pollAnswers        PollAnswer[]
+  slideshowAssets    SlideshowAsset[]
 }
 
 model Section {
@@ -36,6 +37,7 @@ model Section {
   classDays   ClassDay[]
   wordCloudSessions WordCloudSession[]
   pollSessions PollSession[]
+  slideshowSessions SlideshowSession[]
 }
 
 model Enrollment {
@@ -156,4 +158,37 @@ model PollAnswer {
   @@index([sessionId])
   @@index([studentId])
   @@unique([sessionId, studentId])
+}
+
+model SlideshowSession {
+  id                   String   @id @default(cuid())
+  section              Section  @relation(fields: [sectionId], references: [id])
+  sectionId            String
+  title                String
+  filePath             String
+  mimeType             String
+  totalSlides          Int?
+  currentSlide         Int      @default(1)
+  showOnDevices        Boolean  @default(true)
+  allowDownload        Boolean  @default(true)
+  requireStay          Boolean  @default(false)
+  preventJump          Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  closedAt             DateTime?
+  instructorLastSeenAt DateTime?
+
+  @@index([sectionId])
+}
+
+model SlideshowAsset {
+  id         String @id @default(cuid())
+  teacher    User   @relation(fields: [teacherId], references: [id])
+  teacherId  String
+  title      String
+  filePath   String
+  mimeType   String
+  totalSlides Int?
+  createdAt  DateTime @default(now())
+
+  @@index([teacherId])
 }

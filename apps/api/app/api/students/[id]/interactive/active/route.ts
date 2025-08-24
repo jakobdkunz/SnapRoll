@@ -50,6 +50,30 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     });
   }
 
+  // Fallback to Slideshow sessions
+  const slide = await prisma.slideshowSession.findFirst({
+    where: { sectionId: { in: sectionIds }, closedAt: null, instructorLastSeenAt: { gt: cutoff } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (slide) {
+    return NextResponse.json({
+      interactive: {
+        kind: 'slideshow',
+        sessionId: slide.id,
+        title: slide.title,
+        filePath: slide.filePath,
+        mimeType: slide.mimeType,
+        currentSlide: slide.currentSlide,
+        totalSlides: slide.totalSlides ?? null,
+        showOnDevices: slide.showOnDevices,
+        allowDownload: slide.allowDownload,
+        requireStay: slide.requireStay,
+        preventJump: slide.preventJump,
+        sectionId: slide.sectionId,
+      },
+    });
+  }
+
   return NextResponse.json({ interactive: null });
 }
 

@@ -66,7 +66,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
           </div>
           <div className="w-[120px]" />
         </div>
-        <Card className="p-6">
+        <div className="grid place-items-center">
+          <Card className="p-6 w-full max-w-3xl">
           <div className="space-y-3">
             {(session?.options ?? []).map((opt, i) => {
               const count = counts ? counts[i] : 0;
@@ -98,7 +99,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
                 .finally(() => setToggling(false));
             }}>{(showLocal ?? session?.showResults) ? 'Hide Results' : 'Show Results'}</Button>
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
