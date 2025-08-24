@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlinePencilSquare, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -14,6 +14,8 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: Section | null }>({ open: false, section: null });
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createTitle, setCreateTitle] = useState('');
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<string | null>(null);
@@ -183,9 +185,9 @@ export default function DashboardPage() {
                     <button
                       onClick={() => setCustomizeModal({ open: true, section: s })}
                       className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
-                      title="Customize"
+                      title="Edit Section"
                     >
-                      <HiOutlinePencilSquare className="h-5 w-5" />
+                      <HiOutlineCog6Tooth className="h-5 w-5" />
                     </button>
                   </div>
                   <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
@@ -272,25 +274,17 @@ export default function DashboardPage() {
             })}
           </div>
           {/* Spacer so the floating button doesn't overlap the last row on mobile */}
-          <div className="h-24 sm:hidden" aria-hidden="true" />
+          <div className="h-40" aria-hidden="true" />
         </>
       )}
       
-      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 border border-black" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={async () => {
-        const title = prompt('Section title?');
-        if (!title) return;
-        await apiFetch<{ section: Section }>(`/api/sections`, {
-          method: 'POST',
-          body: JSON.stringify({ title, teacherId }),
-        });
-        load(teacherId);
-      }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
+      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 border border-black" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
           <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Customize Section</h2>
+              <h2 className="text-lg font-semibold">Edit Section</h2>
               <button onClick={handleCloseCustomize} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             <CustomizeModal 
@@ -301,6 +295,26 @@ export default function DashboardPage() {
             />
           </div>
         )}
+      </Modal>
+
+      {/* Create Section Modal */}
+      <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)}>
+        <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Create Section</h2>
+            <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Section Title</label>
+              <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await apiFetch(`/api/sections`, { method: 'POST', body: JSON.stringify({ title: createTitle.trim(), teacherId }) }); setCreateModalOpen(false); setCreateTitle(''); load(teacherId); }}>Create</Button>
+              <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
       </Modal>
 
       {/* Start Word Cloud Modal (inline on dashboard) */}
@@ -351,6 +365,7 @@ function CustomizeModal({
 }) {
   const [title, setTitle] = useState(section.title);
   const [gradient, setGradient] = useState(section.gradient);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -386,14 +401,28 @@ function CustomizeModal({
         </div>
       </div>
       
-      <div className="flex gap-2 pt-4">
-        <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
-          Save Changes
-        </Button>
-        <Button variant="ghost" onClick={onCancel}>
-          Cancel
+      <div className="flex items-center justify-between pt-4">
+        <div className="flex gap-2">
+          <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
+            Save Changes
+          </Button>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+        <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
+          <HiOutlineTrash className="h-5 w-5" /> Delete Section
         </Button>
       </div>
+      {confirmDelete && (
+        <div className="mt-2 p-3 rounded-lg border border-rose-200 bg-rose-50">
+          <div className="text-sm mb-2">Are you sure?</div>
+          <div className="flex gap-2">
+            <Button className="!bg-rose-600" onClick={async () => { await apiFetch(`/api/sections/${section.id}`, { method: 'DELETE' }); onCancel(); }}>Remove</Button>
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
