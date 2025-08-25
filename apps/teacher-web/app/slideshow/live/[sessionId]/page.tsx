@@ -290,6 +290,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!details || !isPdf) return;
     (async () => {
       try {
+        // Import PDF.js with proper configuration to avoid canvas module issues
         const mod = await import('pdfjs-dist/build/pdf.js');
         const pdfjsLib = (((mod as unknown as { default?: unknown }).default ?? mod) as unknown) as PdfJsLib;
         if (pdfjsLib.GlobalWorkerOptions) {
