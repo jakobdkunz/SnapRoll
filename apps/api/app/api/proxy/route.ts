@@ -32,7 +32,12 @@ export async function GET(req: Request) {
     if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: 502 });
     const headers = new Headers(upstream.headers);
     headers.set('Cache-Control', 'no-store');
-    // Don't set Access-Control-Allow-Origin here - middleware handles it
+    // Remove any existing CORS headers from upstream - middleware handles them
+    headers.delete('access-control-allow-origin');
+    headers.delete('access-control-allow-methods');
+    headers.delete('access-control-allow-headers');
+    headers.delete('access-control-allow-credentials');
+    headers.delete('access-control-max-age');
     headers.delete('content-encoding');
     headers.delete('transfer-encoding');
     headers.delete('content-length');
