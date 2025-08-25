@@ -223,6 +223,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
             <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
           ) : isPpt ? (
             <div className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
+              {debug && (
+                <div className="absolute top-2 left-2 z-50 max-w-[60vw] bg-black/70 text-green-300 text-xs p-2 rounded whitespace-pre-wrap">{debug || `PPTX url=${fileUrl}`}</div>
+              )}
               <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />
               <canvas
                 ref={overlayCanvasRef}
@@ -397,16 +400,24 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       type JQueryFactory = (el: HTMLElement) => JQueryInstance;
       const wjq = window as unknown as { jQuery?: JQueryFactory };
       const jqFactory: JQueryFactory | undefined = wjq.jQuery;
-      if (!jqFactory) return;
-      jqFactory(host).pptxToHtml({
-        pptxFileUrl: fileUrl,
-        slideMode: true,
-        slidesScale: '100%',
-        keyBoardShortCut: false,
-        mediaProcess: true,
-        slideType: 'revealjs',
-        revealjsConfig: { controls: false, progress: false }
-      });
+      if (!jqFactory) {
+        setDebug((prev) => prev + `\nPPTX: jQuery missing`);
+        return;
+      }
+      try {
+        jqFactory(host).pptxToHtml({
+          pptxFileUrl: fileUrl,
+          slideMode: true,
+          slidesScale: '100%',
+          keyBoardShortCut: false,
+          mediaProcess: true,
+          slideType: 'revealjs',
+          revealjsConfig: { controls: false, progress: false }
+        });
+        setDebug((prev) => prev + `\nPPTX render started url=${fileUrl}`);
+      } catch (err) {
+        setDebug((prev) => prev + `\nPPTX render error: ${(err as Error)?.message || String(err)}`);
+      }
       setTimeout(() => {
         const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
         wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
