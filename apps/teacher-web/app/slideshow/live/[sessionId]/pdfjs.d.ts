@@ -8,4 +8,9 @@ declare module 'pdfjs-dist/legacy/build/pdf' {
   export default value;
 }
 
+declare module 'pdfjs-dist/legacy/build/pdf.js' {
+  const value: unknown;
+  export default value;
+}
+
 

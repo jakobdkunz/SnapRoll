@@ -287,7 +287,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     async function run() {
       setDebug((prev) => prev + `\nPDF render start: url=${fileUrl}`);
       // Lazy-load PDF.js legacy build for broad browser support
-      const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf')).default as unknown as PdfJsLib;
+      const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf.js')).default as unknown as PdfJsLib;
       // Set worker (CDN, legacy path)
       (pdfjsLib as PdfJsLib).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
       const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
@@ -377,16 +377,17 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       }
     }
     async function ensureDeps() {
-      ensureCss('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
-      ensureCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
-      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
-      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
+      ensureCss(`${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css')}`);
+      ensureCss(`${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css')}`);
+      const proxy = (url: string) => `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(url)}`;
+      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript(proxy('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js'));
+      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript(proxy('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'));
+      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript(proxy('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js'));
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
+        await loadScript(proxy('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js'));
+        await loadScript(proxy('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js'));
       }
     }
     async function render() {

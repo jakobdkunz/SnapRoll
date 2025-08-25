@@ -9,6 +9,9 @@ function isAllowed(url: URL) {
   const host = url.hostname.toLowerCase();
   if (host.endsWith('.vercel-storage.com')) return true;
   if (host.endsWith('blob.vercel-storage.com')) return true;
+  if (host === 'cdn.jsdelivr.net') return true;
+  if (host === 'unpkg.com') return true;
+  if (host === 'cdnjs.cloudflare.com') return true;
   // Optionally allow other public CDNs
   return false;
 }
