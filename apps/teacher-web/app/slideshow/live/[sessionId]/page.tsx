@@ -412,13 +412,31 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       // Create FileReaderJS polyfill for PPTXjs compatibility
       if (!(window as unknown as { FileReaderJS?: unknown }).FileReaderJS) {
         (window as any).FileReaderJS = {
-          // Simple polyfill that provides the interface PPTXjs expects
+          // Complete polyfill that provides all methods PPTXjs expects
           readAsDataURL: function(file: File, callback: (result: string) => void) {
             const reader = new FileReader();
             reader.onload = function(e) {
               callback(e.target?.result as string);
             };
             reader.readAsDataURL(file);
+          },
+          setSync: function() {
+            // PPTXjs calls this but doesn't seem to need it for our use case
+            return true;
+          },
+          readAsText: function(file: File, callback: (result: string) => void) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              callback(e.target?.result as string);
+            };
+            reader.readAsText(file);
+          },
+          readAsArrayBuffer: function(file: File, callback: (result: ArrayBuffer) => void) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              callback(e.target?.result as ArrayBuffer);
+            };
+            reader.readAsArrayBuffer(file);
           }
         };
       }
