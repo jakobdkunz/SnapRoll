@@ -525,10 +525,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           originalConsoleWarn.apply(console, args);
         };
         
-        // Add success and error callbacks to track what happens
+        // Try a simpler approach - just use the URL without blob
         const pptxOptions = {
-          pptxFileUrl: fileUrl, // Keep URL as fallback
-          pptxFile: pptxBlob, // Try using blob instead
+          pptxFileUrl: fileUrl,
           slideMode: true,
           slidesScale: '100%',
           keyBoardShortCut: false,
@@ -551,8 +550,14 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         
         setDebug((prev) => prev + `\nPPTX: Calling pptxToHtml with options: ${JSON.stringify(pptxOptions, null, 2)}`);
         
+        // Test if PPTXjs is actually working
+        const jq = jqFactory(host);
+        setDebug((prev) => prev + `\nPPTX: jQuery object: ${!!jq}`);
+        setDebug((prev) => prev + `\nPPTX: pptxToHtml method: ${typeof jq.pptxToHtml}`);
+        
         try {
-          jqFactory(host).pptxToHtml(pptxOptions);
+          jq.pptxToHtml(pptxOptions);
+          setDebug((prev) => prev + `\nPPTX: pptxToHtml call completed without exception`);
         } catch (err) {
           setDebug((prev) => prev + `\nPPTX: Exception during pptxToHtml call: ${(err as Error)?.message || String(err)}`);
         }
