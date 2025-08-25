@@ -454,6 +454,21 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     async function render() {
       await ensureDeps();
       if (cancelled) return;
+      
+      // Test if we can actually fetch the PPTX file
+      try {
+        const response = await fetch(fileUrl);
+        if (!response.ok) {
+          setDebug((prev) => prev + `\nPPTX: File fetch failed: ${response.status} ${response.statusText}`);
+          return;
+        }
+        const contentType = response.headers.get('content-type');
+        setDebug((prev) => prev + `\nPPTX: File fetch success, content-type: ${contentType}`);
+      } catch (err) {
+        setDebug((prev) => prev + `\nPPTX: File fetch error: ${(err as Error)?.message || String(err)}`);
+        return;
+      }
+      
       const container = pptContainerRef.current!;
       container.innerHTML = '';
       const host = document.createElement('div');
@@ -467,6 +482,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         return;
       }
       try {
+        setDebug((prev) => prev + `\nPPTX: Starting render with url=${fileUrl}`);
+        
+        // Add success and error callbacks to track what happens
         jqFactory(host).pptxToHtml({
           pptxFileUrl: fileUrl,
           slideMode: true,
@@ -474,16 +492,31 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           keyBoardShortCut: false,
           mediaProcess: true,
           slideType: 'revealjs',
-          revealjsConfig: { controls: false, progress: false }
+          revealjsConfig: { controls: false, progress: false },
+          success: function() {
+            setDebug((prev) => prev + `\nPPTX: Render success!`);
+          },
+          error: function(err: any) {
+            setDebug((prev) => prev + `\nPPTX: Render error callback: ${err?.message || String(err)}`);
+          }
         });
-        setDebug((prev) => prev + `\nPPTX render started url=${fileUrl}`);
+        
+        setDebug((prev) => prev + `\nPPTX: pptxToHtml called successfully`);
+        
+        // Check if content was actually rendered after a delay
+        setTimeout(() => {
+          if (host.children.length === 0) {
+            setDebug((prev) => prev + `\nPPTX: No content rendered after timeout`);
+          } else {
+            setDebug((prev) => prev + `\nPPTX: Content found, children count: ${host.children.length}`);
+          }
+          
+          const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
+          wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
+        }, 1000); // Increased timeout to give more time for rendering
       } catch (err) {
         setDebug((prev) => prev + `\nPPTX render error: ${(err as Error)?.message || String(err)}`);
       }
-      setTimeout(() => {
-        const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
-        wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
-      }, 400);
     }
     render();
     return () => { cancelled = true; };
