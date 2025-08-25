@@ -588,25 +588,21 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           // Try different approaches to pass the file
           const globalJqHost = globalJq(host);
           
-          // First try with the blob
-          try {
-            setDebug((prev) => prev + `\nPPTX: Trying with blob...`);
-            globalJqHost.pptxToHtml(pptxOptions);
-          } catch (err) {
-            setDebug((prev) => prev + `\nPPTX: Blob approach failed: ${(err as Error)?.message || String(err)}`);
-            
-            // Try with URL instead
-            try {
-              setDebug((prev) => prev + `\nPPTX: Trying with URL...`);
-              const urlOptions = { ...pptxOptions };
-              delete urlOptions.pptxFile;
-              urlOptions.pptxFileUrl = fileUrl;
-              globalJqHost.pptxToHtml(urlOptions);
-            } catch (err2) {
-              setDebug((prev) => prev + `\nPPTX: URL approach also failed: ${(err2 as Error)?.message || String(err2)}`);
-              throw err2;
-            }
-          }
+          // Use only blob approach since proxy is blocked by Vercel
+          setDebug((prev) => prev + `\nPPTX: Using blob approach (proxy blocked by Vercel)...`);
+          setDebug((prev) => prev + `\nPPTX: Blob size: ${pptxBlob.size}, type: ${pptxBlob.type}`);
+          
+          const blobOptions = {
+            ...pptxOptions,
+            pptxFile: pptxBlob
+          };
+          
+          setDebug((prev) => prev + `\nPPTX: Calling pptxToHtml with blob options: ${JSON.stringify({
+            ...blobOptions,
+            pptxFile: `[Blob: ${pptxBlob.size} bytes]`
+          }, null, 2)}`);
+          
+          globalJqHost.pptxToHtml(blobOptions);
         } else {
           setDebug((prev) => prev + `\nPPTX: Using factory jQuery (no global plugin)`);
           jq.pptxToHtml(pptxOptions);
