@@ -464,30 +464,35 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       await ensureDeps();
       if (cancelled) return;
       
-      // Test if we can actually fetch the PPTX file
-      try {
-        const response = await fetch(fileUrl);
-        if (!response.ok) {
-          setDebug((prev) => prev + `\nPPTX: File fetch failed: ${response.status} ${response.statusText}`);
+              // Test if we can actually fetch the PPTX file
+        let pptxBlob: Blob | null = null;
+        try {
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            setDebug((prev) => prev + `\nPPTX: File fetch failed: ${response.status} ${response.statusText}`);
+            return;
+          }
+          const contentType = response.headers.get('content-type');
+          const contentLength = response.headers.get('content-length');
+          setDebug((prev) => prev + `\nPPTX: File fetch success, content-type: ${contentType}, content-length: ${contentLength}`);
+          
+          // Try to read a small portion to verify it's actually a PPTX file
+          const arrayBuffer = await response.arrayBuffer();
+          setDebug((prev) => prev + `\nPPTX: File size: ${arrayBuffer.byteLength} bytes`);
+          
+          // Check if it starts with PPTX magic bytes (PK\x03\x04)
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const isPptx = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B && uint8Array[2] === 0x03 && uint8Array[3] === 0x04;
+          setDebug((prev) => prev + `\nPPTX: File appears to be PPTX: ${isPptx}`);
+          
+          // Create a blob from the array buffer for PPTXjs
+          pptxBlob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+          setDebug((prev) => prev + `\nPPTX: Created blob: ${pptxBlob.size} bytes, type: ${pptxBlob.type}`);
+          
+        } catch (err) {
+          setDebug((prev) => prev + `\nPPTX: File fetch error: ${(err as Error)?.message || String(err)}`);
           return;
         }
-        const contentType = response.headers.get('content-type');
-        const contentLength = response.headers.get('content-length');
-        setDebug((prev) => prev + `\nPPTX: File fetch success, content-type: ${contentType}, content-length: ${contentLength}`);
-        
-        // Try to read a small portion to verify it's actually a PPTX file
-        const arrayBuffer = await response.arrayBuffer();
-        setDebug((prev) => prev + `\nPPTX: File size: ${arrayBuffer.byteLength} bytes`);
-        
-        // Check if it starts with PPTX magic bytes (PK\x03\x04)
-        const uint8Array = new Uint8Array(arrayBuffer);
-        const isPptx = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B && uint8Array[2] === 0x03 && uint8Array[3] === 0x04;
-        setDebug((prev) => prev + `\nPPTX: File appears to be PPTX: ${isPptx}`);
-        
-      } catch (err) {
-        setDebug((prev) => prev + `\nPPTX: File fetch error: ${(err as Error)?.message || String(err)}`);
-        return;
-      }
       
       const container = pptContainerRef.current!;
       container.innerHTML = '';
@@ -522,7 +527,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         
         // Add success and error callbacks to track what happens
         const pptxOptions = {
-          pptxFileUrl: fileUrl,
+          pptxFileUrl: fileUrl, // Keep URL as fallback
+          pptxFile: pptxBlob, // Try using blob instead
           slideMode: true,
           slidesScale: '100%',
           keyBoardShortCut: false,
