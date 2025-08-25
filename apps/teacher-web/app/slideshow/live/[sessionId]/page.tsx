@@ -43,6 +43,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const pageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const pdfDocRef = useRef<PdfDocument | null>(null);
+  const pdfUrlRef = useRef<string>('');
+  const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const pptContainerRef = useRef<HTMLDivElement | null>(null);
   const pptInitializedRef = useRef<boolean>(false);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
@@ -176,7 +179,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         </div>
         <div className="flex-1 min-h-0">
           {isPdf ? (
-            <div ref={containerRef} className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
+            <div ref={containerRef} className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-white">
               {debug && (
                 <div className="absolute top-2 left-2 z-50 max-w-[60vw] bg-black/70 text-green-300 text-xs p-2 rounded whitespace-pre-wrap">{debug}</div>
               )}
@@ -279,85 +282,81 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     );
   }
 
-  // Render PDF page into canvas when details/page change
+  // Load PDF doc once per URL
   useEffect(() => {
-    if (!details || !pageCanvasRef.current || !containerRef.current) return;
-    if (!isPdf) return;
-    let cancelled = false;
-    async function run() {
-      setDebug((prev) => prev + `\nPDF render start: url=${fileUrl}`);
-      // Lazy-load PDF.js legacy build for broad browser support
-      const mod = await import('pdfjs-dist/legacy/build/pdf.js');
-      const pdfjsLib = ((mod as unknown as { default?: unknown }).default ?? mod) as unknown as {
-        GlobalWorkerOptions?: { workerSrc: string };
-        getDocument: (opts: { url: string; withCredentials?: boolean; disableStream?: boolean; disableRange?: boolean }) => { promise: Promise<PdfDocument> };
-      };
-      if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
-      } else {
-        setDebug((prev) => prev + '\nPDF: GlobalWorkerOptions missing');
-      }
-      const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
-      let pdf: PdfDocument;
+    if (!details || !isPdf) return;
+    (async () => {
       try {
-        pdf = await loadingTask.promise;
+        const mod = await import('pdfjs-dist/legacy/build/pdf.js');
+        const pdfjsLib = ((mod as unknown as { default?: unknown }).default ?? mod) as any;
+        if (pdfjsLib?.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+        }
+        if (pdfUrlRef.current !== fileUrl) {
+          setDebug((prev) => prev + `\nPDF doc load: ${fileUrl}`);
+          const task = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
+          pdfDocRef.current = await task.promise;
+          pdfUrlRef.current = fileUrl;
+        }
       } catch (err) {
         setError('Failed to load PDF');
         setDebug((prev) => prev + `\nPDF load error: ${(err as Error)?.message || String(err)}`);
-        return;
       }
-      if (cancelled) return;
-      const pageNum = Math.max(1, (details?.currentSlide ?? 1));
-      let page: PdfPage;
-      try {
-        page = await pdf.getPage(pageNum);
-      } catch (err) {
-        setError('Failed to get PDF page');
-        setDebug((prev) => prev + `\nPDF page error: ${(err as Error)?.message || String(err)}`);
-        return;
-      }
-      if (cancelled) return;
-      const container = containerRef.current!;
-      const canvas = pageCanvasRef.current!;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      const viewport = page.getViewport({ scale: 1 });
-      // Fit to container keeping aspect ratio
-      const maxW = container.clientWidth;
-      const maxH = container.clientHeight;
-      const scale = Math.min(maxW / viewport.width, maxH / viewport.height);
-      const scaled = page.getViewport({ scale });
-      canvas.width = Math.floor(scaled.width);
-      canvas.height = Math.floor(scaled.height);
-      canvas.style.width = `${canvas.width}px`;
-      canvas.style.height = `${canvas.height}px`;
-      // Center
-      canvas.style.left = `${Math.max(0, (maxW - canvas.width) / 2)}px`;
-      canvas.style.top = `${Math.max(0, (maxH - canvas.height) / 2)}px`;
-      try {
-        await page.render({ canvasContext: ctx, viewport: scaled }).promise;
-        setDebug((prev) => prev + `\nPDF rendered ${canvas.width}x${canvas.height}`);
-      } catch (err) {
-        setError('Failed to render PDF');
-        setDebug((prev) => prev + `\nPDF render error: ${(err as Error)?.message || String(err)}`);
-      }
-      // Match overlay to canvas size/position
-      if (overlayCanvasRef.current) {
-        const o = overlayCanvasRef.current;
-        o.width = canvas.width;
-        o.height = canvas.height;
-        o.style.width = canvas.style.width;
-        o.style.height = canvas.style.height;
-        o.style.left = canvas.style.left;
-        o.style.top = canvas.style.top;
-      }
-    }
-    run();
-    const ro = new ResizeObserver(() => run());
-    ro.observe(containerRef.current);
-    return () => { cancelled = true; ro.disconnect(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPdf, details?.currentSlide, fileUrl]);
+    })();
+  }, [isPdf, fileUrl, details]);
+
+  // Render current page; debounce resize and cancel previous render
+  useEffect(() => {
+    if (!details || !isPdf || !pageCanvasRef.current || !containerRef.current) return;
+    const container = containerRef.current;
+    let t = 0;
+    const schedule = () => {
+      if (t) window.clearTimeout(t);
+      t = window.setTimeout(async () => {
+        const pdf = pdfDocRef.current;
+        if (!pdf) return;
+        try {
+          const page = await pdf.getPage(Math.max(1, details.currentSlide || 1));
+          const canvas = pageCanvasRef.current!;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          const viewport = page.getViewport({ scale: 1 });
+          const maxW = container.clientWidth;
+          const maxH = container.clientHeight;
+          const scale = Math.min(maxW / viewport.width, maxH / viewport.height);
+          const scaled = page.getViewport({ scale });
+          canvas.width = Math.floor(scaled.width);
+          canvas.height = Math.floor(scaled.height);
+          canvas.style.width = `${canvas.width}px`;
+          canvas.style.height = `${canvas.height}px`;
+          canvas.style.left = `${Math.max(0, (maxW - canvas.width) / 2)}px`;
+          canvas.style.top = `${Math.max(0, (maxH - canvas.height) / 2)}px`;
+          if (renderTaskRef.current && (renderTaskRef.current as any).cancel) {
+            try { (renderTaskRef.current as any).cancel(); } catch {}
+          }
+          const task: any = page.render({ canvasContext: ctx, viewport: scaled });
+          renderTaskRef.current = task;
+          await task.promise;
+          if (overlayCanvasRef.current) {
+            const o = overlayCanvasRef.current;
+            o.width = canvas.width;
+            o.height = canvas.height;
+            o.style.width = canvas.style.width;
+            o.style.height = canvas.style.height;
+            o.style.left = canvas.style.left;
+            o.style.top = canvas.style.top;
+          }
+        } catch (err) {
+          setError('Failed to get PDF page');
+          setDebug((prev) => prev + `\nPDF page/render error: ${(err as Error)?.message || String(err)}`);
+        }
+      }, 80);
+    };
+    schedule();
+    const ro = new ResizeObserver(() => schedule());
+    ro.observe(container);
+    return () => { if (t) window.clearTimeout(t); ro.disconnect(); };
+  }, [isPdf, details?.currentSlide]);
 
   // Render PPTX client-side with PPTXjs via CDN
   useEffect(() => {
