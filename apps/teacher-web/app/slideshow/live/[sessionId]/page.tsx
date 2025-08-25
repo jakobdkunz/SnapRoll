@@ -472,7 +472,18 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           return;
         }
         const contentType = response.headers.get('content-type');
-        setDebug((prev) => prev + `\nPPTX: File fetch success, content-type: ${contentType}`);
+        const contentLength = response.headers.get('content-length');
+        setDebug((prev) => prev + `\nPPTX: File fetch success, content-type: ${contentType}, content-length: ${contentLength}`);
+        
+        // Try to read a small portion to verify it's actually a PPTX file
+        const arrayBuffer = await response.arrayBuffer();
+        setDebug((prev) => prev + `\nPPTX: File size: ${arrayBuffer.byteLength} bytes`);
+        
+        // Check if it starts with PPTX magic bytes (PK\x03\x04)
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const isPptx = uint8Array[0] === 0x50 && uint8Array[1] === 0x4B && uint8Array[2] === 0x03 && uint8Array[3] === 0x04;
+        setDebug((prev) => prev + `\nPPTX: File appears to be PPTX: ${isPptx}`);
+        
       } catch (err) {
         setDebug((prev) => prev + `\nPPTX: File fetch error: ${(err as Error)?.message || String(err)}`);
         return;
@@ -493,6 +504,22 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       try {
         setDebug((prev) => prev + `\nPPTX: Starting render with url=${fileUrl}`);
         
+        // Capture console errors during PPTX rendering
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+        const errors: string[] = [];
+        const warnings: string[] = [];
+        
+        console.error = (...args) => {
+          errors.push(args.map(arg => String(arg)).join(' '));
+          originalConsoleError.apply(console, args);
+        };
+        
+        console.warn = (...args) => {
+          warnings.push(args.map(arg => String(arg)).join(' '));
+          originalConsoleWarn.apply(console, args);
+        };
+        
         // Add success and error callbacks to track what happens
         const pptxOptions = {
           pptxFileUrl: fileUrl,
@@ -504,9 +531,15 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           revealjsConfig: { controls: false, progress: false },
           success: function() {
             setDebug((prev) => prev + `\nPPTX: Render success!`);
+            // Restore console
+            console.error = originalConsoleError;
+            console.warn = originalConsoleWarn;
           },
           error: function(err: any) {
             setDebug((prev) => prev + `\nPPTX: Render error callback: ${err?.message || String(err)}`);
+            // Restore console
+            console.error = originalConsoleError;
+            console.warn = originalConsoleWarn;
           }
         };
         
@@ -525,14 +558,29 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           if (host.children.length === 0) {
             setDebug((prev) => prev + `\nPPTX: No content rendered after timeout`);
             setDebug((prev) => prev + `\nPPTX: Host element HTML: ${host.innerHTML}`);
+            setDebug((prev) => prev + `\nPPTX: Console errors: ${errors.join(' | ')}`);
+            setDebug((prev) => prev + `\nPPTX: Console warnings: ${warnings.join(' | ')}`);
+            
+            // Try to check if PPTXjs is actually working by testing with a simple call
+            try {
+              const jq = jqFactory(host);
+              setDebug((prev) => prev + `\nPPTX: jQuery object created: ${!!jq}`);
+              setDebug((prev) => prev + `\nPPTX: pptxToHtml method exists: ${typeof jq.pptxToHtml === 'function'}`);
+            } catch (err) {
+              setDebug((prev) => prev + `\nPPTX: jQuery test error: ${(err as Error)?.message || String(err)}`);
+            }
           } else {
             setDebug((prev) => prev + `\nPPTX: Content found, children count: ${host.children.length}`);
             setDebug((prev) => prev + `\nPPTX: First child tag: ${host.children[0]?.tagName}`);
           }
           
+          // Restore console
+          console.error = originalConsoleError;
+          console.warn = originalConsoleWarn;
+          
           const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
           wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
-        }, 2000); // Increased timeout to give more time for rendering
+        }, 3000); // Increased timeout to give more time for rendering
       } catch (err) {
         setDebug((prev) => prev + `\nPPTX render error: ${(err as Error)?.message || String(err)}`);
       }
