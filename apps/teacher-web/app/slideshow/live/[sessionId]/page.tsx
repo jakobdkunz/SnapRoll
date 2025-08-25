@@ -10,6 +10,7 @@ type SessionDetails = {
   title: string;
   filePath: string;
   mimeType: string;
+  officeMode?: boolean;
   totalSlides: number | null;
   currentSlide: number;
   showOnDevices: boolean;
@@ -141,11 +142,18 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
               <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
             </div>
           ) : isPpt ? (
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
-              <div className="text-sm text-slate-600">Slide {Math.max(1, details.currentSlide)}{details.totalSlides ? ` / ${details.totalSlides}` : ''}</div>
-              <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
-            </div>
+            details.officeMode ? (
+              <div className="ml-auto flex items-center gap-2 text-sm text-slate-500">
+                <Button variant="ghost" onClick={() => window.open(fileUrl, '_blank')}>Download</Button>
+                <span>Use controls in the embedded viewer</span>
+              </div>
+            ) : (
+              <div className="ml-auto flex items-center gap-2">
+                <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
+                <div className="text-sm text-slate-600">Slide {Math.max(1, details.currentSlide)}{details.totalSlides ? ` / ${details.totalSlides}` : ''}</div>
+                <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
+              </div>
+            )
           ) : null}
         </div>
         <div className="flex-1 min-h-0">
@@ -190,6 +198,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
                 onPointerCancel={() => { drawingRef.current.drawing = false; }}
               />
             </div>
+          ) : isPpt && details.officeMode ? (
+            <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
           ) : isPpt ? (
             <div className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
               <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />

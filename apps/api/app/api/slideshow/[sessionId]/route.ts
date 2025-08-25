@@ -12,6 +12,7 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
     title: s.title,
     filePath: s.filePath,
     mimeType: s.mimeType,
+    officeMode: s.officeMode,
     totalSlides: s.totalSlides ?? null,
     currentSlide: s.currentSlide,
     showOnDevices: s.showOnDevices,
