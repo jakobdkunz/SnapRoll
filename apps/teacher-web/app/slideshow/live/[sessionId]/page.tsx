@@ -555,33 +555,16 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         }
         
         try {
-                  // Try using the global jQuery object directly since it has the plugin
-        const globalJq = (window as any).jQuery;
-        if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
-          setDebug((prev) => prev + `\nPPTX: Using global jQuery with plugin`);
-          
-          // Try different approaches to pass the file
-          const globalJqHost = globalJq(host);
-          
-          // Use only blob approach since proxy is blocked by Vercel
-          setDebug((prev) => prev + `\nPPTX: Using blob approach (proxy blocked by Vercel)...`);
-          setDebug((prev) => prev + `\nPPTX: Blob size: ${pptxBlob.size}, type: ${pptxBlob.type}`);
-          
-          const blobOptions = {
-            ...pptxOptions,
-            pptxFile: pptxBlob
-          };
-          
-          setDebug((prev) => prev + `\nPPTX: Calling pptxToHtml with blob options: ${JSON.stringify({
-            ...blobOptions,
-            pptxFile: `[Blob: ${pptxBlob.size} bytes]`
-          }, null, 2)}`);
-          
-          globalJqHost.pptxToHtml(blobOptions);
-        } else {
-          setDebug((prev) => prev + `\nPPTX: Using factory jQuery (no global plugin)`);
-          jq.pptxToHtml(pptxOptions);
-        }
+          // Use the global jQuery object if available, otherwise use factory
+          const globalJq = (window as any).jQuery;
+          if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
+            setDebug((prev) => prev + `\nPPTX: Using global jQuery with plugin`);
+            const globalJqHost = globalJq(host);
+            globalJqHost.pptxToHtml(pptxOptions);
+          } else {
+            setDebug((prev) => prev + `\nPPTX: Using factory jQuery (no global plugin)`);
+            jq.pptxToHtml(pptxOptions);
+          }
           setDebug((prev) => prev + `\nPPTX: pptxToHtml call completed without exception`);
         } catch (err) {
           setDebug((prev) => prev + `\nPPTX: Exception during pptxToHtml call: ${(err as Error)?.message || String(err)}`);
