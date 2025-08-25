@@ -79,6 +79,22 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     }
   }, [rawFileUrl]);
 
+  // For PPTX rendering, use the direct Vercel Blob URL instead of proxy
+  const directFileUrl = useMemo(() => {
+    if (!rawFileUrl) return '';
+    try {
+      const u = new URL(rawFileUrl);
+      const host = u.hostname.toLowerCase();
+      // For PPTX, use direct Vercel Blob URL to avoid proxy issues
+      if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
+        return rawFileUrl; // Use direct URL for PPTX
+      }
+      return rawFileUrl;
+    } catch {
+      return rawFileUrl;
+    }
+  }, [rawFileUrl]);
+
   // Determine type
   const isPdf = !!details && /pdf/i.test(details.mimeType);
   const isPpt = !!details && (/(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath));
@@ -485,7 +501,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         return;
       }
       try {
-        setDebug((prev) => prev + `\nPPTX: Starting render with url=${fileUrl}`);
+        setDebug((prev) => prev + `\nPPTX: Starting render with direct URL: ${directFileUrl}`);
         
         // Capture console errors during PPTX rendering
         const originalConsoleError = console.error;
@@ -505,7 +521,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         
         // Use direct URL approach since Vercel Blob blocks server-to-server requests
         const pptxOptions = {
-          pptxFileUrl: fileUrl, // Use the direct URL
+          pptxFileUrl: directFileUrl, // Use the direct Vercel Blob URL
           slideMode: true,
           slidesScale: '100%',
           keyBoardShortCut: false,
