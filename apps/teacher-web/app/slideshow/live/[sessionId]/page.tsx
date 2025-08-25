@@ -27,8 +27,10 @@ type PdfPage = {
 };
 type PdfDocument = { getPage: (n: number) => Promise<PdfPage> };
 type PdfJsLib = {
-  GlobalWorkerOptions: { workerSrc: string };
-  getDocument: (url: string | { url: string; withCredentials?: boolean; disableStream?: boolean; disableRange?: boolean }) => { promise: Promise<PdfDocument> };
+  GlobalWorkerOptions?: { workerSrc: string };
+  getDocument: (
+    url: string | { url: string; withCredentials?: boolean; disableStream?: boolean; disableRange?: boolean }
+  ) => { promise: Promise<PdfDocument> };
 };
 
 export default function SlideshowLivePage({ params }: { params: { sessionId: string } }) {
@@ -47,8 +49,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const pdfUrlRef = useRef<string>('');
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
   const pptContainerRef = useRef<HTMLDivElement | null>(null);
-  const pptInitializedRef = useRef<boolean>(false);
-  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const [tool] = useState<'pen' | 'eraser'>('pen');
   const drawingRef = useRef<{ drawing: boolean; lastX: number; lastY: number }>({ drawing: false, lastX: 0, lastY: 0 });
 
   const rawFileUrl = useMemo(() => {
@@ -86,7 +87,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       setLoading(true);
       const d = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
       setDetails(d);
-      setDebug((prev) => `Loaded session: ${d.id}\nmime=${d.mimeType} pdf=${/pdf/i.test(d.mimeType)} ppt=${/(powerpoint|\\.pptx?$)/i.test(d.mimeType) || /\\.pptx?$/i.test(d.filePath)} officeMode=${String(d.officeMode)}\nurl=${d.filePath}`);
+      setDebug(`Loaded session: ${d.id}\nmime=${d.mimeType} pdf=${/pdf/i.test(d.mimeType)} ppt=${/(powerpoint|\\.pptx?$)/i.test(d.mimeType) || /\\.pptx?$/i.test(d.filePath)} officeMode=${String(d.officeMode)}\nurl=${d.filePath}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load slideshow');
     } finally {
@@ -288,8 +289,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     (async () => {
       try {
         const mod = await import('pdfjs-dist/legacy/build/pdf.js');
-        const pdfjsLib = ((mod as unknown as { default?: unknown }).default ?? mod) as any;
-        if (pdfjsLib?.GlobalWorkerOptions) {
+        const pdfjsLib = (((mod as unknown as { default?: unknown }).default ?? mod) as unknown) as PdfJsLib;
+        if (pdfjsLib.GlobalWorkerOptions) {
           pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
         }
         if (pdfUrlRef.current !== fileUrl) {
@@ -331,12 +332,16 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           canvas.style.height = `${canvas.height}px`;
           canvas.style.left = `${Math.max(0, (maxW - canvas.width) / 2)}px`;
           canvas.style.top = `${Math.max(0, (maxH - canvas.height) / 2)}px`;
-          if (renderTaskRef.current && (renderTaskRef.current as any).cancel) {
-            try { (renderTaskRef.current as any).cancel(); } catch {}
+          if (renderTaskRef.current && renderTaskRef.current.cancel) {
+            try {
+              renderTaskRef.current.cancel();
+            } catch (e) {
+              setDebug((prev) => prev + `\nPDF: cancel previous render failed: ${(e as Error)?.message || String(e)}`);
+            }
           }
-          const task: any = page.render({ canvasContext: ctx, viewport: scaled });
-          renderTaskRef.current = task;
-          await task.promise;
+          const task = page.render({ canvasContext: ctx, viewport: scaled });
+          renderTaskRef.current = task as { cancel: () => void; promise: Promise<unknown> };
+          await (task as { promise: Promise<unknown> }).promise;
           if (overlayCanvasRef.current) {
             const o = overlayCanvasRef.current;
             o.width = canvas.width;
@@ -356,7 +361,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     const ro = new ResizeObserver(() => schedule());
     ro.observe(container);
     return () => { if (t) window.clearTimeout(t); ro.disconnect(); };
-  }, [isPdf, details?.currentSlide]);
+  }, [isPdf, details]);
 
   // Render PPTX client-side with PPTXjs via CDN
   useEffect(() => {
