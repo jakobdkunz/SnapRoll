@@ -45,13 +45,27 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     return () => { mounted = false; window.clearInterval(id); };
   }, [sessionId]);
 
-  const fileUrl = useMemo(() => {
+  const rawFileUrl = useMemo(() => {
     if (!details) return '';
     let path = details.filePath;
     if (/^https\/\//i.test(path)) path = path.replace(/^https\/\//i, 'https://');
     if (/^http\/\//i.test(path)) path = path.replace(/^http\/\//i, 'http://');
     return /^https?:\/\//i.test(path) ? path : `${getApiBaseUrl()}${path}`;
   }, [details]);
+  const fileUrl = useMemo(() => {
+    if (!rawFileUrl) return '';
+    try {
+      const u = new URL(rawFileUrl);
+      const host = u.hostname.toLowerCase();
+      if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
+        const api = getApiBaseUrl().replace(/\/$/, '');
+        return `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
+      }
+      return rawFileUrl;
+    } catch {
+      return rawFileUrl;
+    }
+  }, [rawFileUrl]);
   const pageUrl = useMemo(() => {
     if (!details) return '';
     const page = Math.max(1, details.currentSlide || 1);
