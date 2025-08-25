@@ -5,6 +5,27 @@ import { put } from '@vercel/blob';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+async function convertWithGotenberg(originalUrl: string): Promise<{ pdfUrl: string } | null> {
+  const base = process.env.GOTENBERG_URL;
+  if (!base) return null;
+  try {
+    const fileResp = await fetch(originalUrl);
+    if (!fileResp.ok) throw new Error('Failed to download source file');
+    const arrayBuffer = await fileResp.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+    const form = new FormData();
+    form.append('files', blob, 'slides.pptx');
+    const resp = await fetch(`${base.replace(/\/$/, '')}/forms/libreoffice/convert`, { method: 'POST', body: form });
+    if (!resp.ok) throw new Error(`Gotenberg convert failed: ${resp.status}`);
+    const pdfBuffer = Buffer.from(await resp.arrayBuffer());
+    const key = `slides/converted/${Date.now()}-converted.pdf`;
+    const { url } = await put(key, pdfBuffer, { access: 'public', contentType: 'application/pdf', addRandomSuffix: false });
+    return { pdfUrl: url };
+  } catch (_e) {
+    return null;
+  }
+}
+
 async function convertPptLikeToPdf(originalUrl: string): Promise<{ pdfUrl: string } | null> {
   const token = process.env.CLOUDCONVERT_API_KEY;
   if (!token) return null;
@@ -101,8 +122,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // If PPT/PPTX, convert to PDF when possible for pre-rendered control
     const isPptLike = /(powerpoint|\.pptx?$)/i.test(mimeType) || /\.pptx?$/i.test(filePath);
     if (isPptLike) {
-      const converted = await convertPptLikeToPdf(filePath);
-      if (converted?.pdfUrl) {
+      // Try free self-hosted Gotenberg first, then CloudConvert fallback
+      const convertedFree = await convertWithGotenberg(filePath);
+      const converted = convertedFree ?? (await convertPptLikeToPdf(filePath));
+      if (converted && converted.pdfUrl) {
         filePath = converted.pdfUrl;
         mimeType = 'application/pdf';
       }
