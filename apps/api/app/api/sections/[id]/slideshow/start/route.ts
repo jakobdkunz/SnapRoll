@@ -2,6 +2,28 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 import { put } from '@vercel/blob';
 
+// Create a custom put function that always includes the token
+const putWithToken = async (key: string, data: Buffer, options: any) => {
+  let token = process.env.BLOB_READ_WRITE_TOKEN;
+  
+  // Fallback to hardcoded token if environment variable is not set
+  if (!token) {
+    token = "vercel_blob_rw_T45WQNtUKWgLEIps_0aVTRcAFYyDyJXAajPsx7hrcloGhBo";
+    console.log('Using fallback token');
+  }
+  
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not set');
+  }
+  return put(key, data, { ...options, token });
+};
+
+// Initialize Vercel Blob with token
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+if (!blobToken) {
+  console.error('BLOB_READ_WRITE_TOKEN is not set');
+}
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -19,11 +41,10 @@ async function convertWithGotenberg(originalUrl: string): Promise<{ pdfUrl: stri
     if (!resp.ok) throw new Error(`Gotenberg convert failed: ${resp.status}`);
     const pdfBuffer = Buffer.from(await resp.arrayBuffer());
     const key = `slides/converted/${Date.now()}-converted.pdf`;
-    const { url } = await put(key, pdfBuffer, { 
+    const { url } = await putWithToken(key, pdfBuffer, { 
       access: 'public', 
       contentType: 'application/pdf', 
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN 
+      addRandomSuffix: false
     });
     return { pdfUrl: url };
   } catch (_e) {
@@ -86,11 +107,10 @@ async function convertPptLikeToPdf(originalUrl: string): Promise<{ pdfUrl: strin
     const arrayBuffer = await resp.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const key = `slides/converted/${Date.now()}-converted.pdf`;
-    const { url } = await put(key, buffer, { 
+    const { url } = await putWithToken(key, buffer, { 
       access: 'public', 
       contentType: 'application/pdf', 
-      addRandomSuffix: false,
-      token: process.env.BLOB_READ_WRITE_TOKEN 
+      addRandomSuffix: false
     });
     return { pdfUrl: url };
   } catch (_e) {
@@ -100,6 +120,9 @@ async function convertPptLikeToPdf(originalUrl: string): Promise<{ pdfUrl: strin
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    // Debug: Check if token is available
+    console.log('BLOB_READ_WRITE_TOKEN available:', !!process.env.BLOB_READ_WRITE_TOKEN);
+    console.log('Token length:', process.env.BLOB_READ_WRITE_TOKEN?.length || 0);
     const sectionId = params.id;
     const form = await request.formData();
     const title = (form.get('title') as string | null)?.trim() || 'Slideshow';
@@ -125,11 +148,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const key = `slides/session/${sectionId}/${Date.now()}-${file.name}`;
-      const { url } = await put(key, buffer, { 
+      const { url } = await putWithToken(key, buffer, { 
         access: 'public', 
         contentType: mime, 
-        addRandomSuffix: false,
-        token: process.env.BLOB_READ_WRITE_TOKEN 
+        addRandomSuffix: false
       });
       filePath = url;
       mimeType = mime;

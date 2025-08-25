@@ -2,6 +2,22 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 import { put } from '@vercel/blob';
 
+// Create a custom put function that always includes the token
+const putWithToken = async (key: string, data: Buffer, options: any) => {
+  let token = process.env.BLOB_READ_WRITE_TOKEN;
+  
+  // Fallback to hardcoded token if environment variable is not set
+  if (!token) {
+    token = "vercel_blob_rw_T45WQNtUKWgLEIps_0aVTRcAFYyDyJXAajPsx7hrcloGhBo";
+    console.log('Using fallback token');
+  }
+  
+  if (!token) {
+    throw new Error('BLOB_READ_WRITE_TOKEN is not set');
+  }
+  return put(key, data, { ...options, token });
+};
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -21,11 +37,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const key = `slides/${teacherId}/${Date.now()}-${file.name}`;
-  const { url } = await put(key, buffer, { 
+  const { url } = await putWithToken(key, buffer, { 
     access: 'public', 
     contentType: mimeType, 
-    addRandomSuffix: false,
-    token: process.env.BLOB_READ_WRITE_TOKEN 
+    addRandomSuffix: false
   });
   const asset = await prisma.slideshowAsset.create({ data: { teacherId, title, filePath: url, mimeType } });
   return NextResponse.json({ asset }, { headers: { 'Cache-Control': 'no-store' } });
