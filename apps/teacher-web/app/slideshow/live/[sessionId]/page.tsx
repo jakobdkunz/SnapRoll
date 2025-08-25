@@ -48,6 +48,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const pdfDocRef = useRef<PdfDocument | null>(null);
   const pdfUrlRef = useRef<string>('');
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
+  const [pdfReadyTick, setPdfReadyTick] = useState(0);
+  const bitmapCacheRef = useRef<Map<string, ImageBitmap>>(new Map());
   const pptContainerRef = useRef<HTMLDivElement | null>(null);
   const [tool] = useState<'pen' | 'eraser'>('pen');
   const drawingRef = useRef<{ drawing: boolean; lastX: number; lastY: number }>({ drawing: false, lastX: 0, lastY: 0 });
@@ -298,6 +300,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           const task = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
           pdfDocRef.current = await task.promise;
           pdfUrlRef.current = fileUrl;
+          setPdfReadyTick((t) => t + 1);
         }
       } catch (err) {
         setError('Failed to load PDF');
@@ -355,13 +358,13 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           setError('Failed to get PDF page');
           setDebug((prev) => prev + `\nPDF page/render error: ${(err as Error)?.message || String(err)}`);
         }
-      }, 80);
+      }, 0);
     };
     schedule();
     const ro = new ResizeObserver(() => schedule());
     ro.observe(container);
     return () => { if (t) window.clearTimeout(t); ro.disconnect(); };
-  }, [isPdf, details]);
+  }, [isPdf, details, pdfReadyTick]);
 
   // Render PPTX client-side with PPTXjs via CDN
   useEffect(() => {
@@ -380,9 +383,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       try {
         await tryLoad(localPath);
       } catch (e) {
-        const proxied = `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(cdnUrl)}`;
         setDebug((prev) => prev + `\nPPTX: local load failed, falling back → ${cdnUrl}`);
-        await tryLoad(proxied);
+        await tryLoad(cdnUrl);
       }
     }
     function ensureCssWithFallback(localPath: string, cdnUrl: string) {
@@ -392,8 +394,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       link.rel = 'stylesheet';
       link.href = localPath;
       link.onerror = () => {
-        const proxied = `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(cdnUrl)}`;
-        link.href = proxied;
+        link.href = cdnUrl;
       };
       document.head.appendChild(link);
     }
