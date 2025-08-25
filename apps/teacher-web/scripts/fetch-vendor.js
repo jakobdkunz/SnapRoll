@@ -31,10 +31,7 @@ const files = [
     name: 'reveal.css',
     url: 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css',
   },
-  {
-    name: 'filereader.js',
-    url: 'https://cdn.jsdelivr.net/npm/filereader@0.10.3/FileReader.min.js',
-  },
+
   {
     name: 'pptxjs.min.js',
     url: 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.min.js',
