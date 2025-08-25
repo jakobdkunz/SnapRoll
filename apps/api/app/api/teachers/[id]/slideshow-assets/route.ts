@@ -21,7 +21,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const key = `slides/${teacherId}/${Date.now()}-${file.name}`;
-  const { url } = await put(key, buffer, { access: 'public', contentType: mimeType, addRandomSuffix: false });
+  const { url } = await put(key, buffer, { 
+    access: 'public', 
+    contentType: mimeType, 
+    addRandomSuffix: false,
+    token: process.env.BLOB_READ_WRITE_TOKEN 
+  });
   const asset = await prisma.slideshowAsset.create({ data: { teacherId, title, filePath: url, mimeType } });
   return NextResponse.json({ asset }, { headers: { 'Cache-Control': 'no-store' } });
 }
