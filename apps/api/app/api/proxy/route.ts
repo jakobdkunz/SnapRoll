@@ -21,15 +21,37 @@ export async function GET(req: Request) {
     const u = new URL(req.url);
     const target = u.searchParams.get('url');
     if (!target) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
+    
     let parsed: URL;
     try {
       parsed = new URL(target);
     } catch {
       return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
     }
+    
     if (!isAllowed(parsed)) return NextResponse.json({ error: 'Host not allowed' }, { status: 403 });
-    const upstream = await fetch(parsed.toString(), { cache: 'no-store', redirect: 'follow' });
-    if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: 502 });
+    
+    console.log(`Proxy: Fetching ${parsed.toString()}`);
+    
+    const upstream = await fetch(parsed.toString(), { 
+      cache: 'no-store', 
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'SnapRoll-Proxy/1.0'
+      }
+    });
+    
+    console.log(`Proxy: Upstream response status: ${upstream.status} ${upstream.statusText}`);
+    
+    if (!upstream.ok) {
+      const errorText = await upstream.text().catch(() => 'Unable to read error response');
+      console.error(`Proxy: Upstream error - Status: ${upstream.status}, Text: ${errorText}`);
+      return NextResponse.json({ 
+        error: `Upstream ${upstream.status}: ${upstream.statusText}`,
+        details: errorText
+      }, { status: 502 });
+    }
+    
     const headers = new Headers(upstream.headers);
     headers.set('Cache-Control', 'no-store');
     // Remove any existing CORS headers from upstream - middleware handles them
@@ -41,10 +63,14 @@ export async function GET(req: Request) {
     headers.delete('content-encoding');
     headers.delete('transfer-encoding');
     headers.delete('content-length');
+    
     const buf = await upstream.arrayBuffer();
+    console.log(`Proxy: Successfully fetched ${buf.byteLength} bytes`);
+    
     return new NextResponse(buf, { status: upstream.status, headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Proxy error';
+    console.error(`Proxy: Exception - ${msg}`);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
