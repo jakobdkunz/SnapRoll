@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [slideAllowDownload, setSlideAllowDownload] = useState(true);
   const [slideRequireStay, setSlideRequireStay] = useState(false);
   const [slidePreventJump, setSlidePreventJump] = useState(false);
+  const [slideOfficeMode, setSlideOfficeMode] = useState(false);
   const [slideUploadFile, setSlideUploadFile] = useState<File | null>(null);
   const [slideWorking, setSlideWorking] = useState(false);
   const [slideError, setSlideError] = useState<string | null>(null);
@@ -446,6 +447,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex items-center gap-2 md:col-span-2"><input type="checkbox" checked={slideOfficeMode} onChange={(e) => setSlideOfficeMode(e.target.checked)} /> <span>Embedded video support (syncing slideshow to student clients will not work)</span></label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={slideShowOnDevices} onChange={(e) => setSlideShowOnDevices(e.target.checked)} /> <span>Show on Student Devices</span></label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={slideAllowDownload} onChange={(e) => setSlideAllowDownload(e.target.checked)} /> <span>Allow Students to Download Slideshow</span></label>
             <label className="flex items-center gap-2"><input type="checkbox" checked={slideRequireStay} onChange={(e) => { const v = e.target.checked; setSlideRequireStay(v); if (v) setSlidePreventJump(false); }} /> <span>Require Students to Stay on Current Slide</span></label>
@@ -472,6 +474,7 @@ export default function DashboardPage() {
                 } else if (slideUploadFile) {
                   fd.append('file', slideUploadFile);
                 }
+                fd.append('officeMode', String(slideOfficeMode));
                 const data = await apiFetch<{ session: { id: string } }>(`/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
                 setSlideOpen(false);
                 setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);

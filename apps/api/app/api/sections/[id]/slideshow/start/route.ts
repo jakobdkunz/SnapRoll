@@ -97,6 +97,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const allowDownload = (form.get('allowDownload') as string) === 'true';
     const requireStay = (form.get('requireStay') as string) === 'true';
     const preventJump = (form.get('preventJump') as string) === 'true';
+    const officeMode = (form.get('officeMode') as string) === 'true';
     const assetId = (form.get('assetId') as string | null) || null;
     let filePath: string;
     let mimeType: string;
@@ -119,9 +120,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       mimeType = mime;
     }
 
-    // If PPT/PPTX, convert to PDF when possible for pre-rendered control
+    // If PPT/PPTX and not using Office embed, convert to PDF when possible for pre-rendered control
     const isPptLike = /(powerpoint|\.pptx?$)/i.test(mimeType) || /\.pptx?$/i.test(filePath);
-    if (isPptLike) {
+    if (isPptLike && !officeMode) {
       // Try free self-hosted Gotenberg first, then CloudConvert fallback
       const convertedFree = await convertWithGotenberg(filePath);
       const converted = convertedFree ?? (await convertPptLikeToPdf(filePath));
@@ -138,6 +139,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         title: finalTitle,
         filePath,
         mimeType,
+        officeMode,
         showOnDevices,
         allowDownload,
         requireStay,

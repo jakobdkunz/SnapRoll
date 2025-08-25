@@ -173,6 +173,7 @@ model SlideshowSession {
   allowDownload        Boolean  @default(true)
   requireStay          Boolean  @default(false)
   preventJump          Boolean  @default(false)
+  officeMode           Boolean  @default(false)
   createdAt            DateTime @default(now())
   closedAt             DateTime?
   instructorLastSeenAt DateTime?
