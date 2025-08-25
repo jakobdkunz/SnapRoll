@@ -580,7 +580,15 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         }
         
         try {
-          jq.pptxToHtml(pptxOptions);
+          // Try using the global jQuery object directly since it has the plugin
+          const globalJq = (window as any).jQuery;
+          if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
+            setDebug((prev) => prev + `\nPPTX: Using global jQuery with plugin`);
+            globalJq(host).pptxToHtml(pptxOptions);
+          } else {
+            setDebug((prev) => prev + `\nPPTX: Using factory jQuery (no global plugin)`);
+            jq.pptxToHtml(pptxOptions);
+          }
           setDebug((prev) => prev + `\nPPTX: pptxToHtml call completed without exception`);
         } catch (err) {
           setDebug((prev) => prev + `\nPPTX: Exception during pptxToHtml call: ${(err as Error)?.message || String(err)}`);
