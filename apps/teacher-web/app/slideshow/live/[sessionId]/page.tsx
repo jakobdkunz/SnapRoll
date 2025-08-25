@@ -424,6 +424,10 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
             // PPTXjs calls this but doesn't seem to need it for our use case
             return true;
           },
+          setupBlob: function() {
+            // PPTXjs calls this to setup blob handling, but we don't need special setup
+            return true;
+          },
           readAsText: function(file: File, callback: (result: string) => void) {
             const reader = new FileReader();
             reader.onload = function(e) {
