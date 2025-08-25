@@ -28,12 +28,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
     }
     if (!isAllowed(parsed)) return NextResponse.json({ error: 'Host not allowed' }, { status: 403 });
-    const upstream = await fetch(parsed.toString(), { cache: 'no-store' });
+    const upstream = await fetch(parsed.toString(), { cache: 'no-store', redirect: 'follow' });
     if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: 502 });
     const headers = new Headers(upstream.headers);
     headers.set('Cache-Control', 'no-store');
     headers.set('Access-Control-Allow-Origin', '*');
-    return new NextResponse(upstream.body, { status: upstream.status, headers });
+    headers.delete('content-encoding');
+    headers.delete('transfer-encoding');
+    headers.delete('content-length');
+    const buf = await upstream.arrayBuffer();
+    return new NextResponse(buf, { status: upstream.status, headers });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Proxy error';
     return NextResponse.json({ error: msg }, { status: 500 });
