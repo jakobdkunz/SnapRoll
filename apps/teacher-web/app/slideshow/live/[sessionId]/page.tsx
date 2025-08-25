@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
+import * as XLSX from 'xlsx';
 
 type SessionDetails = {
   id: string;
@@ -117,16 +118,24 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     load();
   }, [load]);
 
+  // Heartbeat to keep session alive
   useEffect(() => {
-    // Instructor heartbeat to keep the session active
-    function tick() {
-      void fetch(`${getApiBaseUrl()}/api/slideshow/${sessionId}/heartbeat`, { method: 'POST', headers: { 'Cache-Control': 'no-store' } });
-    }
-    tick();
-    const id = window.setInterval(tick, 5000);
-    heartbeatRef.current = id;
-    return () => { if (heartbeatRef.current) window.clearInterval(heartbeatRef.current); };
-  }, [sessionId]);
+    if (!details) return;
+    const heartbeat = async () => {
+      try {
+        await apiFetch(`/api/slideshow/${sessionId}/heartbeat`, { method: 'POST' });
+      } catch (e) {
+        console.error('Heartbeat failed:', e);
+      }
+    };
+    heartbeatRef.current = window.setInterval(heartbeat, 30000);
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+  }, [details, sessionId]);
 
   async function closeAndBack() {
     try {
@@ -385,245 +394,443 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     return () => { if (t) window.clearTimeout(t); ro.disconnect(); };
   }, [isPdf, details, pdfReadyTick]);
 
-  // Render PPTX client-side with PPTXjs via CDN
+  // PPTX rendering using SheetJS
   useEffect(() => {
-    if (!details || !pptContainerRef.current) return;
-    if (!isPpt) return;
+    if (!isPpt || !directFileUrl || !pptContainerRef.current) return;
+    
     let cancelled = false;
-    async function loadScriptWithFallback(localPath: string, cdnUrl: string) {
-      const tryLoad = (src: string) => new Promise<void>((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error(`Failed to load ${src}`));
-        document.head.appendChild(s);
-      });
+    
+    async function renderPptx() {
+      setDebug((prev) => prev + `\nPPTX: Starting SheetJS-based rendering`);
+      setDebug((prev) => prev + `\nPPTX: Fetching from: ${directFileUrl}`);
+      
       try {
-        await tryLoad(localPath);
-      } catch (e) {
-        setDebug((prev) => prev + `\nPPTX: local load failed, falling back → ${cdnUrl}`);
-        await tryLoad(cdnUrl);
-      }
-    }
-    function ensureCssWithFallback(localPath: string, cdnUrl: string) {
-      const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
-      if (existing.some((l) => l.href.endsWith(localPath) || l.href.includes(cdnUrl))) return;
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = localPath;
-      link.onerror = () => {
-        link.href = cdnUrl;
-      };
-      document.head.appendChild(link);
-    }
-    async function ensureDeps() {
-      // CSS first (local, then fallback)
-      ensureCssWithFallback('/vendor/reveal.css', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
-      ensureCssWithFallback('/vendor/pptxjs.css', 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.css');
-      // Scripts (local, then fallback via proxy)
-      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScriptWithFallback('/vendor/jquery.min.js', 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScriptWithFallback('/vendor/jszip.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
-      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScriptWithFallback('/vendor/reveal.js', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
-      // Create FileReaderJS polyfill for PPTXjs compatibility
-      if (!(window as unknown as { FileReaderJS?: unknown }).FileReaderJS) {
-        (window as any).FileReaderJS = {
-          // Complete polyfill that provides all methods PPTXjs expects
-          readAsDataURL: function(file: File, callback: (result: string) => void) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              callback(e.target?.result as string);
-            };
-            reader.readAsDataURL(file);
-          },
-          setSync: function() {
-            // PPTXjs calls this but doesn't seem to need it for our use case
-            return true;
-          },
-          setupBlob: function() {
-            // PPTXjs calls this to setup blob handling, but we don't need special setup
-            return true;
-          },
-          readAsText: function(file: File, callback: (result: string) => void) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              callback(e.target?.result as string);
-            };
-            reader.readAsText(file);
-          },
-          readAsArrayBuffer: function(file: File, callback: (result: ArrayBuffer) => void) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              callback(e.target?.result as ArrayBuffer);
-            };
-            reader.readAsArrayBuffer(file);
-          }
-        };
-      }
-      const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
-      const hasPlugin = w?.$?.fn?.pptxToHtml;
-      setDebug((prev) => prev + `\nPPTX: jQuery available: ${!!w?.$}, pptxToHtml plugin available: ${!!hasPlugin}`);
-      
-      if (!hasPlugin) {
-        setDebug((prev) => prev + `\nPPTX: Loading pptxjs.min.js...`);
-        await loadScriptWithFallback('/vendor/pptxjs.min.js', 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.min.js');
-        setDebug((prev) => prev + `\nPPTX: Loading divs2slides.min.js...`);
-        await loadScriptWithFallback('/vendor/divs2slides.min.js', 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/divs2slides.min.js');
-        
-        // Check again after loading
-        const w2 = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
-        const hasPlugin2 = w2?.$?.fn?.pptxToHtml;
-        setDebug((prev) => prev + `\nPPTX: After loading - jQuery available: ${!!w2?.$}, pptxToHtml plugin available: ${!!hasPlugin2}`);
-      }
-    }
-    async function render() {
-      await ensureDeps();
-      if (cancelled) return;
-      
-      // Add a small delay to ensure scripts are fully initialized
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-              // Skip file validation since Vercel Blob blocks server-to-server requests
-              // We'll let PPTXjs handle the file fetching directly in the browser context
-              setDebug((prev) => prev + `\nPPTX: Skipping proxy validation due to Vercel security restrictions`);
-              setDebug((prev) => prev + `\nPPTX: Will use direct URL approach with pptxFileUrl`);
-      
-      const container = pptContainerRef.current!;
-      container.innerHTML = '';
-      const host = document.createElement('div');
-      container.appendChild(host);
-      type JQueryInstance = { pptxToHtml: (opts: Record<string, unknown>) => void };
-      type JQueryFactory = (el: HTMLElement) => JQueryInstance;
-      const wjq = window as unknown as { jQuery?: JQueryFactory };
-      const jqFactory: JQueryFactory | undefined = wjq.jQuery;
-      if (!jqFactory) {
-        setDebug((prev) => prev + `\nPPTX: jQuery missing`);
-        return;
-      }
-      try {
-        setDebug((prev) => prev + `\nPPTX: Starting render with direct URL: ${directFileUrl}`);
-        
-        // Capture console errors during PPTX rendering
-        const originalConsoleError = console.error;
-        const originalConsoleWarn = console.warn;
-        const errors: string[] = [];
-        const warnings: string[] = [];
-        
-        console.error = (...args) => {
-          errors.push(args.map(arg => String(arg)).join(' '));
-          originalConsoleError.apply(console, args);
-        };
-        
-        console.warn = (...args) => {
-          warnings.push(args.map(arg => String(arg)).join(' '));
-          originalConsoleWarn.apply(console, args);
-        };
-        
-        // Use direct URL approach since Vercel Blob blocks server-to-server requests
-        const pptxOptions = {
-          pptxFileUrl: directFileUrl, // Use the direct Vercel Blob URL
-          slideMode: true,
-          slidesScale: '100%',
-          keyBoardShortCut: false,
-          mediaProcess: true,
-          slideType: 'revealjs',
-          revealjsConfig: { controls: false, progress: false },
-          success: function() {
-            setDebug((prev) => prev + `\nPPTX: Render success!`);
-            // Restore console
-            console.error = originalConsoleError;
-            console.warn = originalConsoleWarn;
-          },
-          error: function(err: any) {
-            setDebug((prev) => prev + `\nPPTX: Render error callback: ${err?.message || String(err)}`);
-            // Restore console
-            console.error = originalConsoleError;
-            console.warn = originalConsoleWarn;
-          }
-        };
-        
-        setDebug((prev) => prev + `\nPPTX: Calling pptxToHtml with options: ${JSON.stringify(pptxOptions, null, 2)}`);
-        
-        // Test if PPTXjs is actually working
-        const jq = jqFactory(host);
-        setDebug((prev) => prev + `\nPPTX: jQuery object: ${!!jq}`);
-        setDebug((prev) => prev + `\nPPTX: pptxToHtml method: ${typeof jq.pptxToHtml}`);
-        
-        // Check if PPTXjs has any internal state or methods we can inspect
-        setDebug((prev) => prev + `\nPPTX: jQuery object keys: ${Object.keys(jq).join(', ')}`);
-        if (jq.pptxToHtml) {
-          setDebug((prev) => prev + `\nPPTX: pptxToHtml function keys: ${Object.keys(jq.pptxToHtml).join(', ')}`);
+        // Fetch the PPTX file
+        const response = await fetch(directFileUrl);
+        if (!response.ok) {
+          setDebug((prev) => prev + `\nPPTX: Fetch failed: ${response.status} ${response.statusText}`);
+          return;
         }
         
-        // Check if PPTXjs is actually loaded globally
-        setDebug((prev) => prev + `\nPPTX: Global jQuery: ${typeof (window as any).jQuery}`);
-        setDebug((prev) => prev + `\nPPTX: Global pptxToHtml: ${typeof (window as any).jQuery?.fn?.pptxToHtml}`);
-        setDebug((prev) => prev + `\nPPTX: Global pptxjs: ${typeof (window as any).pptxjs}`);
+        const arrayBuffer = await response.arrayBuffer();
+        setDebug((prev) => prev + `\nPPTX: Fetched ${arrayBuffer.byteLength} bytes`);
         
-        // Try to get the plugin from the global jQuery object
-        const globalJq = (window as any).jQuery;
-        if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
-          setDebug((prev) => prev + `\nPPTX: Found global pptxToHtml plugin!`);
-          const globalJqHost = globalJq(host);
-          setDebug((prev) => prev + `\nPPTX: Global jQuery object keys: ${Object.keys(globalJqHost).join(', ')}`);
-        } else {
-          setDebug((prev) => prev + `\nPPTX: Global pptxToHtml plugin not found`);
-        }
+        // Read the PPTX file using SheetJS
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        setDebug((prev) => prev + `\nPPTX: Workbook loaded, sheets: ${workbook.SheetNames.join(', ')}`);
         
-        try {
-          // Use the global jQuery object if available, otherwise use factory
-          const globalJq = (window as any).jQuery;
-          if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
-            setDebug((prev) => prev + `\nPPTX: Using global jQuery with plugin`);
-            const globalJqHost = globalJq(host);
-            globalJqHost.pptxToHtml(pptxOptions);
-          } else {
-            setDebug((prev) => prev + `\nPPTX: Using factory jQuery (no global plugin)`);
-            jq.pptxToHtml(pptxOptions);
-          }
-          setDebug((prev) => prev + `\nPPTX: pptxToHtml call completed without exception`);
-        } catch (err) {
-          setDebug((prev) => prev + `\nPPTX: Exception during pptxToHtml call: ${(err as Error)?.message || String(err)}`);
-        }
+        // Extract slides from the workbook
+        const slides: string[] = [];
         
-        setDebug((prev) => prev + `\nPPTX: pptxToHtml called successfully`);
+        // Look for slide-related sheets
+        const slideSheets = workbook.SheetNames.filter(name => 
+          name.toLowerCase().includes('slide') || 
+          name.toLowerCase().includes('sheet') ||
+          /^slide\d+$/i.test(name)
+        );
         
-        // Check if content was actually rendered after a delay
-        setTimeout(() => {
-          if (host.children.length === 0) {
-            setDebug((prev) => prev + `\nPPTX: No content rendered after timeout`);
-            setDebug((prev) => prev + `\nPPTX: Host element HTML: ${host.innerHTML}`);
-            setDebug((prev) => prev + `\nPPTX: Console errors: ${errors.join(' | ')}`);
-            setDebug((prev) => prev + `\nPPTX: Console warnings: ${warnings.join(' | ')}`);
-            
-            // Try to check if PPTXjs is actually working by testing with a simple call
-            try {
-              const jq = jqFactory(host);
-              setDebug((prev) => prev + `\nPPTX: jQuery object created: ${!!jq}`);
-              setDebug((prev) => prev + `\nPPTX: pptxToHtml method exists: ${typeof jq.pptxToHtml === 'function'}`);
-            } catch (err) {
-              setDebug((prev) => prev + `\nPPTX: jQuery test error: ${(err as Error)?.message || String(err)}`);
+        setDebug((prev) => prev + `\nPPTX: Found slide sheets: ${slideSheets.join(', ')}`);
+        
+        if (slideSheets.length === 0) {
+          // Try to process all sheets as potential slides
+          for (const sheetName of workbook.SheetNames) {
+            const worksheet = workbook.Sheets[sheetName];
+            const html = XLSX.utils.sheet_to_html(worksheet);
+            if (html && html.trim()) {
+              slides.push(html);
+              setDebug((prev) => prev + `\nPPTX: Processed sheet "${sheetName}" as slide`);
             }
-          } else {
-            setDebug((prev) => prev + `\nPPTX: Content found, children count: ${host.children.length}`);
-            setDebug((prev) => prev + `\nPPTX: First child tag: ${host.children[0]?.tagName}`);
+          }
+        } else {
+          // Process identified slide sheets
+          for (const sheetName of slideSheets) {
+            const worksheet = workbook.Sheets[sheetName];
+            const html = XLSX.utils.sheet_to_html(worksheet);
+            if (html && html.trim()) {
+              slides.push(html);
+              setDebug((prev) => prev + `\nPPTX: Processed slide sheet "${sheetName}"`);
+            }
+          }
+        }
+        
+        setDebug((prev) => prev + `\nPPTX: Generated ${slides.length} slides`);
+        
+        if (slides.length === 0) {
+          setDebug((prev) => prev + `\nPPTX: No slides found, trying alternative approach`);
+          
+          // Try to extract text content from all sheets
+          for (const sheetName of workbook.SheetNames) {
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            if (jsonData && jsonData.length > 0) {
+              const slideContent = jsonData
+                .filter((row: any) => row && row.length > 0)
+                .map((row: any) => `<div>${row.join(' ')}</div>`)
+                .join('');
+              
+              if (slideContent.trim()) {
+                slides.push(`<div class="slide">${slideContent}</div>`);
+                setDebug((prev) => prev + `\nPPTX: Created slide from sheet "${sheetName}"`);
+              }
+            }
+          }
+        }
+        
+        if (cancelled) return;
+        
+        // Render the slides
+        const container = pptContainerRef.current!;
+        container.innerHTML = '';
+        
+        if (slides.length === 0) {
+          setDebug((prev) => prev + `\nPPTX: No content could be extracted from PPTX file`);
+          container.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500">No slides found in presentation</div>';
+          return;
+        }
+        
+        // Create slideshow container
+        const slideshowContainer = document.createElement('div');
+        slideshowContainer.className = 'slideshow-container w-full h-full';
+        slideshowContainer.style.cssText = `
+          position: relative;
+          overflow: hidden;
+          background: white;
+        `;
+        
+        // Add slides
+        slides.forEach((slideHtml, index) => {
+          const slideElement = document.createElement('div');
+          slideElement.className = `slide ${index === 0 ? 'active' : 'hidden'}`;
+          slideElement.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            box-sizing: border-box;
+            overflow: auto;
+            background: white;
+            ${index === 0 ? 'opacity: 1;' : 'opacity: 0;'}
+            transition: opacity 0.3s ease;
+          `;
+          slideElement.innerHTML = slideHtml;
+          slideshowContainer.appendChild(slideElement);
+        });
+        
+        container.appendChild(slideshowContainer);
+        
+        // Add navigation controls
+        if (slides.length > 1) {
+          const navContainer = document.createElement('div');
+          navContainer.className = 'slide-nav absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2';
+          navContainer.style.cssText = `
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+          `;
+          
+          const prevBtn = document.createElement('button');
+          prevBtn.textContent = '←';
+          prevBtn.className = 'px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700';
+          prevBtn.onclick = () => navigateSlide(-1);
+          
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = '→';
+          nextBtn.className = 'px-3 py-1 bg-gray-800 text-white rounded hover:bg-gray-700';
+          nextBtn.onclick = () => navigateSlide(1);
+          
+          const slideIndicator = document.createElement('span');
+          slideIndicator.className = 'px-3 py-1 bg-gray-800 text-white rounded';
+          slideIndicator.textContent = `1 / ${slides.length}`;
+          
+          navContainer.appendChild(prevBtn);
+          navContainer.appendChild(slideIndicator);
+          navContainer.appendChild(nextBtn);
+          container.appendChild(navContainer);
+          
+          let currentSlideIndex = 0;
+          
+          function navigateSlide(direction: number) {
+            const newIndex = Math.max(0, Math.min(slides.length - 1, currentSlideIndex + direction));
+            if (newIndex !== currentSlideIndex) {
+              const slides = slideshowContainer.querySelectorAll('.slide');
+              slides[currentSlideIndex].classList.remove('active');
+              slides[currentSlideIndex].classList.add('hidden');
+              slides[currentSlideIndex].style.opacity = '0';
+              
+              slides[newIndex].classList.remove('hidden');
+              slides[newIndex].classList.add('active');
+              slides[newIndex].style.opacity = '1';
+              
+              currentSlideIndex = newIndex;
+              slideIndicator.textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+              
+              // Update slide number in parent component
+              if (details) {
+                setDetails(prev => prev ? { ...prev, currentSlide: currentSlideIndex + 1 } : null);
+              }
+            }
           }
           
-          // Restore console
-          console.error = originalConsoleError;
-          console.warn = originalConsoleWarn;
+          // Keyboard navigation
+          const handleKeyPress = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') {
+              navigateSlide(-1);
+            } else if (e.key === 'ArrowRight') {
+              navigateSlide(1);
+            }
+          };
           
-          const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
-          wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
-        }, 3000); // Increased timeout to give more time for rendering
+          document.addEventListener('keydown', handleKeyPress);
+          
+          // Cleanup
+          return () => {
+            document.removeEventListener('keydown', handleKeyPress);
+          };
+        }
+        
+        setDebug((prev) => prev + `\nPPTX: Successfully rendered ${slides.length} slides using SheetJS`);
+        
       } catch (err) {
-        setDebug((prev) => prev + `\nPPTX render error: ${(err as Error)?.message || String(err)}`);
+        setDebug((prev) => prev + `\nPPTX: SheetJS rendering error: ${(err as Error)?.message || String(err)}`);
+        const container = pptContainerRef.current!;
+        container.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Failed to load presentation</div>';
       }
     }
-    render();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPpt, fileUrl, details?.currentSlide]);
+    
+    renderPptx();
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [isPpt, directFileUrl, details]);
+
+  async function closeAndBack() {
+    if (working) return;
+    setWorking(true);
+    try {
+      await apiFetch(`/api/slideshow/${sessionId}/close`, { method: 'POST' });
+      router.push('/dashboard');
+    } catch (e) {
+      console.error('Failed to close slideshow:', e);
+      router.push('/dashboard');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  // PDF rendering
+  useEffect(() => {
+    if (!isPdf || !fileUrl || !pageCanvasRef.current || !overlayCanvasRef.current || !containerRef.current) return;
+    
+    let cancelled = false;
+    async function renderPdf() {
+      try {
+        setDebug((prev) => prev + `\nPDF: Starting render`);
+        const pdfjsLib = (window as any).pdfjsLib as PdfJsLib;
+        if (!pdfjsLib) {
+          setDebug((prev) => prev + `\nPDF: pdfjsLib not available`);
+          return;
+        }
+        
+        pdfjsLib.GlobalWorkerOptions = pdfjsLib.GlobalWorkerOptions || {};
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        
+        const loadingTask = pdfjsLib.getDocument(fileUrl);
+        const pdf = await loadingTask.promise;
+        if (cancelled) return;
+        
+        pdfDocRef.current = pdf;
+        pdfUrlRef.current = fileUrl;
+        
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.0 });
+        
+        const canvas = pageCanvasRef.current!;
+        const context = canvas.getContext('2d')!;
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+        
+        const renderTask = page.render(renderContext);
+        renderTaskRef.current = renderTask;
+        
+        await renderTask.promise;
+        if (cancelled) return;
+        
+        setPdfReadyTick(prev => prev + 1);
+        setDebug((prev) => prev + `\nPDF: Render complete`);
+      } catch (err) {
+        setDebug((prev) => prev + `\nPDF: Render error: ${(err as Error)?.message || String(err)}`);
+      }
+    }
+    
+    renderPdf();
+    
+    return () => {
+      cancelled = true;
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+    };
+  }, [isPdf, fileUrl, pdfReadyTick]);
+
+  // Drawing functionality
+  useEffect(() => {
+    if (!overlayCanvasRef.current || !pageCanvasRef.current) return;
+    
+    const overlayCanvas = overlayCanvasRef.current;
+    const pageCanvas = pageCanvasRef.current;
+    const ctx = overlayCanvas.getContext('2d')!;
+    
+    // Match overlay canvas size to page canvas
+    overlayCanvas.width = pageCanvas.width;
+    overlayCanvas.height = pageCanvas.height;
+    
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    
+    function getMousePos(e: MouseEvent) {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const scaleX = overlayCanvas.width / rect.width;
+      const scaleY = overlayCanvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+    
+    function startDrawing(e: MouseEvent) {
+      isDrawing = true;
+      const pos = getMousePos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+    
+    function draw(e: MouseEvent) {
+      if (!isDrawing) return;
+      
+      const pos = getMousePos(e);
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.strokeStyle = tool === 'pen' ? '#000' : '#fff';
+      ctx.lineWidth = tool === 'pen' ? 2 : 10;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+      
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+    
+    function stopDrawing() {
+      isDrawing = false;
+    }
+    
+    overlayCanvas.addEventListener('mousedown', startDrawing);
+    overlayCanvas.addEventListener('mousemove', draw);
+    overlayCanvas.addEventListener('mouseup', stopDrawing);
+    overlayCanvas.addEventListener('mouseout', stopDrawing);
+    
+    return () => {
+      overlayCanvas.removeEventListener('mousedown', startDrawing);
+      overlayCanvas.removeEventListener('mousemove', draw);
+      overlayCanvas.removeEventListener('mouseup', stopDrawing);
+      overlayCanvas.removeEventListener('mouseout', stopDrawing);
+    };
+  }, [tool, pdfReadyTick]);
+
+  let content: ReactNode;
+  if (loading) {
+    content = (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading slideshow...</p>
+        </div>
+      </div>
+    );
+  } else if (error) {
+    content = (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Error: {error}</p>
+          <Button onClick={load}>Retry</Button>
+        </div>
+      </div>
+    );
+  } else if (!details) {
+    content = (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No slideshow details available</p>
+        </div>
+      </div>
+    );
+  } else {
+    content = (
+      <>
+        <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-semibold text-black">SnapRoll</span>
+              <span className="text-sm font-medium text-green-600">Instructor</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600">
+                {details.currentSlide} / {details.totalSlides || '?'}
+              </span>
+              <Button onClick={closeAndBack} disabled={working}>
+                {working ? 'Closing...' : 'Close'}
+              </Button>
+            </div>
+          </div>
+        </header>
+        
+        <main className="flex-1 relative">
+          {isPdf && (
+            <div ref={containerRef} className="relative w-full h-full">
+              <canvas
+                ref={pageCanvasRef}
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+              <canvas
+                ref={overlayCanvasRef}
+                className="absolute inset-0 w-full h-full pointer-events-auto"
+                style={{ touchAction: 'none' }}
+              />
+            </div>
+          )}
+          
+          {isPpt && (
+            <div ref={pptContainerRef} className="w-full h-full" />
+          )}
+          
+          {!isPdf && !isPpt && (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-600">Unsupported file type</p>
+            </div>
+          )}
+        </main>
+        
+        {debug && (
+          <div className="fixed bottom-4 right-4 max-w-md max-h-64 overflow-auto bg-black text-green-400 text-xs p-4 rounded border">
+            <pre>{debug}</pre>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (<div className="min-h-dvh flex flex-col">{content}</div>);
 }
