@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+      </head>
       <body>
         <div className="min-h-dvh">
           <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">

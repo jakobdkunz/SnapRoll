@@ -7,7 +7,14 @@ const nextConfig = {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         canvas: false,
+        fs: false,
+        path: false,
+        os: false,
       };
+      
+      // Exclude canvas from being processed
+      config.externals = config.externals || [];
+      config.externals.push('canvas');
     }
     return config;
   },

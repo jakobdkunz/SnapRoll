@@ -290,9 +290,11 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!details || !isPdf) return;
     (async () => {
       try {
-        // Import PDF.js with proper configuration to avoid canvas module issues
-        const mod = await import('pdfjs-dist/build/pdf.js');
-        const pdfjsLib = (((mod as unknown as { default?: unknown }).default ?? mod) as unknown) as PdfJsLib;
+        // Import PDF.js using CDN to avoid canvas module issues
+        const pdfjsLib = (window as any).pdfjsLib as PdfJsLib;
+        if (!pdfjsLib) {
+          throw new Error('PDF.js not loaded from CDN');
+        }
         if (pdfjsLib.GlobalWorkerOptions) {
           pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
         }
