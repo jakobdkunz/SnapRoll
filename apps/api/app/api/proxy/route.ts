@@ -32,7 +32,7 @@ export async function GET(req: Request) {
     if (!upstream.ok) return NextResponse.json({ error: `Upstream ${upstream.status}` }, { status: 502 });
     const headers = new Headers(upstream.headers);
     headers.set('Cache-Control', 'no-store');
-    headers.set('Access-Control-Allow-Origin', '*');
+    // Don't set Access-Control-Allow-Origin here - middleware handles it
     headers.delete('content-encoding');
     headers.delete('transfer-encoding');
     headers.delete('content-length');
