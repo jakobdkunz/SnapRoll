@@ -19,7 +19,12 @@ async function convertWithGotenberg(originalUrl: string): Promise<{ pdfUrl: stri
     if (!resp.ok) throw new Error(`Gotenberg convert failed: ${resp.status}`);
     const pdfBuffer = Buffer.from(await resp.arrayBuffer());
     const key = `slides/converted/${Date.now()}-converted.pdf`;
-    const { url } = await put(key, pdfBuffer, { access: 'public', contentType: 'application/pdf', addRandomSuffix: false });
+    const { url } = await put(key, pdfBuffer, { 
+      access: 'public', 
+      contentType: 'application/pdf', 
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN 
+    });
     return { pdfUrl: url };
   } catch (_e) {
     return null;
@@ -81,7 +86,12 @@ async function convertPptLikeToPdf(originalUrl: string): Promise<{ pdfUrl: strin
     const arrayBuffer = await resp.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const key = `slides/converted/${Date.now()}-converted.pdf`;
-    const { url } = await put(key, buffer, { access: 'public', contentType: 'application/pdf', addRandomSuffix: false });
+    const { url } = await put(key, buffer, { 
+      access: 'public', 
+      contentType: 'application/pdf', 
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN 
+    });
     return { pdfUrl: url };
   } catch (_e) {
     return null;
@@ -115,7 +125,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       const key = `slides/session/${sectionId}/${Date.now()}-${file.name}`;
-      const { url } = await put(key, buffer, { access: 'public', contentType: mime, addRandomSuffix: false });
+      const { url } = await put(key, buffer, { 
+        access: 'public', 
+        contentType: mime, 
+        addRandomSuffix: false,
+        token: process.env.BLOB_READ_WRITE_TOKEN 
+      });
       filePath = url;
       mimeType = mime;
     }
