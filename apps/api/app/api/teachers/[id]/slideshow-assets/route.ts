@@ -6,10 +6,9 @@ import { put } from '@vercel/blob';
 const putWithToken = async (key: string, data: Buffer, options: any) => {
   let token = process.env.BLOB_READ_WRITE_TOKEN;
   
-  // Fallback to hardcoded token if environment variable is not set
+  // No fallback token - require environment variable
   if (!token) {
-    token = "vercel_blob_rw_T45WQNtUKWgLEIps_0aVTRcAFYyDyJXAajPsx7hrcloGhBo";
-    console.log('Using fallback token');
+    throw new Error('BLOB_READ_WRITE_TOKEN environment variable is required');
   }
   
   if (!token) {
