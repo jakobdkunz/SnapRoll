@@ -27,7 +27,7 @@ type PdfPage = {
 type PdfDocument = { getPage: (n: number) => Promise<PdfPage> };
 type PdfJsLib = {
   GlobalWorkerOptions: { workerSrc: string };
-  getDocument: (url: string) => { promise: Promise<PdfDocument> };
+  getDocument: (url: string | { url: string; withCredentials?: boolean; disableStream?: boolean; disableRange?: boolean }) => { promise: Promise<PdfDocument> };
 };
 
 export default function SlideshowLivePage({ params }: { params: { sessionId: string } }) {
@@ -209,12 +209,11 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!isPdf) return;
     let cancelled = false;
     async function run() {
-      // Lazy-load PDF.js
-      const pdfjsLib = (await import('pdfjs-dist/build/pdf')).default as unknown as PdfJsLib;
-      // Set worker (CDN)
-      // Assign workerSrc directly
-      (pdfjsLib as PdfJsLib).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
-      const loadingTask = pdfjsLib.getDocument(fileUrl);
+      // Lazy-load PDF.js legacy build for broad browser support
+      const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf')).default as unknown as PdfJsLib;
+      // Set worker (CDN, legacy path)
+      (pdfjsLib as PdfJsLib).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+      const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
       const pdf: PdfDocument = await loadingTask.promise;
       if (cancelled) return;
       const pageNum = Math.max(1, (details?.currentSlide ?? 1));
