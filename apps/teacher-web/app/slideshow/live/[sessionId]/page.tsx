@@ -38,6 +38,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [debug, setDebug] = useState<string>('');
   const heartbeatRef = useRef<number | null>(null);
   const pageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -63,7 +64,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       // Proxy blob hosts to avoid CORS/Range issues in PDF.js and PPTXjs
       if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
         const api = getApiBaseUrl().replace(/\/$/, '');
-        return `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
+        const proxied = `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
+        return proxied;
       }
       return rawFileUrl;
     } catch {
@@ -81,6 +83,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       setLoading(true);
       const d = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
       setDetails(d);
+      setDebug((prev) => `Loaded session: ${d.id}\nmime=${d.mimeType} pdf=${/pdf/i.test(d.mimeType)} ppt=${/(powerpoint|\\.pptx?$)/i.test(d.mimeType) || /\\.pptx?$/i.test(d.filePath)} officeMode=${String(d.officeMode)}\nurl=${d.filePath}`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load slideshow');
     } finally {
@@ -174,6 +177,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         <div className="flex-1 min-h-0">
           {isPdf ? (
             <div ref={containerRef} className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
+              {debug && (
+                <div className="absolute top-2 left-2 z-50 max-w-[60vw] bg-black/70 text-green-300 text-xs p-2 rounded whitespace-pre-wrap">{debug}</div>
+              )}
               <canvas ref={pageCanvasRef} className="absolute inset-0 m-auto max-w-full max-h-full" />
               <canvas
                 ref={overlayCanvasRef}
@@ -276,15 +282,30 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!isPdf) return;
     let cancelled = false;
     async function run() {
+      setDebug((prev) => prev + `\nPDF render start: url=${fileUrl}`);
       // Lazy-load PDF.js legacy build for broad browser support
       const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf')).default as unknown as PdfJsLib;
       // Set worker (CDN, legacy path)
       (pdfjsLib as PdfJsLib).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
       const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
-      const pdf: PdfDocument = await loadingTask.promise;
+      let pdf: PdfDocument;
+      try {
+        pdf = await loadingTask.promise;
+      } catch (err) {
+        setError('Failed to load PDF');
+        setDebug((prev) => prev + `\nPDF load error: ${(err as Error)?.message || String(err)}`);
+        return;
+      }
       if (cancelled) return;
       const pageNum = Math.max(1, (details?.currentSlide ?? 1));
-      const page: PdfPage = await pdf.getPage(pageNum);
+      let page: PdfPage;
+      try {
+        page = await pdf.getPage(pageNum);
+      } catch (err) {
+        setError('Failed to get PDF page');
+        setDebug((prev) => prev + `\nPDF page error: ${(err as Error)?.message || String(err)}`);
+        return;
+      }
       if (cancelled) return;
       const container = containerRef.current!;
       const canvas = pageCanvasRef.current!;
@@ -303,7 +324,13 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       // Center
       canvas.style.left = `${Math.max(0, (maxW - canvas.width) / 2)}px`;
       canvas.style.top = `${Math.max(0, (maxH - canvas.height) / 2)}px`;
-      await page.render({ canvasContext: ctx, viewport: scaled }).promise;
+      try {
+        await page.render({ canvasContext: ctx, viewport: scaled }).promise;
+        setDebug((prev) => prev + `\nPDF rendered ${canvas.width}x${canvas.height}`);
+      } catch (err) {
+        setError('Failed to render PDF');
+        setDebug((prev) => prev + `\nPDF render error: ${(err as Error)?.message || String(err)}`);
+      }
       // Match overlay to canvas size/position
       if (overlayCanvasRef.current) {
         const o = overlayCanvasRef.current;

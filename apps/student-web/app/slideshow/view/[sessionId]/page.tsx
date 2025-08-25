@@ -25,6 +25,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pptContainerRef = useRef<HTMLDivElement | null>(null);
+  const [debug, setDebug] = useState<string>('');
 
   useEffect(() => {
     let mounted = true;
@@ -34,6 +35,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         const d = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
         if (!mounted) return;
         setDetails(d);
+        setDebug(`Loaded: ${d.id} mime=${d.mimeType} officeMode=${String(d.officeMode)} currentSlide=${d.currentSlide}`);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : 'Failed to load slideshow');
       } finally {
@@ -41,7 +43,20 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       }
     }
     load();
-    const id = window.setInterval(load, 3500);
+    // Poll less aggressively to avoid flicker; only update currentSlide if changed
+    const id = window.setInterval(async () => {
+      try {
+        const d = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
+        if (!mounted) return;
+        setDetails((prev) => {
+          if (!prev) return d;
+          if (prev.currentSlide !== d.currentSlide) return { ...prev, currentSlide: d.currentSlide };
+          return prev;
+        });
+      } catch (_e) {
+        // ignore
+      }
+    }, 2000);
     return () => { mounted = false; window.clearInterval(id); };
   }, [sessionId]);
 
@@ -153,11 +168,17 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       </div>
       <div className="flex-1 min-h-0">
         {isPdf ? (
-          <iframe title="slides" src={pageUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
+          <div className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
+            {debug && (<div className="absolute top-2 left-2 z-50 max-w-[60vw] bg-black/70 text-green-300 text-xs p-2 rounded whitespace-pre-wrap">{debug}</div>)}
+            <iframe title="slides" src={pageUrl} className="absolute inset-0 w-full h-full border-0 overflow-hidden" />
+          </div>
         ) : (isPpt && details.officeMode) ? (
           <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
         ) : isPpt ? (
-          <div ref={pptContainerRef} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] overflow-auto" />
+          <div className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+            {debug && (<div className="absolute top-2 left-2 z-50 max-w-[60vw] bg-black/70 text-green-300 text-xs p-2 rounded whitespace-pre-wrap">{debug}</div>)}
+            <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />
+          </div>
         ) : (
           <div className="h-full grid place-items-center p-6">
             <Card className="p-6 text-center max-w-lg">
