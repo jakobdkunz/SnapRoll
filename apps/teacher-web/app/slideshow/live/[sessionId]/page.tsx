@@ -409,6 +409,10 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScriptWithFallback('/vendor/jquery.min.js', 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
       if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScriptWithFallback('/vendor/jszip.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
       if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScriptWithFallback('/vendor/reveal.js', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
+      // Load FileReaderJS which is required by PPTXjs
+      if (!(window as unknown as { FileReaderJS?: unknown }).FileReaderJS) {
+        await loadScriptWithFallback('/vendor/filereader.js', 'https://cdn.jsdelivr.net/npm/filereader@0.10.3/FileReader.min.js');
+      }
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {

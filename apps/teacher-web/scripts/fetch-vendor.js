@@ -32,16 +32,20 @@ const files = [
     url: 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css',
   },
   {
+    name: 'filereader.js',
+    url: 'https://cdn.jsdelivr.net/npm/filereader@0.10.3/FileReader.min.js',
+  },
+  {
     name: 'pptxjs.min.js',
-    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/pptxjs.min.js',
+    url: 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.min.js',
   },
   {
     name: 'divs2slides.min.js',
-    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/divs2slides.min.js',
+    url: 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/divs2slides.min.js',
   },
   {
     name: 'pptxjs.css',
-    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/css/pptxjs.css',
+    url: 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.css',
   },
 ];
 
