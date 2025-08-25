@@ -368,8 +368,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!details || !pptContainerRef.current) return;
     if (!isPpt) return;
     let cancelled = false;
-    async function loadScript(src: string) {
-      await new Promise<void>((resolve, reject) => {
+    async function loadScriptWithFallback(localPath: string, cdnUrl: string) {
+      const tryLoad = (src: string) => new Promise<void>((resolve, reject) => {
         const s = document.createElement('script');
         s.src = src;
         s.async = true;
@@ -377,28 +377,39 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         s.onerror = () => reject(new Error(`Failed to load ${src}`));
         document.head.appendChild(s);
       });
-    }
-    function ensureCss(href: string) {
-      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
-      if (!links.some((l) => l.href === href)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        document.head.appendChild(link);
+      try {
+        await tryLoad(localPath);
+      } catch (e) {
+        const proxied = `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(cdnUrl)}`;
+        setDebug((prev) => prev + `\nPPTX: local load failed, falling back → ${cdnUrl}`);
+        await tryLoad(proxied);
       }
     }
+    function ensureCssWithFallback(localPath: string, cdnUrl: string) {
+      const existing = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      if (existing.some((l) => l.href.endsWith(localPath) || l.href.includes(cdnUrl))) return;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = localPath;
+      link.onerror = () => {
+        const proxied = `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(cdnUrl)}`;
+        link.href = proxied;
+      };
+      document.head.appendChild(link);
+    }
     async function ensureDeps() {
-      ensureCss(`${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css')}`);
-      ensureCss(`${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css')}`);
-      const proxy = (url: string) => `${getApiBaseUrl().replace(/\/$/, '')}/api/proxy?url=${encodeURIComponent(url)}`;
-      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript(proxy('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js'));
-      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript(proxy('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'));
-      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript(proxy('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js'));
+      // CSS first (local, then fallback)
+      ensureCssWithFallback('/vendor/reveal.css', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
+      ensureCssWithFallback('/vendor/pptxjs.css', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
+      // Scripts (local, then fallback via proxy)
+      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScriptWithFallback('/vendor/jquery.min.js', 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
+      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScriptWithFallback('/vendor/jszip.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScriptWithFallback('/vendor/reveal.js', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {
-        await loadScript(proxy('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js'));
-        await loadScript(proxy('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js'));
+        await loadScriptWithFallback('/vendor/pptxjs.min.js', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
+        await loadScriptWithFallback('/vendor/divs2slides.min.js', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
       }
     }
     async function render() {
