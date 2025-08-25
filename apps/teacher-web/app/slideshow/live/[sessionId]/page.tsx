@@ -464,6 +464,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       await ensureDeps();
       if (cancelled) return;
       
+      // Add a small delay to ensure scripts are fully initialized
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
               // Test if we can actually fetch the PPTX file
         let pptxBlob: Blob | null = null;
         try {
@@ -559,6 +562,21 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         setDebug((prev) => prev + `\nPPTX: jQuery object keys: ${Object.keys(jq).join(', ')}`);
         if (jq.pptxToHtml) {
           setDebug((prev) => prev + `\nPPTX: pptxToHtml function keys: ${Object.keys(jq.pptxToHtml).join(', ')}`);
+        }
+        
+        // Check if PPTXjs is actually loaded globally
+        setDebug((prev) => prev + `\nPPTX: Global jQuery: ${typeof (window as any).jQuery}`);
+        setDebug((prev) => prev + `\nPPTX: Global pptxToHtml: ${typeof (window as any).jQuery?.fn?.pptxToHtml}`);
+        setDebug((prev) => prev + `\nPPTX: Global pptxjs: ${typeof (window as any).pptxjs}`);
+        
+        // Try to get the plugin from the global jQuery object
+        const globalJq = (window as any).jQuery;
+        if (globalJq && globalJq.fn && globalJq.fn.pptxToHtml) {
+          setDebug((prev) => prev + `\nPPTX: Found global pptxToHtml plugin!`);
+          const globalJqHost = globalJq(host);
+          setDebug((prev) => prev + `\nPPTX: Global jQuery object keys: ${Object.keys(globalJqHost).join(', ')}`);
+        } else {
+          setDebug((prev) => prev + `\nPPTX: Global pptxToHtml plugin not found`);
         }
         
         try {
