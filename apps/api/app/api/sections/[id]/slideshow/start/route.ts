@@ -11,17 +11,11 @@ const putWithToken = async (key: string, data: Buffer, options: any) => {
     throw new Error('BLOB_READ_WRITE_TOKEN environment variable is required');
   }
   
-  if (!token) {
-    throw new Error('BLOB_READ_WRITE_TOKEN is not set');
-  }
   return put(key, data, { ...options, token });
 };
 
 // Initialize Vercel Blob with token
 const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-if (!blobToken) {
-  console.error('BLOB_READ_WRITE_TOKEN is not set');
-}
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
