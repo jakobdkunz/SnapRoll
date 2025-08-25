@@ -287,9 +287,16 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     async function run() {
       setDebug((prev) => prev + `\nPDF render start: url=${fileUrl}`);
       // Lazy-load PDF.js legacy build for broad browser support
-      const pdfjsLib = (await import('pdfjs-dist/legacy/build/pdf.js')).default as unknown as PdfJsLib;
-      // Set worker (CDN, legacy path)
-      (pdfjsLib as PdfJsLib).GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+      const mod = await import('pdfjs-dist/legacy/build/pdf.js');
+      const pdfjsLib = ((mod as unknown as { default?: unknown }).default ?? mod) as unknown as {
+        GlobalWorkerOptions?: { workerSrc: string };
+        getDocument: (opts: { url: string; withCredentials?: boolean; disableStream?: boolean; disableRange?: boolean }) => { promise: Promise<PdfDocument> };
+      };
+      if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+      } else {
+        setDebug((prev) => prev + '\nPDF: GlobalWorkerOptions missing');
+      }
       const loadingTask = pdfjsLib.getDocument({ url: fileUrl, withCredentials: false, disableStream: true, disableRange: true });
       let pdf: PdfDocument;
       try {
