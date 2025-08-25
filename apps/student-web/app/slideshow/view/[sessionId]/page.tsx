@@ -53,7 +53,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const pageUrl = useMemo(() => {
     if (!details) return '';
     const page = Math.max(1, details.currentSlide || 1);
-    return `${fileUrl}#page=${page}`;
+    const cacheBust = `r=${page}`;
+    return `${fileUrl}?${cacheBust}#page=${page}&zoom=page-fit&toolbar=0`;
   }, [details, fileUrl]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
@@ -72,9 +73,9 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       </div>
       <div className="flex-1 min-h-0">
         {isPdf ? (
-          <iframe title="slides" src={pageUrl} className="w-full h-full border-0" />
+          <iframe title="slides" src={pageUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
         ) : isPpt ? (
-          <iframe title="slides" src={officeEmbedUrl} className="w-full h-full border-0" />
+          <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
         ) : (
           <div className="h-full grid place-items-center p-6">
             <Card className="p-6 text-center max-w-lg">
