@@ -322,7 +322,18 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         document.head.appendChild(s);
       });
     }
+    function ensureCss(href: string) {
+      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      if (!links.some((l) => l.href === href)) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        document.head.appendChild(link);
+      }
+    }
     async function ensureDeps() {
+      ensureCss('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
+      ensureCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
       if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
       if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
       if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
