@@ -290,10 +290,10 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (!details || !isPdf) return;
     (async () => {
       try {
-        const mod = await import('pdfjs-dist/legacy/build/pdf.js');
+        const mod = await import('pdfjs-dist/build/pdf.js');
         const pdfjsLib = (((mod as unknown as { default?: unknown }).default ?? mod) as unknown) as PdfJsLib;
         if (pdfjsLib.GlobalWorkerOptions) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
         }
         if (pdfUrlRef.current !== fileUrl) {
           setDebug((prev) => prev + `\nPDF doc load: ${fileUrl}`);
