@@ -525,9 +525,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           originalConsoleWarn.apply(console, args);
         };
         
-        // Try a simpler approach - just use the URL without blob
+        // Try a different approach - use pptxFile with blob instead of URL
         const pptxOptions = {
-          pptxFileUrl: fileUrl,
+          pptxFile: pptxBlob, // Use the blob directly
           slideMode: true,
           slidesScale: '100%',
           keyBoardShortCut: false,
@@ -554,6 +554,12 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         const jq = jqFactory(host);
         setDebug((prev) => prev + `\nPPTX: jQuery object: ${!!jq}`);
         setDebug((prev) => prev + `\nPPTX: pptxToHtml method: ${typeof jq.pptxToHtml}`);
+        
+        // Check if PPTXjs has any internal state or methods we can inspect
+        setDebug((prev) => prev + `\nPPTX: jQuery object keys: ${Object.keys(jq).join(', ')}`);
+        if (jq.pptxToHtml) {
+          setDebug((prev) => prev + `\nPPTX: pptxToHtml function keys: ${Object.keys(jq.pptxToHtml).join(', ')}`);
+        }
         
         try {
           jq.pptxToHtml(pptxOptions);
