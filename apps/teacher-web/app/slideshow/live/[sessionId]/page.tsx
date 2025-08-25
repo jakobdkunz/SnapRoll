@@ -47,7 +47,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const drawingRef = useRef<{ drawing: boolean; lastX: number; lastY: number }>({ drawing: false, lastX: 0, lastY: 0 });
 
-  const fileUrl = useMemo(() => {
+  const rawFileUrl = useMemo(() => {
     if (!details) return '';
     let path = details.filePath;
     // Normalize accidentally missing colon in protocol (e.g., https//)
@@ -55,6 +55,21 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (/^http\/\//i.test(path)) path = path.replace(/^http\/\//i, 'http://');
     return /^https?:\/\//i.test(path) ? path : `${getApiBaseUrl()}${path}`;
   }, [details]);
+  const fileUrl = useMemo(() => {
+    if (!rawFileUrl) return '';
+    try {
+      const u = new URL(rawFileUrl);
+      const host = u.hostname.toLowerCase();
+      // Proxy blob hosts to avoid CORS/Range issues in PDF.js and PPTXjs
+      if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
+        const api = getApiBaseUrl().replace(/\/$/, '');
+        return `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
+      }
+      return rawFileUrl;
+    } catch {
+      return rawFileUrl;
+    }
+  }, [rawFileUrl]);
 
   // Determine type
   const isPdf = !!details && /pdf/i.test(details.mimeType);
