@@ -33,15 +33,15 @@ const files = [
   },
   {
     name: 'pptxjs.min.js',
-    url: 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js',
+    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/pptxjs.min.js',
   },
   {
     name: 'divs2slides.min.js',
-    url: 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js',
+    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/divs2slides.min.js',
   },
   {
     name: 'pptxjs.css',
-    url: 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css',
+    url: 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/css/pptxjs.css',
   },
 ];
 

@@ -404,7 +404,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     async function ensureDeps() {
       // CSS first (local, then fallback)
       ensureCssWithFallback('/vendor/reveal.css', 'https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
-      ensureCssWithFallback('/vendor/pptxjs.css', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
+      ensureCssWithFallback('/vendor/pptxjs.css', 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/css/pptxjs.css');
       // Scripts (local, then fallback via proxy)
       if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScriptWithFallback('/vendor/jquery.min.js', 'https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
       if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScriptWithFallback('/vendor/jszip.min.js', 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
@@ -412,8 +412,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {
-        await loadScriptWithFallback('/vendor/pptxjs.min.js', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
-        await loadScriptWithFallback('/vendor/divs2slides.min.js', 'https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
+        await loadScriptWithFallback('/vendor/pptxjs.min.js', 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/pptxjs.min.js');
+        await loadScriptWithFallback('/vendor/divs2slides.min.js', 'https://raw.githubusercontent.com/meshesha/PPTXjs/master/js/divs2slides.min.js');
       }
     }
     async function render() {
