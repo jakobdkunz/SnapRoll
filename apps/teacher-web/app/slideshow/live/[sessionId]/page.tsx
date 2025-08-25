@@ -446,9 +446,18 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       }
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
+      setDebug((prev) => prev + `\nPPTX: jQuery available: ${!!w?.$}, pptxToHtml plugin available: ${!!hasPlugin}`);
+      
       if (!hasPlugin) {
+        setDebug((prev) => prev + `\nPPTX: Loading pptxjs.min.js...`);
         await loadScriptWithFallback('/vendor/pptxjs.min.js', 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.min.js');
+        setDebug((prev) => prev + `\nPPTX: Loading divs2slides.min.js...`);
         await loadScriptWithFallback('/vendor/divs2slides.min.js', 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/divs2slides.min.js');
+        
+        // Check again after loading
+        const w2 = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
+        const hasPlugin2 = w2?.$?.fn?.pptxToHtml;
+        setDebug((prev) => prev + `\nPPTX: After loading - jQuery available: ${!!w2?.$}, pptxToHtml plugin available: ${!!hasPlugin2}`);
       }
     }
     async function render() {
@@ -485,7 +494,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         setDebug((prev) => prev + `\nPPTX: Starting render with url=${fileUrl}`);
         
         // Add success and error callbacks to track what happens
-        jqFactory(host).pptxToHtml({
+        const pptxOptions = {
           pptxFileUrl: fileUrl,
           slideMode: true,
           slidesScale: '100%',
@@ -499,7 +508,15 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
           error: function(err: any) {
             setDebug((prev) => prev + `\nPPTX: Render error callback: ${err?.message || String(err)}`);
           }
-        });
+        };
+        
+        setDebug((prev) => prev + `\nPPTX: Calling pptxToHtml with options: ${JSON.stringify(pptxOptions, null, 2)}`);
+        
+        try {
+          jqFactory(host).pptxToHtml(pptxOptions);
+        } catch (err) {
+          setDebug((prev) => prev + `\nPPTX: Exception during pptxToHtml call: ${(err as Error)?.message || String(err)}`);
+        }
         
         setDebug((prev) => prev + `\nPPTX: pptxToHtml called successfully`);
         
@@ -507,13 +524,15 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
         setTimeout(() => {
           if (host.children.length === 0) {
             setDebug((prev) => prev + `\nPPTX: No content rendered after timeout`);
+            setDebug((prev) => prev + `\nPPTX: Host element HTML: ${host.innerHTML}`);
           } else {
             setDebug((prev) => prev + `\nPPTX: Content found, children count: ${host.children.length}`);
+            setDebug((prev) => prev + `\nPPTX: First child tag: ${host.children[0]?.tagName}`);
           }
           
           const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
           wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
-        }, 1000); // Increased timeout to give more time for rendering
+        }, 2000); // Increased timeout to give more time for rendering
       } catch (err) {
         setDebug((prev) => prev + `\nPPTX render error: ${(err as Error)?.message || String(err)}`);
       }
