@@ -38,8 +38,9 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const pdfUrlWithPage = useMemo(() => {
     if (!details) return '';
     const page = Math.max(1, details.currentSlide || 1);
-    // Most PDF viewers honor #page=N
-    return `${fileUrl}#page=${page}`;
+    // Force reload per page and try to fit page
+    const cacheBust = `r=${page}`;
+    return `${fileUrl}?${cacheBust}#page=${page}&zoom=page-fit&toolbar=0`;
   }, [details, fileUrl]);
 
   const load = useCallback(async () => {
@@ -124,17 +125,21 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
       <div className="px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
         <div className="text-lg font-semibold truncate">{details.title}</div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
-          <div className="text-sm text-slate-600">Slide {Math.max(1, details.currentSlide)}{details.totalSlides ? ` / ${details.totalSlides}` : ''}</div>
-          <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
-        </div>
+        {isPdf ? (
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
+            <div className="text-sm text-slate-600">Slide {Math.max(1, details.currentSlide)}{details.totalSlides ? ` / ${details.totalSlides}` : ''}</div>
+            <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
+          </div>
+        ) : isPpt ? (
+          <div className="ml-auto text-sm text-slate-500">Use controls in the embedded viewer</div>
+        ) : null}
       </div>
       <div className="flex-1 min-h-0">
         {isPdf ? (
-          <iframe title="slides" src={pdfUrlWithPage} className="w-full h-full border-0" />
+          <iframe key={`pdf-${details.currentSlide}`} title="slides" src={pdfUrlWithPage} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
         ) : isPpt ? (
-          <iframe title="slides" src={officeEmbedUrl} className="w-full h-full border-0" />
+          <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
         ) : (
           <div className="h-full grid place-items-center p-6">
             <Card className="p-6 text-center max-w-lg">
