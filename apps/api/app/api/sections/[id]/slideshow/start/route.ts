@@ -6,10 +6,9 @@ import { put } from '@vercel/blob';
 const putWithToken = async (key: string, data: Buffer, options: any) => {
   let token = process.env.BLOB_READ_WRITE_TOKEN;
   
-  // Fallback to hardcoded token if environment variable is not set
+  // No fallback token - require environment variable
   if (!token) {
-    token = "vercel_blob_rw_T45WQNtUKWgLEIps_0aVTRcAFYyDyJXAajPsx7hrcloGhBo";
-    console.log('Using fallback token');
+    throw new Error('BLOB_READ_WRITE_TOKEN environment variable is required');
   }
   
   if (!token) {
@@ -120,9 +119,6 @@ async function convertPptLikeToPdf(originalUrl: string): Promise<{ pdfUrl: strin
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    // Debug: Check if token is available
-    console.log('BLOB_READ_WRITE_TOKEN available:', !!process.env.BLOB_READ_WRITE_TOKEN);
-    console.log('Token length:', process.env.BLOB_READ_WRITE_TOKEN?.length || 0);
     const sectionId = params.id;
     const form = await request.formData();
     const title = (form.get('title') as string | null)?.trim() || 'Slideshow';
