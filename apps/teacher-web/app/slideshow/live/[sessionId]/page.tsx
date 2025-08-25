@@ -124,7 +124,7 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     if (clamped === details.currentSlide) return;
     try {
       setWorking(true);
-      await apiFetch(`/api/slideshow/${details.id}/goto`, { method: 'POST', body: JSON.stringify({ currentSlide: clamped }) });
+      await apiFetch(`/api/slideshow/${details.id}/goto`, { method: 'POST', body: JSON.stringify({ slide: clamped }) });
       setDetails((prev) => (prev ? { ...prev, currentSlide: clamped } : prev));
     } finally {
       setWorking(false);
