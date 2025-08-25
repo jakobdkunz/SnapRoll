@@ -41,6 +41,8 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
   const pageCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const pptContainerRef = useRef<HTMLDivElement | null>(null);
+  const pptInitializedRef = useRef<boolean>(false);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const drawingRef = useRef<{ drawing: boolean; lastX: number; lastY: number }>({ drawing: false, lastX: 0, lastY: 0 });
 
@@ -139,9 +141,10 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
               <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
             </div>
           ) : isPpt ? (
-            <div className="ml-auto flex items-center gap-2 text-sm text-slate-500">
-              <Button variant="ghost" onClick={() => window.open(fileUrl, '_blank')}>Download</Button>
-              <span>Use controls in the embedded viewer</span>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
+              <div className="text-sm text-slate-600">Slide {Math.max(1, details.currentSlide)}{details.totalSlides ? ` / ${details.totalSlides}` : ''}</div>
+              <Button onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working}>Next</Button>
             </div>
           ) : null}
         </div>
@@ -188,7 +191,46 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
               />
             </div>
           ) : isPpt ? (
-            <iframe title="slides" src={officeEmbedUrl} className="w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] border-0" />
+            <div className="relative w-full h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-black">
+              <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />
+              <canvas
+                ref={overlayCanvasRef}
+                className="absolute inset-0 cursor-crosshair"
+                onPointerDown={(e) => {
+                  if (!overlayCanvasRef.current) return;
+                  overlayCanvasRef.current.setPointerCapture(e.pointerId);
+                  const rect = overlayCanvasRef.current.getBoundingClientRect();
+                  drawingRef.current.drawing = true;
+                  drawingRef.current.lastX = e.clientX - rect.left;
+                  drawingRef.current.lastY = e.clientY - rect.top;
+                }}
+                onPointerMove={(e) => {
+                  if (!drawingRef.current.drawing || !overlayCanvasRef.current) return;
+                  const ctx = overlayCanvasRef.current.getContext('2d');
+                  if (!ctx) return;
+                  const rect = overlayCanvasRef.current.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  ctx.lineCap = 'round';
+                  ctx.lineJoin = 'round';
+                  ctx.lineWidth = tool === 'pen' ? 4 : 16;
+                  ctx.strokeStyle = tool === 'pen' ? '#ffeb3b' : 'rgba(0,0,0,1)';
+                  ctx.globalCompositeOperation = tool === 'pen' ? 'source-over' : 'destination-out';
+                  ctx.beginPath();
+                  ctx.moveTo(drawingRef.current.lastX, drawingRef.current.lastY);
+                  ctx.lineTo(x, y);
+                  ctx.stroke();
+                  drawingRef.current.lastX = x;
+                  drawingRef.current.lastY = y;
+                }}
+                onPointerUp={(e) => {
+                  if (!overlayCanvasRef.current) return;
+                  overlayCanvasRef.current.releasePointerCapture(e.pointerId);
+                  drawingRef.current.drawing = false;
+                }}
+                onPointerCancel={() => { drawingRef.current.drawing = false; }}
+              />
+            </div>
           ) : (
             <div className="h-full grid place-items-center p-6">
               <Card className="p-6 text-center max-w-lg">
@@ -254,6 +296,63 @@ export default function SlideshowLivePage({ params }: { params: { sessionId: str
     return () => { cancelled = true; ro.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPdf, details?.currentSlide, fileUrl]);
+
+  // Render PPTX client-side with PPTXjs via CDN
+  useEffect(() => {
+    if (!details || !pptContainerRef.current) return;
+    if (!isPpt) return;
+    let cancelled = false;
+    async function loadScript(src: string) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(s);
+      });
+    }
+    async function ensureDeps() {
+      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
+      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
+      const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
+      const hasPlugin = w?.$?.fn?.pptxToHtml;
+      if (!hasPlugin) {
+        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
+        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
+      }
+    }
+    async function render() {
+      await ensureDeps();
+      if (cancelled) return;
+      const container = pptContainerRef.current!;
+      container.innerHTML = '';
+      const host = document.createElement('div');
+      container.appendChild(host);
+      type JQueryInstance = { pptxToHtml: (opts: Record<string, unknown>) => void };
+      type JQueryFactory = (el: HTMLElement) => JQueryInstance;
+      const wjq = window as unknown as { jQuery?: JQueryFactory };
+      const jqFactory: JQueryFactory | undefined = wjq.jQuery;
+      if (!jqFactory) return;
+      jqFactory(host).pptxToHtml({
+        pptxFileUrl: fileUrl,
+        slideMode: true,
+        slidesScale: '100%',
+        keyBoardShortCut: false,
+        mediaProcess: true,
+        slideType: 'revealjs',
+        revealjsConfig: { controls: false, progress: false }
+      });
+      setTimeout(() => {
+        const wr = window as unknown as { Reveal?: { slide?: (n: number) => void } };
+        wr.Reveal?.slide?.(Math.max(0, (((details && details.currentSlide) ? details.currentSlide : 1) - 1)));
+      }, 400);
+    }
+    render();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPpt, fileUrl, details?.currentSlide]);
 
   return (<div className="min-h-dvh flex flex-col">{content}</div>);
 }
