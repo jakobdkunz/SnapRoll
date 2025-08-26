@@ -87,12 +87,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Scale to canvas size
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
+    // Scale to frame size (not canvas size) so drawings scale properly on resize
+    const scaleX = frameSize.w / rect.width;
+    const scaleY = frameSize.h / rect.height;
     
     const result = { x: x * scaleX, y: y * scaleY };
-    console.log('Canvas coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, scaleX, scaleY, result });
+    console.log('Frame coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, scaleX, scaleY, result });
     return result;
   }, [frameSize]);
 
@@ -201,11 +201,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [frameSize]);
 
-  // Redraw all strokes when drawings change
+  // Redraw all strokes when drawings change or frame size changes
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
-    if (!canvas || !ctx) return;
+    if (!canvas || !ctx || !frameSize) return;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -215,15 +215,22 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      // Scale coordinates to current canvas size
+      const scaleX = canvas.width / frameSize.w;
+      const scaleY = canvas.height / frameSize.h;
+      
+      const firstPoint = stroke.points[0];
+      ctx.moveTo(firstPoint.x * scaleX, firstPoint.y * scaleY);
       
       for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        const point = stroke.points[i];
+        ctx.lineTo(point.x * scaleX, point.y * scaleY);
       }
       
       ctx.stroke();
     });
-  }, [drawings]);
+  }, [drawings, frameSize]);
 
   // Load session details
   useEffect(() => {
