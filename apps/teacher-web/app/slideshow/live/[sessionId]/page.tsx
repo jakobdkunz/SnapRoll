@@ -949,10 +949,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                   <div 
                     className="absolute pointer-events-none z-50 border-2 border-red-500 rounded-full bg-red-500/20"
                     style={{
-                      width: `${eraserRadius * frameSize.w}px`,
-                      height: `${eraserRadius * frameSize.h}px`,
-                      left: mousePosition.x - (eraserRadius * frameSize.w / 2),
-                      top: mousePosition.y - (eraserRadius * frameSize.h / 2),
+                      width: `${eraserRadius * Math.min(frameSize.w, frameSize.h)}px`,
+                      height: `${eraserRadius * Math.min(frameSize.w, frameSize.h)}px`,
+                      left: mousePosition.x - (eraserRadius * Math.min(frameSize.w, frameSize.h) / 2),
+                      top: mousePosition.y - (eraserRadius * Math.min(frameSize.w, frameSize.h) / 2),
                       transform: 'translate(0, 0)'
                     }}
                   />
