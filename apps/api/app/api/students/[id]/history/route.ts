@@ -24,13 +24,17 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const rawLimit = Math.max(1, Number.isFinite(Number(limitParam)) ? Number(limitParam) : 20);
   const limit = Math.min(rawLimit, 60);
 
-  // Sections for this student
+  // Sections for this student with enrollment timestamps
   const enrollments = await prisma.enrollment.findMany({
     where: { studentId },
     include: { section: true },
     orderBy: { section: { title: 'asc' } },
   });
-  const sections = enrollments.map((e) => ({ id: e.section.id, title: e.section.title }));
+  const sections = enrollments.map((e) => ({ 
+    id: e.section.id, 
+    title: e.section.title,
+    enrolledAt: e.createdAt 
+  }));
   const sectionIds = sections.map((s) => s.id);
 
   if (sectionIds.length === 0) {
@@ -92,8 +96,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
   });
 
   const classDayById = new Map(classDays.map((cd) => [cd.id, cd]));
+  const now = new Date();
 
-  // Build per-section byDate map
+  // Build per-section byDate map with application-level logic
   const records = sections.map((s) => {
     const byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string } | null }> = {};
     for (const ymd of pageDates) {
@@ -103,10 +108,30 @@ export async function GET(request: Request, { params }: { params: { id: string }
         byDate[ymd] = { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
         continue;
       }
+      
       const ar = attendance.find((a) => a.classDayId === cdForDate.id);
       const mc = manualChanges.find((m) => m.classDayId === cdForDate.id);
       const originalStatus = ar?.status || 'BLANK';
-      const effectiveStatus = mc ? mc.status : originalStatus;
+      
+      // Application-level logic for determining effective status
+      const effectiveStatus = (() => {
+        if (mc) return mc.status; // Manual changes take precedence
+        
+        if (ar?.status) return ar.status; // Has attendance record
+        
+        // No attendance record - determine if this should be ABSENT
+        const classDayDate = cdForDate.date;
+        const enrollmentDate = s.enrolledAt;
+        const isPastDate = classDayDate < now;
+        const wasEnrolled = classDayDate >= enrollmentDate;
+        
+        if (isPastDate && wasEnrolled) {
+          return 'ABSENT'; // Past date, was enrolled, no record = ABSENT
+        }
+        
+        return 'BLANK'; // Not enrolled yet or future date
+      })();
+      
       byDate[ymd] = {
         status: effectiveStatus,
         originalStatus,
@@ -125,7 +150,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   return NextResponse.json(
     { 
-      sections, 
+      sections: sections.map(s => ({ id: s.id, title: s.title })), 
       days: pageDates.map((d) => ({ date: d })), 
       records,
       totalDays,

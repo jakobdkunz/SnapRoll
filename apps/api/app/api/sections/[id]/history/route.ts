@@ -40,7 +40,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
   const page = uniqueDays.slice(offset, offset + limit);
   const classDays = page.map(p => p.cd);
 
-  // Get all students enrolled in this section
+  // Get all students enrolled in this section with enrollment timestamps
   const enrollments = await prisma.enrollment.findMany({
     where: { sectionId: id },
     include: { student: true },
@@ -75,6 +75,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     attendanceMap.set(`${ar.classDayId}-${ar.studentId}`, ar);
   }
 
+  const now = new Date();
+
   // Create the history data structure
   const history = {
     students: enrollments.map(e => ({
@@ -93,8 +95,25 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const attendanceRecord = attendanceMap.get(`${classDay.id}-${enrollment.studentId}`);
         const manualChange = manualChangeMap.get(`${classDay.id}-${enrollment.studentId}`);
         
-        // Determine effective status: manual change takes precedence
-        const effectiveStatus = manualChange ? manualChange.status : (attendanceRecord?.status || 'BLANK');
+        // Application-level logic for determining effective status
+        const effectiveStatus = (() => {
+          if (manualChange) return manualChange.status; // Manual changes take precedence
+          
+          if (attendanceRecord?.status) return attendanceRecord.status; // Has attendance record
+          
+          // No attendance record - determine if this should be ABSENT
+          const classDayDate = classDay.date;
+          const enrollmentDate = enrollment.createdAt;
+          const isPastDate = classDayDate < now;
+          const wasEnrolled = classDayDate >= enrollmentDate;
+          
+          if (isPastDate && wasEnrolled) {
+            return 'ABSENT'; // Past date, was enrolled, no record = ABSENT
+          }
+          
+          return 'BLANK'; // Not enrolled yet or future date
+        })();
+        
         const originalStatus = attendanceRecord?.status || 'BLANK';
         const isManual = !!manualChange;
         
