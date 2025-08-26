@@ -53,6 +53,7 @@ export async function GET(_request: Request, { params }: { params: { id: string 
   // Fallback to Slideshow sessions
   const slide = await prisma.slideshowSession.findFirst({
     where: { sectionId: { in: sectionIds }, closedAt: null, instructorLastSeenAt: { gt: cutoff } },
+    include: { asset: true },
     orderBy: { createdAt: 'desc' },
   });
   if (slide) {
@@ -60,11 +61,11 @@ export async function GET(_request: Request, { params }: { params: { id: string 
       interactive: {
         kind: 'slideshow',
         sessionId: slide.id,
-        title: slide.title,
-        filePath: slide.filePath,
-        mimeType: slide.mimeType,
+        title: slide.asset.title,
+        filePath: slide.asset.filePath,
+        mimeType: slide.asset.mimeType,
         currentSlide: slide.currentSlide,
-        totalSlides: slide.totalSlides ?? null,
+        totalSlides: slide.asset.totalSlides ?? null,
         showOnDevices: slide.showOnDevices,
         allowDownload: slide.allowDownload,
         requireStay: slide.requireStay,
