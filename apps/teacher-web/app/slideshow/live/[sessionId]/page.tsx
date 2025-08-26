@@ -153,10 +153,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     setCurrentStroke(null);
     
     // Save drawings to server
+    console.log('Saving drawings to server:', newDrawings);
     apiFetch(`/api/slideshow/${sessionId}/drawings`, {
       method: 'POST',
       body: JSON.stringify({ drawings: newDrawings })
-    }).catch(console.error);
+    }).then(() => console.log('Drawings saved successfully'))
+      .catch(error => console.error('Failed to save drawings:', error));
   }, [isDrawing, currentStroke, drawings, sessionId]);
 
   const clearDrawings = useCallback(() => {
@@ -168,10 +170,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
     
     // Save empty drawings to server
+    console.log('Clearing drawings on server');
     apiFetch(`/api/slideshow/${sessionId}/drawings`, {
       method: 'POST',
       body: JSON.stringify({ drawings: [] })
-    }).catch(console.error);
+    }).then(() => console.log('Drawings cleared successfully'))
+      .catch(error => console.error('Failed to clear drawings:', error));
   }, [sessionId]);
 
   // Initialize canvas when frame size changes
