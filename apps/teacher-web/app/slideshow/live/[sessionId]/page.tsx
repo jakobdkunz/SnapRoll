@@ -154,9 +154,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             Math.pow(strokePoint.x - point.x, 2) + Math.pow(strokePoint.y - point.y, 2)
           );
           // The visual circle uses eraserRadius * Math.min(frameSize.w, frameSize.h) pixels
-          // Convert to percentage by dividing by the canvas size
+          // Convert to percentage: divide by the smaller frame dimension
           const minFrameSize = Math.min(frameSize?.w || 1, frameSize?.h || 1);
-          const effectiveRadius = (eraserRadius * minFrameSize) / minFrameSize;
+          const effectiveRadius = eraserRadius / minFrameSize;
           return distance < effectiveRadius;
         });
       });
