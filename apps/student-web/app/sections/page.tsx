@@ -367,6 +367,7 @@ export default function SectionsPage() {
               pattern="\\d*"
               maxLength={1}
               value={d}
+              placeholder={String(i + 1)}
               disabled={checking}
               onChange={(e) => handleChange(i, e)}
               onKeyDown={(e) => handleKeyDown(i, e)}
