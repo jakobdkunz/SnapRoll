@@ -140,8 +140,14 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const id = localStorage.getItem('snaproll.studentId');
-    setStudentId(id);
+    // Use a small delay to ensure localStorage is available
+    const timer = setTimeout(() => {
+      const id = localStorage.getItem('snaproll.studentId');
+      console.log('Sections: studentId from localStorage:', id);
+      setStudentId(id);
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
