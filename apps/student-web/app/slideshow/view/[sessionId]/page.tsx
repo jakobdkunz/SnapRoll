@@ -61,7 +61,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         <div className="text-lg font-semibold truncate">{details.title}</div>
         <div className="ml-auto text-sm text-slate-600">Slide {current}{total ? ` / ${total}` : ''}</div>
       </div>
-      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+      {/* Full-viewport slide stage (below sticky header) */}
+      <div className="fixed inset-0 pt-[64px] sm:pt-[72px]">
         <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
           {!slide ? (
             <div className="absolute inset-0 grid place-items-center p-6">
