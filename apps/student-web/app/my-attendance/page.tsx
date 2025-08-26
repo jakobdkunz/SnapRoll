@@ -98,8 +98,8 @@ export default function MyAttendancePage() {
     return { sections, days, recBySection };
   }, [data]);
 
-  // Don't render anything until client-side hydration is complete
-  if (!isClient) {
+  // Don't render anything until client-side hydration is complete AND we have a student ID
+  if (!isClient || !studentId) {
     return (
       <div className="space-y-4 p-6">
         <Card className="p-4">
@@ -115,8 +115,6 @@ export default function MyAttendancePage() {
       </div>
     );
   }
-
-  if (!studentId) return <div className="p-6">Please go back and enter your email.</div>;
   if (loading) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
