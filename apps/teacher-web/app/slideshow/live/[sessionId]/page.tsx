@@ -32,6 +32,29 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [renderMsg, setRenderMsg] = useState('');
   const [renderLogs, setRenderLogs] = useState<string[]>([]);
   const [debug, setDebug] = useState('');
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [imgAspect, setImgAspect] = useState<number | null>(null);
+  const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
+
+  function recomputeFrame(aspect: number) {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const stageW = rect.width;
+    const stageH = rect.height;
+    if (stageW <= 0 || stageH <= 0) return;
+    let w: number;
+    let h: number;
+    if (stageW / stageH > aspect) {
+      h = stageH;
+      w = h * aspect;
+    } else {
+      w = stageW;
+      h = w / aspect;
+    }
+    setFrameSize({ w, h });
+  }
 
   const renderHostRef = useRef<HTMLDivElement | null>(null);
 
@@ -76,6 +99,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const id = window.setInterval(() => { void apiFetch(`/api/slideshow/${sessionId}/heartbeat`, { method: 'POST' }); }, 5000);
     return () => window.clearInterval(id);
   }, [sessionId]);
+
+  // Recompute frame on resize
+  useEffect(() => {
+    if (!imgAspect) return;
+    const onResize = () => recomputeFrame(imgAspect);
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
+  }, [imgAspect]);
 
   const rawFileUrl = details?.filePath;
   const isPdf = !!details && /pdf/i.test(details.mimeType);
@@ -486,10 +518,29 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         </div>
         {/* Full-width stage within normal flow (no scroll lock) */}
         <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-          <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
-            <div className="absolute inset-0 p-2 sm:p-4">
-              <div className="w-full h-full rounded-xl overflow-hidden shadow bg-white flex items-center justify-center">
-                <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block w-full h-full object-contain" />
+          <div ref={stageRef} className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+            <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
+              <div
+                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
+                style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
+              >
+                <img
+                  src={slide.imageUrl}
+                  alt={`Slide ${slide.index}`}
+                  ref={imgRef}
+                  className="block w-full h-full object-contain"
+                  onLoad={() => {
+                    const el = imgRef.current;
+                    if (!el) return;
+                    const nw = el.naturalWidth || 0;
+                    const nh = el.naturalHeight || 0;
+                    if (nw > 0 && nh > 0) {
+                      const aspect = nw / nh;
+                      setImgAspect(aspect);
+                      recomputeFrame(aspect);
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>

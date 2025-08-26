@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
@@ -15,6 +15,29 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const [slides, setSlides] = useState<SlideItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [imgAspect, setImgAspect] = useState<number | null>(null);
+  const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
+
+  function recomputeFrame(aspect: number) {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const rect = stage.getBoundingClientRect();
+    const stageW = rect.width;
+    const stageH = rect.height;
+    if (stageW <= 0 || stageH <= 0) return;
+    let w: number;
+    let h: number;
+    if (stageW / stageH > aspect) {
+      h = stageH;
+      w = h * aspect;
+    } else {
+      w = stageW;
+      h = w / aspect;
+    }
+    setFrameSize({ w, h });
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -47,6 +70,15 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     return () => { mounted = false; window.clearInterval(id); };
   }, [sessionId, slides.length]);
 
+  // Recompute frame on resize
+  useEffect(() => {
+    if (!imgAspect) return;
+    const onResize = () => recomputeFrame(imgAspect);
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
+  }, [imgAspect]);
+
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
 
@@ -63,7 +95,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       </div>
       {/* Full-width stage within normal flow (no scroll lock) */}
       <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-        <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+        <div ref={stageRef} className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
           {!slide ? (
             <div className="absolute inset-0 grid place-items-center p-6">
               <Card className="p-6 text-center">
@@ -71,12 +103,27 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
               </Card>
             </div>
           ) : (
-            <div className="absolute inset-0 p-2 sm:p-4">
-              <div className="w-full h-full rounded-xl overflow-hidden shadow bg-white flex items-center justify-center">
+            <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
+              <div
+                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
+                style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
+              >
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}
+                  ref={imgRef}
                   className="block w-full h-full object-contain"
+                  onLoad={() => {
+                    const el = imgRef.current;
+                    if (!el) return;
+                    const nw = el.naturalWidth || 0;
+                    const nh = el.naturalHeight || 0;
+                    if (nw > 0 && nh > 0) {
+                      const aspect = nw / nh;
+                      setImgAspect(aspect);
+                      recomputeFrame(aspect);
+                    }
+                  }}
                 />
               </div>
             </div>
