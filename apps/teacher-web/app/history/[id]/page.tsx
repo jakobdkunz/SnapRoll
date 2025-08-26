@@ -62,7 +62,6 @@ export default function HistoryPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const finalizeOnceRef = useRef(false);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -140,16 +139,6 @@ export default function HistoryPage() {
     const reqId = ++requestIdRef.current;
     setIsFetching(true);
     try {
-      // Ensure blanks are finalized to ABSENT prior to first history load for accurate totals
-      if (!finalizeOnceRef.current) {
-        try {
-          await apiFetch(`/api/sections/${params.id}/finalize-blanks`, { method: 'POST' });
-        } catch {
-          /* ignore finalize errors */
-        } finally {
-          finalizeOnceRef.current = true;
-        }
-      }
       const data = await apiFetch<{ 
         students: Student[]; 
         days: Day[]; 
@@ -228,7 +217,7 @@ export default function HistoryPage() {
     };
   }, [params.id, offset, limit, loadHistory]);
 
-  // Schedule finalize + reload at next local midnight to add a new day column
+  // Schedule reload at next local midnight to refresh data
   useEffect(() => {
     function msUntilNextMidnight() {
       const now = new Date();
@@ -239,9 +228,6 @@ export default function HistoryPage() {
     function schedule() {
       const ms = msUntilNextMidnight();
       timeout = window.setTimeout(async () => {
-        try {
-          await apiFetch(`/api/sections/${params.id}/finalize-blanks`, { method: 'POST' });
-        } catch {/* ignore finalize at midnight */}
         await loadHistory(offset, limit);
         schedule();
       }, ms + 100);
