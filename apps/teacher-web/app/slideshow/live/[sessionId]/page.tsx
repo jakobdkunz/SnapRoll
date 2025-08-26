@@ -489,7 +489,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
             <div className="absolute inset-0 p-2 sm:p-4">
               <div className="w-full h-full rounded-xl overflow-hidden shadow bg-white flex items-center justify-center">
-                <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block max-w-full max-h-full object-contain" />
+                <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block w-full h-full object-contain" />
               </div>
             </div>
           </div>

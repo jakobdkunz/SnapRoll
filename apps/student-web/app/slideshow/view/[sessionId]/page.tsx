@@ -76,7 +76,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}
-                  className="block max-w-full max-h-full object-contain"
+                  className="block w-full h-full object-contain"
                 />
               </div>
             </div>
