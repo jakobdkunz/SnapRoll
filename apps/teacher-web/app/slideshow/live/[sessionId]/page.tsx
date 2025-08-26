@@ -78,7 +78,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   // Drawing functions
   const getCanvasCoordinates = useCallback((e: React.MouseEvent | MouseEvent): DrawingPoint | null => {
     const canvas = canvasRef.current;
-    if (!canvas || !frameSize) return null;
+    if (!canvas || !frameSize) {
+      console.log('Canvas or frameSize not available:', { canvas: !!canvas, frameSize });
+      return null;
+    }
     
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -88,15 +91,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
-    return { x: x * scaleX, y: y * scaleY };
+    const result = { x: x * scaleX, y: y * scaleY };
+    console.log('Canvas coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, scaleX, scaleY, result });
+    return result;
   }, [frameSize]);
 
   const startDrawing = useCallback((e: React.MouseEvent) => {
     if (drawingMode !== 'pen') return;
     
+    e.preventDefault();
     const point = getCanvasCoordinates(e);
     if (!point) return;
     
+    console.log('Start drawing at:', point);
     setIsDrawing(true);
     const newStroke: DrawingStroke = { color: drawingColor, points: [point] };
     setCurrentStroke(newStroke);
@@ -117,6 +124,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const draw = useCallback((e: React.MouseEvent) => {
     if (!isDrawing || drawingMode !== 'pen' || !currentStroke) return;
     
+    e.preventDefault();
     const point = getCanvasCoordinates(e);
     if (!point) return;
     
@@ -169,8 +177,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   // Initialize canvas when frame size changes
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !frameSize) return;
+    if (!canvas || !frameSize) {
+      console.log('Canvas init skipped:', { canvas: !!canvas, frameSize });
+      return;
+    }
     
+    console.log('Initializing canvas with size:', frameSize);
     canvas.width = frameSize.w;
     canvas.height = frameSize.h;
     
@@ -179,6 +191,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       ctxRef.current = ctx;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
+      console.log('Canvas context initialized');
+    } else {
+      console.error('Failed to get canvas context');
     }
   }, [frameSize]);
 
@@ -731,6 +746,24 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1">
                   Clear
                 </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    const ctx = ctxRef.current;
+                    if (ctx && frameSize) {
+                      ctx.strokeStyle = drawingColor;
+                      ctx.lineWidth = 3;
+                      ctx.beginPath();
+                      ctx.moveTo(10, 10);
+                      ctx.lineTo(100, 100);
+                      ctx.stroke();
+                      console.log('Test line drawn');
+                    }
+                  }} 
+                  className="text-sm px-2 py-1"
+                >
+                  Test
+                </Button>
               </>
             )}
           </div>
@@ -770,7 +803,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 {/* Drawing canvas overlay */}
                 <canvas
                   ref={canvasRef}
-                  className="absolute inset-0 w-full h-full cursor-crosshair"
+                  className={`absolute inset-0 w-full h-full ${
+                    drawingMode === 'pen' ? 'cursor-crosshair' : 'cursor-pointer'
+                  }`}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
                   onMouseUp={stopDrawing}
@@ -787,6 +822,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                     }
                   }}
                   title={drawingMode === 'mouse' ? 'Click to advance to next slide' : 'Draw on the slide'}
+                  style={{ 
+                    border: drawingMode === 'pen' ? '1px solid rgba(255,0,0,0.3)' : 'none',
+                    pointerEvents: 'auto'
+                  }}
                 />
               </div>
             </div>
