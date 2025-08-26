@@ -179,16 +179,18 @@ export default function AttendancePage() {
         ) : (
           <>
             <div className="mt-4 flex items-center justify-center">
-                              <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
-                  <div className="flex items-center gap-6 sm:gap-8">
-                    <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0" />
-                    {code.split('').map((ch, i) => (
-                    <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
-                      {ch}
+                                              <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
+                  <div className="flex items-center">
+                    <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0 mr-6 sm:mr-8" />
+                    <div className="flex gap-3 sm:gap-4">
+                      {code.split('').map((ch, i) => (
+                        <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
+                          {ch}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
             </div>
             <div className="mt-6 text-slate-600 text-sm flex items-center justify-center gap-4">
               <span className="inline-flex items-center gap-1"><HiOutlineGlobeAlt className="h-5 w-5" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
