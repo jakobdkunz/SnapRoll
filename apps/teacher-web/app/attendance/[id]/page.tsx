@@ -154,7 +154,7 @@ export default function AttendancePage() {
         </div>
         
         {/* Attendance Code Widget - Centered */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center -mb-16">
           <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
             <div className="text-sm uppercase tracking-wide text-slate-500">
               Attendance Code
