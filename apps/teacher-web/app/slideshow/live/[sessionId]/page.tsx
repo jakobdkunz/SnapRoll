@@ -37,8 +37,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [working, setWorking] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState('');
-  const [renderLogs, setRenderLogs] = useState<string[]>([]);
-  const [debug, setDebug] = useState('');
+
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -386,6 +385,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => window.removeEventListener('resize', onResize);
   }, [imgAspect]);
 
+  const gotoSlide = useCallback(async (slideNumber: number) => {
+    if (working || !details) return;
+    setWorking(true);
+    try {
+      await apiFetch(`/api/slideshow/${sessionId}/goto`, { method: 'POST', body: JSON.stringify({ slide: slideNumber }) });
+      setDetails(prev => prev ? { ...prev, currentSlide: slideNumber } : prev);
+    } catch (e) {
+      console.error('Failed to goto slide:', e);
+    } finally {
+      setWorking(false);
+    }
+  }, [working, details, sessionId]);
+
   // Keyboard navigation
   useEffect(() => {
     if (!slides.length) return;
@@ -429,21 +441,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [rawFileUrl]);
 
-
-
-  async function gotoSlide(slideNumber: number) {
-    if (working || !details) return;
-    setWorking(true);
-    try {
-      await apiFetch(`/api/slideshow/${sessionId}/goto`, { method: 'POST', body: JSON.stringify({ slide: slideNumber }) });
-      setDetails(prev => prev ? { ...prev, currentSlide: slideNumber } : prev);
-    } catch (e) {
-      console.error('Failed to goto slide:', e);
-    } finally {
-      setWorking(false);
-    }
-  }
-
   async function closeAndBack() {
     if (working) return;
     setWorking(true);
@@ -469,22 +466,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       });
     }
 
-  async function ensureHtml2Canvas() {
-    const w = window as unknown as { html2canvas?: any };
-    if (!w.html2canvas) {
-      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
-    }
-  }
+
 
 
 
   async function ensurePdfJs() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyWin = window as any;
     if (!anyWin.pdfjsLib) {
       // Use legacy UMD build which exposes window.pdfjsLib
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js');
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js');
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfjsLib = (window as any).pdfjsLib;
     if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -505,15 +499,20 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     setRenderMsg('Loading PDF…');
     try {
       await ensurePdfJs();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfjsLib = (window as any).pdfjsLib;
+      if (!pdfjsLib) throw new Error('PDF.js library not loaded');
       const doc = await pdfjsLib.getDocument({ url: proxiedFileUrl, withCredentials: true }).promise;
       for (let i = 1; i <= doc.numPages; i++) {
         setRenderMsg(`Rendering slide ${i}/${doc.numPages}…`);
         const page = await doc.getPage(i);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const viewport = page.getViewport({ scale: 3 });
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d')!;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         canvas.width = viewport.width;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         canvas.height = viewport.height;
         await page.render({ canvasContext: ctx, viewport }).promise;
         const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
@@ -571,11 +570,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             </Button>
             {renderMsg && (<div className="text-sm text-slate-500">{renderMsg}</div>)}
           </div>
-          {!!renderLogs.length && (
-            <div className="mt-4 max-h-48 overflow-auto rounded bg-slate-100 text-slate-800 text-xs p-2 whitespace-pre-wrap">
-              {renderLogs.join('\n')}
-            </div>
-          )}
+
           <div ref={renderHostRef} />
         </Card>
       </div>
@@ -707,7 +702,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                   }}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
-                  onClick={(e) => {
+                  onClick={() => {
                     if (drawingMode === 'mouse') {
                       const total = slides.length;
                       const current = Math.min(Math.max(1, details?.currentSlide || 1), total);

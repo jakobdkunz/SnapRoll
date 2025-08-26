@@ -1,5 +1,4 @@
 "use client";
-import Link from 'next/link';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
