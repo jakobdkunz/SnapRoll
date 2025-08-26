@@ -25,7 +25,7 @@ export default function SectionsPage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [recentSlides, setRecentSlides] = useState<RecentSlidesResponse['recents']>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   // Interactive state
@@ -140,14 +140,8 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Wait for next tick to ensure localStorage is available
-    const timer = setTimeout(() => {
-      const id = localStorage.getItem('snaproll.studentId');
-      setStudentId(id);
-      setIsInitialized(true);
-    }, 0);
-    
-    return () => clearTimeout(timer);
+    const id = localStorage.getItem('snaproll.studentId');
+    setStudentId(id);
   }, []);
 
   useEffect(() => {
@@ -271,34 +265,7 @@ export default function SectionsPage() {
     };
   }, [mounted, studentId]);
 
-  // Don't render anything until we're initialized
-  if (!isInitialized) {
-    return (
-      <div className="space-y-6">
-        <Card className="p-6 space-y-3">
-          <div className="text-center">
-            <div className="font-medium">Attendance</div>
-            <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
-          </div>
-          <div className="flex items-center justify-center gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="w-12 h-12 rounded-xl" />
-            ))}
-          </div>
-        </Card>
 
-        <div className="text-slate-600 text-sm">My courses</div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="p-3 sm:p-4">
-              <Skeleton className="aspect-[3/2] w-full rounded-lg mb-3" />
-              <Skeleton className="h-5 w-40" />
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   if (!mounted) return null;
   if (!studentId) return <div>Please go back and enter your email.</div>;
