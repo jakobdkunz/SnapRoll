@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
 
-type DrawingMode = 'mouse' | 'pen';
+type DrawingMode = 'mouse' | 'pen' | 'eraser';
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
-type DrawingStroke = { color: DrawingColor; points: DrawingPoint[] };
+type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: DrawingMode };
+type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
 type SessionDetails = {
   id: string;
@@ -48,7 +49,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [drawingColor, setDrawingColor] = useState<DrawingColor>('red');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
-  const [drawings, setDrawings] = useState<DrawingStroke[]>([]);
+  const [drawings, setDrawings] = useState<SlideDrawings>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -97,7 +98,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [frameSize]);
 
   const startDrawing = useCallback((e: React.MouseEvent) => {
-    if (drawingMode !== 'pen') return;
+    if (drawingMode !== 'pen' && drawingMode !== 'eraser') return;
     
     e.preventDefault();
     const point = getCanvasCoordinates(e);
@@ -105,14 +106,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     
     console.log('Start drawing at:', point);
     setIsDrawing(true);
-    const newStroke: DrawingStroke = { color: drawingColor, points: [point] };
+    const newStroke: DrawingStroke = { color: drawingColor, points: [point], mode: drawingMode };
     setCurrentStroke(newStroke);
     
     // Draw initial point
     const ctx = ctxRef.current;
     if (ctx) {
-      ctx.strokeStyle = drawingColor;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = drawingMode === 'eraser' ? '#ffffff' : drawingColor;
+      ctx.lineWidth = drawingMode === 'eraser' ? 20 : 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
       
@@ -127,7 +128,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [drawingMode, drawingColor, getCanvasCoordinates]);
 
   const draw = useCallback((e: React.MouseEvent) => {
-    if (!isDrawing || drawingMode !== 'pen' || !currentStroke) return;
+    if (!isDrawing || (drawingMode !== 'pen' && drawingMode !== 'eraser') || !currentStroke) return;
     
     e.preventDefault();
     const point = getCanvasCoordinates(e);
@@ -139,8 +140,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     // Draw line in real-time
     const ctx = ctxRef.current;
     if (ctx) {
-      ctx.strokeStyle = drawingColor;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = drawingMode === 'eraser' ? '#ffffff' : drawingColor;
+      ctx.lineWidth = drawingMode === 'eraser' ? 20 : 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
       
@@ -159,7 +160,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (!isDrawing || !currentStroke) return;
     
     setIsDrawing(false);
-    const newDrawings = [...drawings, currentStroke];
+    const currentSlideIndex = details?.currentSlide || 1;
+    const currentSlideDrawings = drawings[currentSlideIndex] || [];
+    const newSlideDrawings = [...currentSlideDrawings, currentStroke];
+    const newDrawings = { ...drawings, [currentSlideIndex]: newSlideDrawings };
     setDrawings(newDrawings);
     setCurrentStroke(null);
     
@@ -170,24 +174,28 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       body: JSON.stringify({ drawings: newDrawings })
     }).then(() => console.log('Drawings saved successfully'))
       .catch(error => console.error('Failed to save drawings:', error));
-  }, [isDrawing, currentStroke, drawings, sessionId]);
+  }, [isDrawing, currentStroke, drawings, sessionId, details?.currentSlide]);
 
   const clearDrawings = useCallback(() => {
-    setDrawings([]);
+    const currentSlideIndex = details?.currentSlide || 1;
+    const newDrawings = { ...drawings };
+    delete newDrawings[currentSlideIndex];
+    setDrawings(newDrawings);
+    
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (canvas && ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
     
-    // Save empty drawings to server
+    // Save updated drawings to server
     console.log('Clearing drawings on server');
     apiFetch(`/api/slideshow/${sessionId}/drawings`, {
       method: 'POST',
-      body: JSON.stringify({ drawings: [] })
+      body: JSON.stringify({ drawings: newDrawings })
     }).then(() => console.log('Drawings cleared successfully'))
       .catch(error => console.error('Failed to clear drawings:', error));
-  }, [sessionId]);
+  }, [sessionId, drawings, details?.currentSlide]);
 
   // Initialize canvas when frame size changes
   useEffect(() => {
@@ -220,11 +228,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    drawings.forEach(stroke => {
+    const currentSlideIndex = details?.currentSlide || 1;
+    const currentSlideDrawings = drawings[currentSlideIndex] || [];
+    
+    currentSlideDrawings.forEach((stroke: DrawingStroke) => {
       if (stroke.points.length < 2) return;
       
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = stroke.mode === 'eraser' ? '#ffffff' : stroke.color;
+      ctx.lineWidth = stroke.mode === 'eraser' ? 20 : 3;
       ctx.beginPath();
       
       // Scale percentage coordinates to current canvas size
@@ -238,7 +249,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       
       ctx.stroke();
     });
-  }, [drawings, frameSize]);
+  }, [drawings, frameSize, details?.currentSlide]);
 
   // Load session details
   useEffect(() => {
@@ -734,54 +745,56 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
               <Button 
                 variant={drawingMode === 'mouse' ? 'primary' : 'ghost'} 
                 onClick={() => setDrawingMode('mouse')}
-                className="text-sm px-2 py-1"
+                className="p-2"
+                title="Mouse mode"
               >
-                Mouse
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5" />
+                </svg>
               </Button>
               <Button 
                 variant={drawingMode === 'pen' ? 'primary' : 'ghost'} 
                 onClick={() => setDrawingMode('pen')}
-                className="text-sm px-2 py-1"
+                className="p-2"
+                title="Pen tool"
               >
-                Pen
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </Button>
+              <Button 
+                variant={drawingMode === 'eraser' ? 'primary' : 'ghost'} 
+                onClick={() => setDrawingMode('eraser')}
+                className="p-2"
+                title="Eraser tool"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </Button>
             </div>
             
-            {drawingMode === 'pen' && (
+            {(drawingMode === 'pen' || drawingMode === 'eraser') && (
               <>
-                <div className="flex items-center gap-1">
-                  {(['red', 'blue', 'green', 'yellow', 'black', 'white'] as DrawingColor[]).map(color => (
-                    <button
-                      key={color}
-                      className={`w-6 h-6 rounded-full border-2 ${
-                        drawingColor === color ? 'border-slate-800' : 'border-slate-300'
-                      }`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setDrawingColor(color)}
-                      title={color}
-                    />
-                  ))}
-                </div>
-                <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1">
-                  Clear
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    const ctx = ctxRef.current;
-                    if (ctx && frameSize) {
-                      ctx.strokeStyle = drawingColor;
-                      ctx.lineWidth = 3;
-                      ctx.beginPath();
-                      ctx.moveTo(10, 10);
-                      ctx.lineTo(100, 100);
-                      ctx.stroke();
-                      console.log('Test line drawn');
-                    }
-                  }} 
-                  className="text-sm px-2 py-1"
-                >
-                  Test
+                {drawingMode === 'pen' && (
+                  <div className="flex items-center gap-1">
+                    {(['red', 'blue', 'green', 'yellow', 'black', 'white'] as DrawingColor[]).map(color => (
+                      <button
+                        key={color}
+                        className={`w-6 h-6 rounded-full border-2 ${
+                          drawingColor === color ? 'border-slate-800' : 'border-slate-300'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setDrawingColor(color)}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                )}
+                <Button variant="ghost" onClick={clearDrawings} className="p-2" title="Clear drawings">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </Button>
               </>
             )}
