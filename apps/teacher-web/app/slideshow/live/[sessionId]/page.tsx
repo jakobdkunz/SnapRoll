@@ -1,17 +1,15 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
-
 
 type SessionDetails = {
   id: string;
   title: string;
   filePath: string;
   mimeType: string;
-  officeMode?: boolean;
   totalSlides: number | null;
   currentSlide: number;
   showOnDevices: boolean;
@@ -20,7 +18,7 @@ type SessionDetails = {
   preventJump: boolean;
 };
 
-// PDFs are rendered via iframe viewer
+type Slide = { id: string; index: number; imageUrl: string; width?: number | null; height?: number | null };
 
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
@@ -28,51 +26,67 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<SessionDetails | null>(null);
+  const [slides, setSlides] = useState<Slide[]>([]);
   const [working, setWorking] = useState(false);
+  const [rendering, setRendering] = useState(false);
+  const [renderMsg, setRenderMsg] = useState('');
   const [debug, setDebug] = useState('');
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pptContainerRef = useRef<HTMLDivElement | null>(null);
+  const renderHostRef = useRef<HTMLDivElement | null>(null);
 
   // Load session details
   useEffect(() => {
     let cancelled = false;
     async function loadSession() {
       try {
-        setDebug('Loading session...');
         const data = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
         if (cancelled) return;
-        
         setDetails(data);
-        setDebug(`Loaded session: ${data.id}\nmime=${data.mimeType} pdf=${data.mimeType === 'application/pdf'} url=${data.filePath}`);
       } catch (err) {
         if (cancelled) return;
         setError((err as Error).message || 'Session not found');
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
-    
     loadSession();
     return () => { cancelled = true; };
+  }, [sessionId]);
+
+  // Load current slides list
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSlides() {
+      try {
+        const res = await apiFetch<{ slides: Slide[] }>(`/api/slideshow/${sessionId}/slides`);
+        if (cancelled) return;
+        setSlides(res.slides);
+      } catch {
+        // ignore
+      }
+    }
+    loadSlides();
+    const id = window.setInterval(loadSlides, 5000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [sessionId]);
+
+  // Heartbeat
+  useEffect(() => {
+    const id = window.setInterval(() => { void apiFetch(`/api/slideshow/${sessionId}/heartbeat`, { method: 'POST' }); }, 5000);
+    return () => window.clearInterval(id);
   }, [sessionId]);
 
   const rawFileUrl = details?.filePath;
   const isPdf = !!details && /pdf/i.test(details.mimeType);
   const isPpt = !!details && (/(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath));
-
-  const fileUrl = useMemo(() => {
+  const proxiedFileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
     try {
       const u = new URL(rawFileUrl);
       const host = u.hostname.toLowerCase();
-      // Proxy blob hosts to avoid CORS/Range issues in PDF.js
       if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
         const api = getApiBaseUrl().replace(/\/$/, '');
-        const proxied = `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
-        return proxied;
+        return `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
       }
       return rawFileUrl;
     } catch {
@@ -80,127 +94,18 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [rawFileUrl]);
 
-  const directFileUrl = useMemo(() => {
-    if (!rawFileUrl) return '';
-    return rawFileUrl; // Direct URL for PPTX
-  }, [rawFileUrl]);
-
-  const pageUrl = useMemo(() => {
-    if (!details) return '';
-    const page = Math.max(1, details.currentSlide || 1);
-    const cacheBust = `r=${page}`;
-    return `${fileUrl}?${cacheBust}#page=${page}&zoom=page-fit&toolbar=0`;
-  }, [details, fileUrl]);
-
-  // PPTX rendering using PPTX.js + Reveal.js (instructor view)
-  useEffect(() => {
-    if (!details || !isPpt || details.officeMode) return;
-    let cancelled = false;
-    async function loadScript(src: string) {
-      await new Promise<void>((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = src;
-        s.async = true;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error(`Failed to load ${src}`));
-        document.head.appendChild(s);
-      });
+  async function gotoSlide(slideNumber: number) {
+    if (working || !details) return;
+    setWorking(true);
+    try {
+      await apiFetch(`/api/slideshow/${sessionId}/goto`, { method: 'POST', body: JSON.stringify({ slide: slideNumber }) });
+      setDetails(prev => prev ? { ...prev, currentSlide: slideNumber } : prev);
+    } catch (e) {
+      console.error('Failed to goto slide:', e);
+    } finally {
+      setWorking(false);
     }
-    function ensureCss(href: string) {
-      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
-      if (!links.some((l) => l.href === href)) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        document.head.appendChild(link);
-      }
-    }
-    async function ensureDeps() {
-      ensureCss('/vendor/reveal.css');
-      ensureCss('/vendor/pptxjs.css');
-      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('/vendor/jquery.min.js');
-      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('/vendor/jszip.min.js');
-      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('/vendor/reveal.js');
-      // Ensure $ alias exists
-      const wAny = window as unknown as { jQuery?: any; $?: any };
-      if (wAny.jQuery && !wAny.$) {
-        wAny.$ = wAny.jQuery;
-      }
-      // Shim FileReaderJS expected by PPTXjs
-      (window as unknown as { FileReaderJS?: any }).FileReaderJS = (window as any).FileReaderJS || {};
-      (window as any).FileReaderJS.setSync = (window as any).FileReaderJS.setSync || function() {};
-      (window as any).FileReaderJS.setupBlob = (window as any).FileReaderJS.setupBlob || function() {};
-      const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
-      const hasPlugin = w?.$?.fn?.pptxToHtml;
-      if (!hasPlugin) {
-        await loadScript('/vendor/pptxjs.min.js');
-        await loadScript('/vendor/divs2slides.min.js');
-      }
-    }
-    async function render() {
-      await ensureDeps();
-      if (cancelled || !pptContainerRef.current) return;
-      const host = document.createElement('div');
-      pptContainerRef.current.innerHTML = '';
-      pptContainerRef.current.appendChild(host);
-      type JQueryInstance = { pptxToHtml: (opts: Record<string, unknown>) => void };
-      type JQueryFactory = (el: HTMLElement) => JQueryInstance;
-      const wjq = window as unknown as { jQuery?: JQueryFactory };
-      const jqFactory: JQueryFactory | undefined = wjq.jQuery;
-      if (!jqFactory) return;
-      try {
-        jqFactory(host).pptxToHtml({
-          pptxFileUrl: fileUrl || directFileUrl,
-          slideMode: true,
-          slidesScale: '100%',
-          keyBoardShortCut: true,
-          mediaProcess: true,
-          slideType: 'revealjs',
-          revealjsPath: '/vendor/',
-          revealjsConfig: { controls: true, progress: true },
-        });
-      } catch (e) {
-        setDebug((prev) => prev + `\nPPTX: render error: ${(e as Error)?.message || String(e)}`);
-      }
-      // After mount, try to sync to current slide and wire changes
-      setTimeout(() => {
-        const wReveal = (window as unknown as { Reveal?: { on?: (evt: string, cb: (e: any) => void) => void; slide?: (h: number, v?: number) => void } }).Reveal;
-        if (!wReveal) return;
-        try {
-          if (details?.currentSlide && typeof wReveal.slide === 'function') {
-            wReveal.slide(Math.max(0, details.currentSlide - 1));
-          }
-          if (typeof wReveal.on === 'function') {
-            wReveal.on('slidechanged', (e: any) => {
-              const index = (e && (e.indexh ?? e.index)) ?? 0;
-              const target = Number(index) + 1;
-              setDetails(prev => prev ? { ...prev, currentSlide: target } : prev);
-              void apiFetch(`/api/slideshow/${sessionId}/goto`, { method: 'POST', body: JSON.stringify({ slide: target }) }).catch(() => {});
-            });
-          }
-        } catch {
-          // ignore
-        }
-      }, 250);
-      // Fallback: if nothing rendered after a few seconds, surface an error
-      setTimeout(() => {
-        if (cancelled || !pptContainerRef.current) return;
-        const hasContent = pptContainerRef.current.innerHTML.trim().length > 0;
-        if (!hasContent) {
-          setError('Failed to load PPTX. Try toggling Office Mode or re-uploading the file.');
-          setDebug((prev) => prev + '\nPPTX: container remained empty after render attempt');
-        }
-      }, 4000);
-    }
-    render();
-    return () => { cancelled = true; };
-  }, [details, isPpt, directFileUrl, fileUrl, sessionId]);
-
-  // Heartbeat to keep session alive
-  useEffect(() => {
-    const id = window.setInterval(() => { void apiFetch(`/api/slideshow/${sessionId}/heartbeat`, { method: 'POST' }); }, 5000);
-    return () => window.clearInterval(id);
-  }, [sessionId]);
+  }
 
   async function closeAndBack() {
     if (working) return;
@@ -208,15 +113,167 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     try {
       await apiFetch(`/api/slideshow/${sessionId}/close`, { method: 'POST' });
       router.push('/dashboard');
-    } catch (e) {
-      console.error('Failed to close slideshow:', e);
+    } catch {
       router.push('/dashboard');
     } finally {
       setWorking(false);
     }
   }
 
-  // PDF rendering replaced by iframe; drawing tools removed for now
+  // Helpers to load scripts
+  async function loadScript(src: string) {
+    await new Promise<void>((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureHtml2Canvas() {
+    const w = window as unknown as { html2canvas?: any };
+    if (!w.html2canvas) {
+      await loadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+    }
+  }
+
+  async function ensurePptxLibs() {
+    // CSS
+    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+    if (!links.some((l) => l.href.endsWith('/vendor/reveal.css'))) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/vendor/reveal.css';
+      document.head.appendChild(link);
+    }
+    if (!links.some((l) => l.href.endsWith('/vendor/pptxjs.css'))) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/vendor/pptxjs.css';
+      document.head.appendChild(link);
+    }
+    const anyWin = window as unknown as { jQuery?: any; $?: any; JSZip?: any; Reveal?: any };
+    if (!anyWin.jQuery) await loadScript('/vendor/jquery.min.js');
+    if (!anyWin.JSZip) await loadScript('/vendor/jszip.min.js');
+    if (!anyWin.Reveal) await loadScript('/vendor/reveal.js');
+    if (!anyWin.$ && anyWin.jQuery) anyWin.$ = anyWin.jQuery;
+    const w = window as any;
+    w.FileReaderJS = w.FileReaderJS || {};
+    w.FileReaderJS.setSync = w.FileReaderJS.setSync || function(){};
+    w.FileReaderJS.setupBlob = w.FileReaderJS.setupBlob || function(){};
+    const hasPlugin = !!(anyWin.$ && anyWin.$.fn && anyWin.$.fn.pptxToHtml);
+    if (!hasPlugin) {
+      await loadScript('/vendor/pptxjs.min.js');
+      await loadScript('/vendor/divs2slides.min.js');
+    }
+  }
+
+  async function ensurePdfJs() {
+    const anyWin = window as any;
+    if (!anyWin.pdfjsLib) {
+      // Use legacy UMD build which exposes window.pdfjsLib
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js');
+    }
+    const pdfjsLib = (window as any).pdfjsLib;
+    if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+  }
+
+  async function uploadPng(index: number, blob: Blob, width?: number, height?: number) {
+    const fd = new FormData();
+    fd.append('index', String(index));
+    if (width) fd.append('width', String(width));
+    if (height) fd.append('height', String(height));
+    fd.append('file', blob, `${index}.png`);
+    await fetch(`${getApiBaseUrl().replace(/\/$/, '')}/api/slideshow/${sessionId}/slides`, { method: 'POST', body: fd, credentials: 'include' });
+  }
+
+  async function renderPdfToPngs() {
+    setRendering(true);
+    setRenderMsg('Loading PDF…');
+    try {
+      await ensurePdfJs();
+      const pdfjsLib = (window as any).pdfjsLib;
+      const doc = await pdfjsLib.getDocument({ url: proxiedFileUrl, withCredentials: true }).promise;
+      for (let i = 1; i <= doc.numPages; i++) {
+        setRenderMsg(`Rendering slide ${i}/${doc.numPages}…`);
+        const page = await doc.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d')!;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
+        await uploadPng(i, blob, canvas.width, canvas.height);
+      }
+      setRenderMsg('Done. Refreshing…');
+      const res = await apiFetch<{ slides: Slide[] }>(`/api/slideshow/${sessionId}/slides`);
+      setSlides(res.slides);
+      // Set total slides for UI
+      setDetails(prev => prev ? { ...prev, totalSlides: res.slides.length } : prev);
+    } catch (e) {
+      setError((e as Error)?.message || 'Failed to render PDF');
+    } finally {
+      setRendering(false);
+      setRenderMsg('');
+    }
+  }
+
+  async function renderPptxToPngs() {
+    setRendering(true);
+    setRenderMsg('Loading PowerPoint…');
+    try {
+      await ensurePptxLibs();
+      await ensureHtml2Canvas();
+      const host = document.createElement('div');
+      host.style.position = 'absolute';
+      host.style.left = '-10000px';
+      host.style.top = '0';
+      (renderHostRef.current || document.body).appendChild(host);
+      const $ = (window as any).jQuery as any;
+      await new Promise<void>((resolve) => {
+        $(host).pptxToHtml({
+          pptxFileUrl: proxiedFileUrl,
+          slideMode: true,
+          slidesScale: '100%',
+          keyBoardShortCut: false,
+          mediaProcess: true,
+          slideType: 'revealjs',
+          revealjsPath: '/vendor/',
+          revealjsConfig: { controls: false, progress: false },
+          after: () => resolve(),
+        });
+      });
+      const Reveal = (window as any).Reveal;
+      const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
+      const html2canvas = (window as any).html2canvas as (node: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
+      for (let i = 0; i < total; i++) {
+        setRenderMsg(`Rendering slide ${i + 1}/${total}…`);
+        if (Reveal && typeof Reveal.slide === 'function') Reveal.slide(i);
+        await new Promise((r) => setTimeout(r, 150));
+        const container = host.querySelector('.reveal') as HTMLElement | null;
+        if (!container) throw new Error('Render container not found');
+        const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
+        await uploadPng(i + 1, blob, canvas.width, canvas.height);
+      }
+      host.remove();
+      setRenderMsg('Done. Refreshing…');
+      const res = await apiFetch<{ slides: Slide[] }>(`/api/slideshow/${sessionId}/slides`);
+      setSlides(res.slides);
+      setDetails(prev => prev ? { ...prev, totalSlides: res.slides.length } : prev);
+    } catch (e) {
+      setError((e as Error)?.message || 'Failed to render PPTX');
+    } finally {
+      setRendering(false);
+      setRenderMsg('');
+    }
+  }
 
   let content: ReactNode;
   if (loading) {
@@ -231,58 +288,45 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         <div className="text-rose-700">{error || 'Not found'}</div>
       </div>
     );
+  } else if (!slides.length) {
+    content = (
+      <div className="flex-1 grid place-items-center p-6">
+        <Card className="p-6 max-w-xl w-full">
+          <div className="text-lg font-semibold mb-2">Prepare slides for live sync</div>
+          <div className="text-slate-600 mb-4">We will pre-render your {isPdf ? 'PDF' : isPpt ? 'PowerPoint' : 'file'} into per-slide PNGs on your device and upload them for students to view.</div>
+          <div className="flex items-center gap-3">
+            <Button disabled={rendering} onClick={() => { if (isPdf) void renderPdfToPngs(); else if (isPpt) void renderPptxToPngs(); else setError('Unsupported file'); }}>{rendering ? 'Rendering…' : 'Render now'}</Button>
+            {renderMsg && (<div className="text-sm text-slate-500">{renderMsg}</div>)}
+          </div>
+          <div ref={renderHostRef} />
+        </Card>
+      </div>
+    );
   } else {
+    const total = slides.length;
+    const current = Math.min(Math.max(1, details.currentSlide || 1), total);
+    const slide = slides[current - 1];
     content = (
       <>
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
-          {isPdf ? (
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
-              <span className="text-sm text-slate-600">{details.currentSlide} / {details.totalSlides || '?'}</span>
-              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working || (!!details.totalSlides && details.currentSlide >= details.totalSlides)}>Next</Button>
-            </div>
-          ) : null}
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" onClick={() => gotoSlide(current - 1)} disabled={working || current <= 1}>Prev</Button>
+            <span className="text-sm text-slate-600">{current} / {total}</span>
+            <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
+          </div>
         </div>
-        
-        <div className="flex-1 relative overflow-hidden" ref={containerRef}>
-          {isPdf ? (
-            <iframe title="slides" src={pageUrl} className="absolute inset-0 w-full h-full border-0 overflow-hidden" />
-          ) : (isPpt && details?.officeMode) ? (
-            <iframe title="slides" src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(directFileUrl || fileUrl)}`} className="absolute inset-0 w-full h-full border-0 overflow-hidden" />
-          ) : isPpt ? (
-            <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-slate-600">Unsupported file type</div>
-            </div>
-          )}
+        <div className="flex-1 relative bg-black">
+          <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="absolute inset-0 w-full h-full object-contain" />
         </div>
-        
-        {/* No overlay tools for PDF in iframe mode */}
       </>
     );
   }
 
-  async function gotoSlide(slideNumber: number) {
-    if (working || !details) return;
-    setWorking(true);
-    try {
-      await apiFetch(`/api/slideshow/${sessionId}/goto`, {
-        method: 'POST',
-        body: JSON.stringify({ slide: slideNumber })
-      });
-      setDetails(prev => prev ? { ...prev, currentSlide: slideNumber } : null);
-    } catch (e) {
-      console.error('Failed to goto slide:', e);
-    } finally {
-      setWorking(false);
-    }
-  }
-
-  return (<div className="min-h-dvh flex flex-col">{content}</div>);
+  return (
+    <div className="min-h-dvh flex flex-col">
+      {content}
+    </div>
+  );
 }
-
-
-
