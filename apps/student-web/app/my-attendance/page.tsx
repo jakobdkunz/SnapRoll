@@ -22,8 +22,10 @@ export default function MyAttendancePage() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     setStudentId(localStorage.getItem('snaproll.studentId'));
     const n = localStorage.getItem('snaproll.studentName');
     if (n) setStudentName(n);
@@ -95,6 +97,24 @@ export default function MyAttendancePage() {
     const recBySection = new Map(records.map((r) => [r.sectionId, r.byDate]));
     return { sections, days, recBySection };
   }, [data]);
+
+  // Don't render anything until client-side hydration is complete
+  if (!isClient) {
+    return (
+      <div className="space-y-4 p-6">
+        <Card className="p-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-32" />
+            <div className="flex gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-16 rounded" />
+              ))}
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   if (!studentId) return <div className="p-6">Please go back and enter your email.</div>;
   if (loading) return (

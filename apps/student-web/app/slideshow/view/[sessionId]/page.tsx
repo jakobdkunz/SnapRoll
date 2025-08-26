@@ -190,7 +190,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
       <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
-        <Button variant="ghost" onClick={() => router.back()}>
+        <Button variant="ghost" onClick={() => router.push('/sections')}>
           <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
           Back
         </Button>
