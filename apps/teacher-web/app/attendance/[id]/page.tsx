@@ -189,8 +189,8 @@ export default function AttendancePage() {
           </Card>
         </div>
 
-        {/* Progress Bar Widget - Bottom */}
-        <div className="mb-4 flex justify-center">
+        {/* Progress Bar Widget - Above Button */}
+        <div className="flex justify-center mb-4">
           <Card className="p-4 w-full max-w-3xl bg-white/80 backdrop-blur">
             {status ? (
               <>
@@ -221,8 +221,8 @@ export default function AttendancePage() {
           </Card>
         </div>
 
-        {/* Generate new code button */}
-        <div className="flex justify-center mb-4">
+        {/* Generate new code button - At bottom */}
+        <div className="mt-auto flex justify-center pb-4">
           <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
             <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
           </Button>
