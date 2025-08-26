@@ -28,10 +28,9 @@ export default function DashboardPage() {
   const [pollSectionId, setPollSectionId] = useState<string | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
-  const [slideRecentSessions, setSlideRecentSessions] = useState<Array<{
+  const [slideRecentAssets, setSlideRecentAssets] = useState<Array<{
     id: string;
     title: string;
-    section: { title: string };
     slides: Array<{ imageUrl: string; width?: number; height?: number }>;
     createdAt: string;
   }>>([]);
@@ -65,25 +64,24 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Load recent sessions when opening slideshow modal
-    async function loadRecentSessions() {
+    // Load recent assets when opening slideshow modal
+    async function loadRecentAssets() {
       if (!teacherId || !slideOpen) return;
       try {
         const res = await apiFetch<{ 
-          recentSessions: Array<{
+          recentAssets: Array<{
             id: string;
             title: string;
-            section: { title: string };
             slides: Array<{ imageUrl: string; width?: number; height?: number }>;
             createdAt: string;
           }>;
         }>(`/api/teachers/${teacherId}/recent-slideshows`);
-        setSlideRecentSessions(res.recentSessions);
+        setSlideRecentAssets(res.recentAssets);
       } catch {
-        setSlideRecentSessions([]);
+        setSlideRecentAssets([]);
       }
     }
-    loadRecentSessions();
+    loadRecentAssets();
   }, [teacherId, slideOpen]);
 
   async function startWordCloud() {
@@ -461,39 +459,38 @@ export default function DashboardPage() {
               </div>
               
               <div className="space-y-3 max-h-96 overflow-y-auto">
-                {slideRecentSessions.length === 0 ? (
+                {slideRecentAssets.length === 0 ? (
                   <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
                     No recent slideshows
                   </div>
                 ) : (
-                  slideRecentSessions.map((session) => (
-                    <div key={session.id} className="group relative">
+                  slideRecentAssets.map((asset) => (
+                    <div key={asset.id} className="group relative">
                       <button 
                         onClick={() => { 
-                          setSlideSelectedSessionId(session.id); 
-                          setSlideSelectedAssetId(null); 
+                          setSlideSelectedAssetId(asset.id); 
+                          setSlideSelectedSessionId(null); 
                           setSlideUploadFile(null);
-                          setSlideTitle(session.title);
+                          setSlideTitle(asset.title);
                         }} 
                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                          slideSelectedSessionId === session.id 
+                          slideSelectedAssetId === asset.id 
                             ? 'border-blue-500 bg-blue-50 shadow-md' 
                             : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          {session.slides[0] && (
+                          {asset.slides[0] && (
                             <img 
-                              src={session.slides[0].imageUrl} 
+                              src={asset.slides[0].imageUrl} 
                               alt="Slide 1" 
                               className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
                             />
                           )}
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-slate-900 truncate">{session.title}</div>
-                            <div className="text-sm text-slate-500">{session.section.title}</div>
+                            <div className="font-medium text-slate-900 truncate">{asset.title}</div>
                             <div className="text-xs text-slate-400 mt-1">
-                              {new Date(session.createdAt).toLocaleDateString()}
+                              {new Date(asset.createdAt).toLocaleDateString()}
                             </div>
                           </div>
                         </div>
@@ -501,10 +498,10 @@ export default function DashboardPage() {
                       <button
                         onClick={async () => {
                           try {
-                            await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?sessionId=${session.id}`, { method: 'DELETE' });
-                            setSlideRecentSessions(prev => prev.filter(s => s.id !== session.id));
+                            await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?assetId=${asset.id}`, { method: 'DELETE' });
+                            setSlideRecentAssets(prev => prev.filter(a => a.id !== asset.id));
                           } catch (e) {
-                            console.error('Failed to delete session:', e);
+                            console.error('Failed to delete asset:', e);
                           }
                         }}
                         className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
