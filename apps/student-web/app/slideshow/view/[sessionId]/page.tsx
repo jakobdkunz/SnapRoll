@@ -124,6 +124,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       try {
         const response = await apiFetch<{ drawings: DrawingStroke[] }>(`/api/slideshow/${sessionId}/drawings`);
         if (mounted) {
+          console.log('Received drawings:', response.drawings);
           setDrawings(response.drawings);
         }
       } catch (error) {
@@ -144,15 +145,20 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
-    if (!canvas || !ctx) return;
+    if (!canvas || !ctx) {
+      console.log('Canvas not ready for redraw:', { canvas: !!canvas, ctx: !!ctx });
+      return;
+    }
     
+    console.log('Redrawing canvas with', drawings.length, 'strokes, showDrawings:', showDrawings);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (!showDrawings) return;
     
-    drawings.forEach(stroke => {
+    drawings.forEach((stroke, index) => {
       if (stroke.points.length < 2) return;
       
+      console.log(`Drawing stroke ${index}:`, stroke);
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = 3;
       ctx.beginPath();

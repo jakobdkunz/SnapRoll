@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@snaproll/lib';
 
+// In-memory storage for drawings (in production, use database)
+const drawingStorage = new Map<string, any[]>();
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { sessionId: string } }
@@ -15,9 +18,8 @@ export async function GET(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // For now, return empty drawings array
-    // In a real implementation, you'd store drawings in the database
-    return NextResponse.json({ drawings: [] });
+    const drawings = drawingStorage.get(params.sessionId) || [];
+    return NextResponse.json({ drawings });
   } catch (error) {
     console.error('Error fetching drawings:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -39,9 +41,12 @@ export async function POST(
     }
 
     const { drawings } = await request.json();
+    
+    // Store drawings in memory
+    drawingStorage.set(params.sessionId, drawings);
+    
+    console.log(`Stored ${drawings.length} drawings for session ${params.sessionId}`);
 
-    // For now, just return success
-    // In a real implementation, you'd store drawings in the database
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving drawings:', error);
