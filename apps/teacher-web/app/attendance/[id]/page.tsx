@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
-import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile } from 'react-icons/hi2';
+import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams, useRouter } from 'next/navigation';
@@ -168,7 +168,10 @@ export default function AttendancePage() {
         </div>
       <div className="grid place-items-center gap-4 w-full mt-0">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
-        <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
+        <div className="text-sm uppercase tracking-wide text-slate-500 flex items-center justify-center gap-2">
+          <HiOutlineUserGroup className="w-5 h-5 text-black" />
+          Attendance Code
+        </div>
         {!status ? (
           <div className="mt-4 grid place-items-center gap-4">
             <Skeleton className="h-12 w-48" />
