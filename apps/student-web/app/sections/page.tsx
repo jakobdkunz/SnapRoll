@@ -16,7 +16,7 @@ type CheckinResponse = { ok: boolean; status: string; section?: { id: string; ti
 
 export default function SectionsPage() {
   const pathname = usePathname();
-  const router = useRouter();
+
   const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);

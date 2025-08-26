@@ -20,7 +20,7 @@ export default function AttendancePage() {
   const router = useRouter();
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
-  const [animatingCount, setAnimatingCount] = useState(0);
+
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
   const prevCodeRef = useRef<string | null>(null);
@@ -98,7 +98,7 @@ export default function AttendancePage() {
         const res = await apiFetch<{ section: { gradient: string; title: string } }>(`/api/sections/${params.id}`);
         if (res?.section?.gradient) setSectionGradient(res.section.gradient);
         if (res?.section?.title) setSectionTitle(res.section.title);
-      } catch (_err) {
+      } catch {
         // ignore, fallback stays
       }
     }

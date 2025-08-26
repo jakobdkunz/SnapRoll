@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, Modal, TextInput } from '@snaproll/ui';
+import { Button, Modal, TextInput } from '@snaproll/ui';
 import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
@@ -22,7 +22,7 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
       setOpen(false);
       // delay to allow modal animation to dismiss before navigating
       setTimeout(() => router.push(`/wordcloud/live/${session.id}`), 120);
-    } catch (e) {
+    } catch {
       alert('Failed to start word cloud. Please try again.');
     }
   }

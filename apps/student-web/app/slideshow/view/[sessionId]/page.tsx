@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';

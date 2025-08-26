@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
-import { Card } from '@snaproll/ui';
+
 import { apiFetch } from '@snaproll/api-client';
 
 type Word = { word: string; count: number };
@@ -155,7 +155,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   // Physics loop
   useEffect(() => {
-    const run = (t: number) => {
+    const run = () => {
       const map = nodes.current;
       const { w: W, h: H } = containerSize.current;
       const cx = W / 2;
@@ -167,7 +167,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const wallMargin = 48;
       const wallK = 0.002;
       const spacing = 6; // extra padding between words
-      const shrink = globalScaleRef.current;
+
       // Integrate forces
       for (let i = 0; i < wordsList.length; i++) {
         const aKey = wordsList[i];
