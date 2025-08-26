@@ -115,9 +115,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(point.x, point.y);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
+      
+      // Convert percentage coordinates to canvas pixels for real-time drawing
+      const canvas = canvasRef.current;
+      if (canvas) {
+        ctx.moveTo(point.x * canvas.width, point.y * canvas.height);
+        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+        ctx.stroke();
+      }
     }
   }, [drawingMode, drawingColor, getCanvasCoordinates]);
 
@@ -131,16 +136,22 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const updatedStroke = { ...currentStroke, points: [...currentStroke.points, point] };
     setCurrentStroke(updatedStroke);
     
-    // Draw line
+    // Draw line in real-time
     const ctx = ctxRef.current;
     if (ctx) {
       ctx.strokeStyle = drawingColor;
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(currentStroke.points[currentStroke.points.length - 1].x, currentStroke.points[currentStroke.points.length - 1].y);
-      ctx.lineTo(point.x, point.y);
-      ctx.stroke();
+      
+      // Convert percentage coordinates to canvas pixels for real-time drawing
+      const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+      const canvas = canvasRef.current;
+      if (canvas) {
+        ctx.moveTo(lastPoint.x * canvas.width, lastPoint.y * canvas.height);
+        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+        ctx.stroke();
+      }
     }
   }, [isDrawing, drawingMode, currentStroke, drawingColor, getCanvasCoordinates]);
 
