@@ -42,8 +42,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const stage = stageRef.current;
     if (!stage) return;
     const rect = stage.getBoundingClientRect();
-    const stageW = rect.width;
-    const stageH = rect.height;
+    // Account for padding (p-2 sm:p-4 = 8px on mobile, 16px on desktop)
+    const padding = window.innerWidth >= 640 ? 32 : 16; // 16px on each side
+    const stageW = rect.width - padding;
+    const stageH = rect.height - padding;
     if (stageW <= 0 || stageH <= 0) return;
     let w: number;
     let h: number;
