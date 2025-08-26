@@ -50,6 +50,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
   const [drawings, setDrawings] = useState<SlideDrawings>({});
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -910,10 +911,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                   ref={canvasRef}
                   className={`absolute inset-0 w-full h-full ${
                     drawingMode === 'pen' ? 'cursor-crosshair' : 
-                    drawingMode === 'eraser' ? 'cursor-grab' : 'cursor-pointer'
+                    drawingMode === 'eraser' ? 'cursor-none' : 'cursor-pointer'
                   }`}
                   onMouseDown={startDrawing}
-                  onMouseMove={draw}
+                  onMouseMove={(e) => {
+                    draw(e);
+                    if (drawingMode === 'eraser') {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setMousePosition({
+                        x: e.clientX - rect.left,
+                        y: e.clientY - rect.top
+                      });
+                    }
+                  }}
                   onMouseUp={stopDrawing}
                   onMouseLeave={stopDrawing}
                   onClick={(e) => {
@@ -933,6 +943,18 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                     pointerEvents: 'auto'
                   }}
                 />
+                
+                {/* Custom eraser cursor */}
+                {drawingMode === 'eraser' && (
+                  <div 
+                    className="absolute pointer-events-none z-50 w-5 h-5 border-2 border-red-500 rounded-full bg-red-500/20"
+                    style={{
+                      left: mousePosition.x - 10,
+                      top: mousePosition.y - 10,
+                      transform: 'translate(0, 0)'
+                    }}
+                  />
+                )}
               </div>
             </div>
           </div>
