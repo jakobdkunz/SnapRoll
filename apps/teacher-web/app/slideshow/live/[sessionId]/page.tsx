@@ -279,8 +279,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const pluginExists = $ && $.fn && $.fn.pptxToHtml;
       if (!pluginExists) throw new Error('PPTX renderer not available');
       let rendered = false;
-      async function tryRenderWithUrl(url: string): Promise<void> {
+      async function tryRenderWithUrl(url: string): Promise<'reveal' | 'div'> {
         addLog(`Rendering via URL: ${url.substring(0, 80)}…`);
+        // First attempt: revealjs mode
         $(host).pptxToHtml({
           pptxFileUrl: url,
           slideMode: true,
@@ -292,20 +293,38 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           revealjsConfig: { controls: false, progress: false, embedded: true, width: 1280, height: 720 },
           after: () => { /* not all builds call after reliably */ },
         });
-        // Wait for Reveal DOM to appear (fallback readiness signal)
-        const start = Date.now();
-        while (Date.now() - start < 15000) {
+        let start = Date.now();
+        while (Date.now() - start < 8000) {
           const hasReveal = host.querySelector('.reveal .slides section');
-          if (hasReveal) { addLog('Reveal DOM detected'); return; }
-          await new Promise((r) => setTimeout(r, 250));
+          if (hasReveal) { addLog('Reveal DOM detected'); return 'reveal'; }
+          await new Promise((r) => setTimeout(r, 200));
+        }
+        addLog('Reveal mode did not initialize, trying div mode…');
+        host.innerHTML = '';
+        // Second attempt: basic div mode
+        $(host).pptxToHtml({
+          pptxFileUrl: url,
+          slideMode: true,
+          slidesScale: '100%',
+          keyBoardShortCut: false,
+          mediaProcess: true,
+          slideType: 'div',
+          after: () => { /* noop */ },
+        });
+        start = Date.now();
+        while (Date.now() - start < 8000) {
+          const anySlide = host.querySelector('.slide, section, .pptx, .reveal .slides section');
+          if (anySlide) { addLog('Div mode DOM detected'); return 'div'; }
+          await new Promise((r) => setTimeout(r, 200));
         }
         const innerLen = host.innerHTML.length;
         addLog(`Renderer did not initialize; host.innerHTML length=${innerLen}`);
         throw new Error('Renderer did not initialize');
       }
       // First attempt: use (proxied) URL
+      let mode: 'reveal' | 'div' | null = null;
       await Promise.race([
-        (async () => { await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
+        (async () => { mode = await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
         new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via URL')), 15000)),
       ]).catch(async (err) => {
         addLog(`URL render failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -316,18 +335,23 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const buf = await resp.arrayBuffer();
         const objUrl = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
         await Promise.race([
-          (async () => { await tryRenderWithUrl(objUrl); rendered = true; })(),
+          (async () => { mode = await tryRenderWithUrl(objUrl); rendered = true; })(),
           new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 20000)),
         ]).finally(() => URL.revokeObjectURL(objUrl));
       });
       const Reveal = (window as any).Reveal;
-      const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
+      let total = 1;
+      if (mode === 'reveal') {
+        total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
+      } else {
+        total = host.querySelectorAll('.reveal .slides section, .slide, section').length || 1;
+      }
       const html2canvas = (window as any).html2canvas as (node: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
       for (let i = 0; i < total; i++) {
         setRenderMsg(`Rendering slide ${i + 1}/${total}…`);
-        if (Reveal && typeof Reveal.slide === 'function') Reveal.slide(i);
+        if (mode === 'reveal' && Reveal && typeof Reveal.slide === 'function') Reveal.slide(i);
         await new Promise((r) => setTimeout(r, 150));
-        const container = host.querySelector('.reveal') as HTMLElement | null;
+        const container = mode === 'reveal' ? (host.querySelector('.reveal') as HTMLElement | null) : (host as HTMLElement);
         if (!container) throw new Error('Render container not found');
         const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
         const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
