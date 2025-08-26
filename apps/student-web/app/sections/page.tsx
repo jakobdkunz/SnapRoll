@@ -362,7 +362,7 @@ export default function SectionsPage() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300"
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
