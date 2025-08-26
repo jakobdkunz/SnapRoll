@@ -6,7 +6,8 @@ import { apiFetch } from '@snaproll/api-client';
 
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
-type DrawingStroke = { color: DrawingColor; points: DrawingPoint[] };
+type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: 'pen' | 'eraser' };
+type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
 type SessionResponse = { id: string; title: string; currentSlide: number };
  type SlideItem = { id: string; index: number; imageUrl: string };
@@ -27,7 +28,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   
   // Drawing state
   const [showDrawings, setShowDrawings] = useState(true);
-  const [drawings, setDrawings] = useState<DrawingStroke[]>([]);
+  const [drawings, setDrawings] = useState<SlideDrawings>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -122,7 +123,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     let mounted = true;
     async function loadDrawings() {
       try {
-        const response = await apiFetch<{ drawings: DrawingStroke[] }>(`/api/slideshow/${sessionId}/drawings`);
+        const response = await apiFetch<{ drawings: SlideDrawings }>(`/api/slideshow/${sessionId}/drawings`);
         if (mounted) {
           console.log('Received drawings:', response.drawings);
           setDrawings(response.drawings);
@@ -150,17 +151,19 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       return;
     }
     
-    console.log('Redrawing canvas with', drawings.length, 'strokes, showDrawings:', showDrawings);
+    const currentSlideIndex = details?.currentSlide || 1;
+    const currentSlideDrawings = drawings[currentSlideIndex] || [];
+    console.log('Redrawing canvas with', currentSlideDrawings.length, 'strokes, showDrawings:', showDrawings);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (!showDrawings) return;
     
-    drawings.forEach((stroke, index) => {
+    currentSlideDrawings.forEach((stroke: DrawingStroke, index: number) => {
       if (stroke.points.length < 2) return;
       
       console.log(`Drawing stroke ${index}:`, stroke);
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = stroke.mode === 'eraser' ? '#ffffff' : stroke.color;
+      ctx.lineWidth = stroke.mode === 'eraser' ? 20 : 3;
       ctx.beginPath();
       
       // Scale percentage coordinates to current canvas size
@@ -174,7 +177,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       
       ctx.stroke();
     });
-  }, [drawings, showDrawings, frameSize]);
+  }, [drawings, showDrawings, frameSize, details?.currentSlide]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
