@@ -22,7 +22,9 @@ export default function MyAttendancePage() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
+    setIsClient(true);
     // Use a longer delay to ensure localStorage is available and retry if needed
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
@@ -112,6 +114,7 @@ export default function MyAttendancePage() {
   }, [data]);
 
 
+  if (!isClient) return null;
   if (!studentId) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
