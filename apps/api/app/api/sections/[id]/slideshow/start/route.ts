@@ -38,16 +38,19 @@ export async function POST(request: Request, { params }: { params: { id: string 
     let finalTitle = title;
     
     if (sessionId) {
-      // Reuse existing session
+      // Reuse existing session with its PNGs
       const existingSession = await prisma.slideshowSession.findFirst({
         where: { 
           id: sessionId,
           section: { teacherId: (await prisma.section.findUnique({ where: { id: sectionId } }))?.teacherId }
+        },
+        include: {
+          slides: true
         }
       });
       if (!existingSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
       
-      // Create new session with same file but new settings
+      // Create new session with same file and copy all existing slides
       filePath = existingSession.filePath;
       mimeType = existingSession.mimeType;
       finalTitle = existingSession.title;
@@ -90,6 +93,24 @@ export async function POST(request: Request, { params }: { params: { id: string 
         instructorLastSeenAt: new Date(),
       },
     });
+
+    // If reusing an existing session, copy all the slides
+    if (sessionId && existingSession?.slides) {
+      const slideData = existingSession.slides.map(slide => ({
+        sessionId: session.id,
+        index: slide.index,
+        imageUrl: slide.imageUrl,
+        width: slide.width,
+        height: slide.height,
+      }));
+      
+      if (slideData.length > 0) {
+        await prisma.slideshowSlide.createMany({
+          data: slideData
+        });
+      }
+    }
+
     return NextResponse.json({ session }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal error';

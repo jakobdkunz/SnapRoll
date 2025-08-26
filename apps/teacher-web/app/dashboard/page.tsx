@@ -28,7 +28,6 @@ export default function DashboardPage() {
   const [pollSectionId, setPollSectionId] = useState<string | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
-  const [slideTeacherAssets, setSlideTeacherAssets] = useState<Array<{ id: string; title: string; filePath: string; mimeType: string }>>([]);
   const [slideRecentSessions, setSlideRecentSessions] = useState<Array<{
     id: string;
     title: string;
@@ -66,12 +65,11 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Load teacher assets and recent sessions when opening slideshow modal
-    async function loadAssets() {
+    // Load recent sessions when opening slideshow modal
+    async function loadRecentSessions() {
       if (!teacherId || !slideOpen) return;
       try {
         const res = await apiFetch<{ 
-          assets: Array<{ id: string; title: string; filePath: string; mimeType: string }>;
           recentSessions: Array<{
             id: string;
             title: string;
@@ -80,14 +78,12 @@ export default function DashboardPage() {
             createdAt: string;
           }>;
         }>(`/api/teachers/${teacherId}/recent-slideshows`);
-        setSlideTeacherAssets(res.assets);
         setSlideRecentSessions(res.recentSessions);
       } catch {
-        setSlideTeacherAssets([]);
         setSlideRecentSessions([]);
       }
     }
-    loadAssets();
+    loadRecentSessions();
   }, [teacherId, slideOpen]);
 
   async function startWordCloud() {
@@ -460,112 +456,65 @@ export default function DashboardPage() {
             {/* Recents Section */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Recent Slideshows</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Recents</h3>
                 <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">72h retention</span>
               </div>
               
-              {/* Recent Sessions */}
-              {slideRecentSessions.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-slate-700 mb-3">Active Sessions</h4>
-                  <div className="space-y-3">
-                    {slideRecentSessions.map((session) => (
-                      <div key={session.id} className="group relative">
-                        <button 
-                          onClick={() => { 
-                            setSlideSelectedSessionId(session.id); 
-                            setSlideSelectedAssetId(null); 
-                            setSlideUploadFile(null);
-                            setSlideTitle(session.title);
-                          }} 
-                          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                            slideSelectedSessionId === session.id 
-                              ? 'border-blue-500 bg-blue-50 shadow-md' 
-                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            {session.slides[0] && (
-                              <img 
-                                src={session.slides[0].imageUrl} 
-                                alt="Slide 1" 
-                                className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
-                              />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-900 truncate">{session.title}</div>
-                              <div className="text-sm text-slate-500">{session.section.title}</div>
-                              <div className="text-xs text-slate-400 mt-1">
-                                {new Date(session.createdAt).toLocaleDateString()}
-                              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {slideRecentSessions.length === 0 ? (
+                  <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                    No recent slideshows
+                  </div>
+                ) : (
+                  slideRecentSessions.map((session) => (
+                    <div key={session.id} className="group relative">
+                      <button 
+                        onClick={() => { 
+                          setSlideSelectedSessionId(session.id); 
+                          setSlideSelectedAssetId(null); 
+                          setSlideUploadFile(null);
+                          setSlideTitle(session.title);
+                        }} 
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                          slideSelectedSessionId === session.id 
+                            ? 'border-blue-500 bg-blue-50 shadow-md' 
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {session.slides[0] && (
+                            <img 
+                              src={session.slides[0].imageUrl} 
+                              alt="Slide 1" 
+                              className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 truncate">{session.title}</div>
+                            <div className="text-sm text-slate-500">{session.section.title}</div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {new Date(session.createdAt).toLocaleDateString()}
                             </div>
                           </div>
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?sessionId=${session.id}`, { method: 'DELETE' });
-                              setSlideRecentSessions(prev => prev.filter(s => s.id !== session.id));
-                            } catch (e) {
-                              console.error('Failed to delete session:', e);
-                            }
-                          }}
-                          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                          title="Delete slideshow"
-                        >
-                          <HiOutlineTrash className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Uploaded Assets */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-700 mb-3">Uploaded Files</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {slideTeacherAssets.length === 0 ? (
-                    <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-                      No uploaded files yet
+                        </div>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?sessionId=${session.id}`, { method: 'DELETE' });
+                            setSlideRecentSessions(prev => prev.filter(s => s.id !== session.id));
+                          } catch (e) {
+                            console.error('Failed to delete session:', e);
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete slideshow"
+                      >
+                        <HiOutlineTrash className="w-4 h-4" />
+                      </button>
                     </div>
-                  ) : (
-                    slideTeacherAssets.map((asset) => (
-                      <div key={asset.id} className="group relative">
-                        <button 
-                          onClick={() => { 
-                            setSlideSelectedAssetId(asset.id); 
-                            setSlideSelectedSessionId(null);
-                            setSlideUploadFile(null); 
-                            setSlideTitle(asset.title || '');
-                          }} 
-                          className={`w-full text-left p-3 rounded-lg border transition-all ${
-                            slideSelectedAssetId === asset.id 
-                              ? 'border-blue-500 bg-blue-50' 
-                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="font-medium text-slate-900 truncate">{asset.title}</div>
-                          <div className="text-xs text-slate-500 truncate">{asset.filePath.split('/').pop()}</div>
-                        </button>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?assetId=${asset.id}`, { method: 'DELETE' });
-                              setSlideTeacherAssets(prev => prev.filter(a => a.id !== asset.id));
-                            } catch (e) {
-                              console.error('Failed to delete asset:', e);
-                            }
-                          }}
-                          className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                          title="Delete file"
-                        >
-                          <HiOutlineTrash className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
+                  ))
+                )}
               </div>
             </div>
 
