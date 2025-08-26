@@ -41,11 +41,12 @@ model Section {
 }
 
 model Enrollment {
-  id        String @id @default(cuid())
-  section   Section @relation(fields: [sectionId], references: [id])
+  id        String   @id @default(cuid())
+  section   Section  @relation(fields: [sectionId], references: [id])
   sectionId String
-  student   User    @relation(fields: [studentId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
   studentId String
+  createdAt DateTime @default(now())
   // Unique per section/student
   @@unique([sectionId, studentId])
 }
