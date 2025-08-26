@@ -36,6 +36,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
   const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
+  const navRef = useRef<HTMLDivElement | null>(null);
+  const [stageHeight, setStageHeight] = useState<number | null>(null);
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -107,6 +109,27 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     window.addEventListener('resize', onResize);
     onResize();
     return () => window.removeEventListener('resize', onResize);
+  }, [imgAspect]);
+
+  // Compute stage height so page doesn't scroll and nav stays visible
+  useEffect(() => {
+    function headerHeight(): number {
+      try {
+        return window.matchMedia('(min-width: 640px)').matches ? 72 : 64;
+      } catch {
+        return 64;
+      }
+    }
+    const compute = () => {
+      const hh = headerHeight();
+      const navH = navRef.current ? navRef.current.getBoundingClientRect().height : 0;
+      const h = Math.max(0, window.innerHeight - hh - navH);
+      setStageHeight(h);
+      if (imgAspect) recomputeFrame(imgAspect);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
   }, [imgAspect]);
 
   const rawFileUrl = details?.filePath;
@@ -507,7 +530,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const slide = slides[current - 1];
     content = (
       <>
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div ref={navRef} className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
             <div className="ml-auto flex items-center gap-2">
@@ -518,7 +541,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         </div>
         {/* Full-width stage within normal flow (no scroll lock) */}
         <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-          <div ref={stageRef} className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+          <div ref={stageRef} className="relative" style={stageHeight != null ? { height: `${stageHeight}px` } : undefined}>
             <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
               <div
                 className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
@@ -550,7 +573,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   return (
-    <div className="min-h-dvh flex flex-col">
+    <div className="min-h-dvh flex flex-col overflow-hidden">
       {content}
     </div>
   );
