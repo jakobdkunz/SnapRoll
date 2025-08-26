@@ -142,8 +142,8 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <div className="flex items-center justify-between mb-6">
+      <div className="relative z-10 flex flex-col h-screen">
+        <div className="flex items-center justify-between mb-4">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
@@ -154,7 +154,7 @@ export default function AttendancePage() {
         </div>
         
         {/* Attendance Code Widget - Centered */}
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex items-center justify-center mb-8">
           <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
             <div className="text-sm uppercase tracking-wide text-slate-500">
               Attendance Code
@@ -190,8 +190,8 @@ export default function AttendancePage() {
         </div>
 
         {/* Progress Bar Widget - Bottom */}
-        <div className="mb-6 flex justify-center">
-          <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
+        <div className="mb-4 flex justify-center">
+          <Card className="p-4 w-full max-w-3xl bg-white/80 backdrop-blur">
             {status ? (
               <>
                 <div className="text-center mb-4">
@@ -222,7 +222,7 @@ export default function AttendancePage() {
         </div>
 
         {/* Generate new code button */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4">
           <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
             <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
           </Button>
