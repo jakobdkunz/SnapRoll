@@ -25,7 +25,7 @@ export default function SectionsPage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [recentSlides, setRecentSlides] = useState<RecentSlidesResponse['recents']>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   // Interactive state
@@ -140,9 +140,14 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    setIsClient(true);
-    const id = localStorage.getItem('snaproll.studentId');
-    setStudentId(id);
+    // Wait for next tick to ensure localStorage is available
+    const timer = setTimeout(() => {
+      const id = localStorage.getItem('snaproll.studentId');
+      setStudentId(id);
+      setIsInitialized(true);
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -266,8 +271,8 @@ export default function SectionsPage() {
     };
   }, [mounted, studentId]);
 
-  // Don't render anything until client-side hydration is complete AND we have a student ID
-  if (!isClient || !studentId) {
+  // Don't render anything until we're initialized
+  if (!isInitialized) {
     return (
       <div className="space-y-6">
         <Card className="p-6 space-y-3">
@@ -296,6 +301,7 @@ export default function SectionsPage() {
   }
 
   if (!mounted) return null;
+  if (!studentId) return <div>Please go back and enter your email.</div>;
 
   if (loading && !initialized) {
     return (

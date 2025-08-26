@@ -22,13 +22,19 @@ export default function MyAttendancePage() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
-    setStudentId(localStorage.getItem('snaproll.studentId'));
-    const n = localStorage.getItem('snaproll.studentName');
-    if (n) setStudentName(n);
+    // Wait for next tick to ensure localStorage is available
+    const timer = setTimeout(() => {
+      const id = localStorage.getItem('snaproll.studentId');
+      setStudentId(id);
+      const n = localStorage.getItem('snaproll.studentName');
+      if (n) setStudentName(n);
+      setIsInitialized(true);
+    }, 0);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -98,8 +104,8 @@ export default function MyAttendancePage() {
     return { sections, days, recBySection };
   }, [data]);
 
-  // Don't render anything until client-side hydration is complete AND we have a student ID
-  if (!isClient || !studentId) {
+  // Don't render anything until we're initialized
+  if (!isInitialized) {
     return (
       <div className="space-y-4 p-6">
         <Card className="p-4">
@@ -115,6 +121,7 @@ export default function MyAttendancePage() {
       </div>
     );
   }
+  if (!studentId) return <div className="p-6">Please go back and enter your email.</div>;
   if (loading) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
