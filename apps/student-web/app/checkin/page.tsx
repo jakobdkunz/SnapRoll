@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
+import { HiOutlineHandRaised } from 'react-icons/hi2';
 
 export default function CheckinPage() {
   const router = useRouter();
@@ -37,7 +38,16 @@ export default function CheckinPage() {
       </div>
       
       <Card className="p-6 space-y-3">
-        <div className="font-medium">Enter Attendance Code</div>
+        <div className="font-medium flex items-center gap-2">
+          Enter Attendance Code
+          <button 
+            onClick={() => router.push('/icon-options')}
+            className="p-1 hover:bg-slate-100 rounded transition-colors"
+            title="View icon options"
+          >
+            <HiOutlineHandRaised className="w-5 h-5 text-slate-600" />
+          </button>
+        </div>
         <TextInput 
           placeholder="4-digit code" 
           inputMode="numeric" 
