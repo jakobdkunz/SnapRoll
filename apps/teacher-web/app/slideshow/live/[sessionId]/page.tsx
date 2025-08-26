@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
 
+
 type SessionDetails = {
   id: string;
   title: string;
@@ -43,7 +44,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         if (cancelled) return;
         
         setDetails(data);
-        setDebug(`Loaded session: ${data.id}\nmime=${data.mimeType} pdf=${data.mimeType === 'application/pdf'} ppt=${data.mimeType.includes('powerpoint') || data.mimeType.includes('presentation')} officeMode=${data.officeMode || false} url=${data.filePath}`);
+        setDebug(`Loaded session: ${data.id}\nmime=${data.mimeType} pdf=${data.mimeType === 'application/pdf'} url=${data.filePath}`);
       } catch (err) {
         if (cancelled) return;
         setError((err as Error).message || 'Session not found');
@@ -59,8 +60,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [sessionId]);
 
   const rawFileUrl = details?.filePath;
-  const isPdf = details?.mimeType === 'application/pdf';
-  const isPpt = details?.mimeType.includes('powerpoint') || details?.mimeType.includes('presentation');
+  const isPdf = !!details && /pdf/i.test(details.mimeType);
+  const isPpt = !!details && (/(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath));
 
   const fileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
@@ -91,8 +92,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return `${fileUrl}?${cacheBust}#page=${page}&zoom=page-fit&toolbar=0`;
   }, [details, fileUrl]);
 
-  // (Removed legacy JSZip fallback; using PPTX.js integration below)
-
   // PPTX rendering using PPTX.js + Reveal.js (instructor view)
   useEffect(() => {
     if (!details || !isPpt || details.officeMode) return;
@@ -122,6 +121,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('/vendor/jquery.min.js');
       if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('/vendor/jszip.min.js');
       if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('/vendor/reveal.js');
+      // Shim FileReaderJS expected by PPTXjs
+      (window as unknown as { FileReaderJS?: any }).FileReaderJS = (window as any).FileReaderJS || {};
+      (window as any).FileReaderJS.setSync = (window as any).FileReaderJS.setSync || function() {};
+      (window as any).FileReaderJS.setupBlob = (window as any).FileReaderJS.setupBlob || function() {};
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {
