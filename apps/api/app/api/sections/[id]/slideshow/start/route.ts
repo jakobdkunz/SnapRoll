@@ -32,48 +32,41 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const preventJump = (form.get('preventJump') as string) === 'true';
     const officeMode = (form.get('officeMode') as string) === 'true';
     const assetId = (form.get('assetId') as string | null) || null;
-    const sessionId = (form.get('sessionId') as string | null) || null;
-    let filePath: string;
-    let mimeType: string;
+    let asset: any = null;
     let finalTitle = title;
     
-    if (sessionId) {
-      // Reuse existing session with its PNGs
-      const existingSession = await prisma.slideshowSession.findFirst({
-        where: { 
-          id: sessionId,
-          section: { teacherId: (await prisma.section.findUnique({ where: { id: sectionId } }))?.teacherId }
-        },
-        include: {
-          slides: true
-        }
+    if (assetId) {
+      // Reuse existing asset
+      asset = await prisma.slideshowAsset.findUnique({ 
+        where: { id: assetId },
+        include: { slides: true }
       });
-      if (!existingSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-      
-      // Create new session with same file and copy all existing slides
-      filePath = existingSession.filePath;
-      mimeType = existingSession.mimeType;
-      finalTitle = existingSession.title;
-    } else if (assetId) {
-      const asset = await prisma.slideshowAsset.findUnique({ where: { id: assetId } });
       if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
-      filePath = asset.filePath;
-      mimeType = asset.mimeType;
       if (!title || title === 'Slideshow') finalTitle = asset.title;
     } else {
+      // Create new asset from uploaded file
       const file = form.get('file') as File | null;
       if (!file) return NextResponse.json({ error: 'File is required' }, { status: 400 });
+      
       const mime = file.type || 'application/octet-stream';
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const key = `slides/session/${sectionId}/${Date.now()}-${file.name}`;
+      const key = `slides/assets/${Date.now()}-${file.name}`;
       const { url } = await putWithToken(key, buffer, { 
         access: 'public', 
         contentType: mime, 
         addRandomSuffix: false
       });
-      filePath = url;
-      mimeType = mime;
+      
+      // Create the asset
+      asset = await prisma.slideshowAsset.create({
+        data: {
+          teacherId: (await prisma.section.findUnique({ where: { id: sectionId } }))?.teacherId!,
+          title: finalTitle,
+          filePath: url,
+          mimeType: mime,
+        }
+      });
     }
 
     // No server-side conversion. Client-side will pre-render PPTX/PDF to PNGs.
@@ -82,9 +75,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const session = await prisma.slideshowSession.create({
       data: {
         sectionId,
-        title: finalTitle,
-        filePath,
-        mimeType,
+        assetId: asset.id,
         officeMode,
         showOnDevices,
         allowDownload,
@@ -94,9 +85,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       },
     });
 
-    // If reusing an existing session, copy all the slides
-    if (sessionId && existingSession?.slides) {
-      const slideData = existingSession.slides.map(slide => ({
+    // If the asset has slides, copy them to the session
+    if (asset.slides && asset.slides.length > 0) {
+      const slideData = asset.slides.map(slide => ({
         sessionId: session.id,
         index: slide.index,
         imageUrl: slide.imageUrl,
@@ -104,11 +95,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
         height: slide.height,
       }));
       
-      if (slideData.length > 0) {
-        await prisma.slideshowSlide.createMany({
-          data: slideData
-        });
-      }
+      await prisma.slideshowSlide.createMany({
+        data: slideData
+      });
     }
 
     return NextResponse.json({ session }, { headers: { 'Cache-Control': 'no-store' } });

@@ -37,8 +37,12 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
 export async function POST(request: Request, { params }: { params: { sessionId: string } }) {
   try {
     const sessionId = params.sessionId;
-    const session = await prisma.slideshowSession.findUnique({ where: { id: sessionId } });
+    const session = await prisma.slideshowSession.findUnique({ 
+      where: { id: sessionId },
+      include: { asset: true }
+    });
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    
     const form = await request.formData();
     const indexStr = (form.get('index') as string | null) || '';
     const widthStr = (form.get('width') as string | null) || '';
@@ -47,24 +51,39 @@ export async function POST(request: Request, { params }: { params: { sessionId: 
     const width = Number.isFinite(Number(widthStr)) ? Number(widthStr) : undefined;
     const height = Number.isFinite(Number(heightStr)) ? Number(heightStr) : undefined;
     if (!Number.isFinite(index) || index < 1) return NextResponse.json({ error: 'Invalid index' }, { status: 400 });
+    
     const file = form.get('file') as File | null;
     if (!file) return NextResponse.json({ error: 'file is required' }, { status: 400 });
     if (!/png$/i.test(file.type)) return NextResponse.json({ error: 'file must be image/png' }, { status: 400 });
+    
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const key = `slides/rendered/${sessionId}/${index}.png`;
+    const key = `slides/rendered/${session.assetId}/${index}.png`;
     const { url } = await putWithToken(key, buffer, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
-    // Upsert slide
-    const slide = await prisma.slideshowSlide.upsert({
-      where: { sessionId_index: { sessionId, index } },
-      update: { imageUrl: url, width: width ?? null, height: height ?? null },
-      create: { sessionId, index, imageUrl: url, width: width ?? null, height: height ?? null },
-    });
-    // Optionally bump totalSlides if index is the largest
-    if (!session.totalSlides || index > session.totalSlides) {
-      await prisma.slideshowSession.update({ where: { id: sessionId }, data: { totalSlides: index } }).catch(() => null);
+    
+    // Upsert slide for both session and asset
+    const [sessionSlide, assetSlide] = await Promise.all([
+      prisma.slideshowSlide.upsert({
+        where: { sessionId_index: { sessionId, index } },
+        update: { imageUrl: url, width: width ?? null, height: height ?? null },
+        create: { sessionId, index, imageUrl: url, width: width ?? null, height: height ?? null },
+      }),
+      prisma.slideshowSlide.upsert({
+        where: { assetId_index: { assetId: session.assetId, index } },
+        update: { imageUrl: url, width: width ?? null, height: height ?? null },
+        create: { assetId: session.assetId, index, imageUrl: url, width: width ?? null, height: height ?? null },
+      })
+    ]);
+    
+    // Update asset's totalSlides if needed
+    if (!session.asset.totalSlides || index > session.asset.totalSlides) {
+      await prisma.slideshowAsset.update({ 
+        where: { id: session.assetId }, 
+        data: { totalSlides: index } 
+      }).catch(() => null);
     }
-    return NextResponse.json({ ok: true, slide }, { headers: { 'Cache-Control': 'no-store' } });
+    
+    return NextResponse.json({ ok: true, slide: sessionSlide }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal error';
     return NextResponse.json({ error: message }, { status: 500 });

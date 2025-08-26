@@ -7,22 +7,15 @@ export const revalidate = 0;
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const teacherId = params.id;
   
-  // Get recent slideshow sessions for this teacher's sections that have been converted to PNGs
-  const recentSessions = await prisma.slideshowSession.findMany({
+  // Get recent slideshow assets for this teacher that have been converted to PNGs
+  const recentAssets = await prisma.slideshowAsset.findMany({
     where: {
-      section: {
-        teacherId: teacherId
-      },
+      teacherId: teacherId,
       slides: {
-        some: {} // Only sessions that have been converted to PNGs
+        some: {} // Only assets that have been converted to PNGs
       }
     },
     include: {
-      section: {
-        select: {
-          title: true
-        }
-      },
       slides: {
         where: {
           index: 1 // First slide only
@@ -37,7 +30,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   });
 
   return NextResponse.json({ 
-    recentSessions
+    recentAssets
   }, { 
     headers: { 'Cache-Control': 'no-store' } 
   });
@@ -46,19 +39,17 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const teacherId = params.id;
   const { searchParams } = new URL(request.url);
-  const sessionId = searchParams.get('sessionId');
+  const assetId = searchParams.get('assetId');
 
-  if (!sessionId) {
-    return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
+  if (!assetId) {
+    return NextResponse.json({ error: 'assetId is required' }, { status: 400 });
   }
 
-  // Delete slideshow session and all related slides
-  await prisma.slideshowSession.delete({
+  // Delete slideshow asset and all related slides
+  await prisma.slideshowAsset.delete({
     where: {
-      id: sessionId,
-      section: {
-        teacherId: teacherId
-      }
+      id: assetId,
+      teacherId: teacherId
     }
   });
 

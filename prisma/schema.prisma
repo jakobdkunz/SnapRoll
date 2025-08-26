@@ -164,10 +164,8 @@ model SlideshowSession {
   id                   String   @id @default(cuid())
   section              Section  @relation(fields: [sectionId], references: [id])
   sectionId            String
-  title                String
-  filePath             String
-  mimeType             String
-  totalSlides          Int?
+  asset                SlideshowAsset @relation(fields: [assetId], references: [id])
+  assetId              String
   currentSlide         Int      @default(1)
   showOnDevices        Boolean  @default(true)
   allowDownload        Boolean  @default(true)
@@ -180,6 +178,7 @@ model SlideshowSession {
   slides               SlideshowSlide[]
 
   @@index([sectionId])
+  @@index([assetId])
 }
 
 model SlideshowAsset {
@@ -191,14 +190,19 @@ model SlideshowAsset {
   mimeType   String
   totalSlides Int?
   createdAt  DateTime @default(now())
+  // Relations
+  slides     SlideshowSlide[]
+  sessions   SlideshowSession[]
 
   @@index([teacherId])
 }
 
 model SlideshowSlide {
   id         String            @id @default(cuid())
-  session    SlideshowSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  sessionId  String
+  session    SlideshowSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId  String?
+  asset      SlideshowAsset?   @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetId    String?
   index      Int
   imageUrl   String
   width      Int?
@@ -206,5 +210,7 @@ model SlideshowSlide {
   createdAt  DateTime          @default(now())
 
   @@unique([sessionId, index])
+  @@unique([assetId, index])
   @@index([sessionId])
+  @@index([assetId])
 }
