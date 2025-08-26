@@ -55,7 +55,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         <div className="text-lg font-semibold truncate">{details.title}</div>
         <div className="ml-auto text-sm text-slate-600">Slide {current}{total ? ` / ${total}` : ''}</div>
       </div>
-      <div className="flex-1 relative bg-black">
+      <div className="flex-1 relative">
         {!slide ? (
           <div className="absolute inset-0 grid place-items-center p-6">
             <Card className="p-6 text-center">
@@ -63,7 +63,13 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
             </Card>
           </div>
         ) : (
-          <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="absolute inset-0 w-full h-full object-contain" />
+          <div className="absolute inset-0 grid place-items-center p-2 sm:p-4">
+            <img
+              src={slide.imageUrl}
+              alt={`Slide ${slide.index}`}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-sm bg-white"
+            />
+          </div>
         )}
       </div>
     </div>
