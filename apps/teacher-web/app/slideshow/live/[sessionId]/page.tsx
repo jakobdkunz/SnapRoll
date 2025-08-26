@@ -117,16 +117,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       }
     }
     async function ensureDeps() {
-      ensureCss('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
-      ensureCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
-      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
-      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
-      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
+      ensureCss('/vendor/reveal.css');
+      ensureCss('/vendor/pptxjs.css');
+      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('/vendor/jquery.min.js');
+      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('/vendor/jszip.min.js');
+      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('/vendor/reveal.js');
       const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
       const hasPlugin = w?.$?.fn?.pptxToHtml;
       if (!hasPlugin) {
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
-        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
+        await loadScript('/vendor/pptxjs.min.js');
+        await loadScript('/vendor/divs2slides.min.js');
       }
     }
     async function render() {
@@ -141,7 +141,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const jqFactory: JQueryFactory | undefined = wjq.jQuery;
       if (!jqFactory) return;
       jqFactory(host).pptxToHtml({
-        pptxFileUrl: directFileUrl || fileUrl,
+        pptxFileUrl: fileUrl || directFileUrl,
         slideMode: true,
         slidesScale: '100%',
         keyBoardShortCut: true,
