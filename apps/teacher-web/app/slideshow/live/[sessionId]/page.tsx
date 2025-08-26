@@ -94,6 +94,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [rawFileUrl]);
 
+  const pptxSourceUrl = useMemo(() => {
+    // Use the direct Blob URL for PPTX to avoid proxy interference
+    return rawFileUrl || '';
+  }, [rawFileUrl]);
+
   async function gotoSlide(slideNumber: number) {
     if (working || !details) return;
     setWorking(true);
@@ -231,9 +236,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       await ensurePptxLibs();
       await ensureHtml2Canvas();
       // Quick reachability test for the PPTX file
-      if (!proxiedFileUrl) throw new Error('No file URL found');
+      const testUrl = pptxSourceUrl || proxiedFileUrl;
+      if (!testUrl) throw new Error('No file URL found');
       try {
-        const testResp = await fetch(proxiedFileUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials });
+        const testResp = await fetch(testUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials, mode: 'cors' });
         if (!testResp.ok) throw new Error(`File not reachable (status ${testResp.status})`);
       } catch (e) {
         throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
@@ -248,7 +254,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       if (!pluginExists) throw new Error('PPTX renderer not available');
       const renderPromise = new Promise<void>((resolve) => {
         $(host).pptxToHtml({
-          pptxFileUrl: proxiedFileUrl,
+          pptxFileUrl: pptxSourceUrl,
           slideMode: true,
           slidesScale: '100%',
           keyBoardShortCut: false,
@@ -262,7 +268,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       // Timeout guard in case plugin never calls after()
       await Promise.race([
         renderPromise,
-        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX')), 10000)),
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX')), 30000)),
       ]);
       const Reveal = (window as any).Reveal;
       const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
