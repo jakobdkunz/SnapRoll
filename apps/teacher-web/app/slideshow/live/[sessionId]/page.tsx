@@ -53,6 +53,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const eraserRadius = 0.025; // 2.5% of canvas size - matches visual circle
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -143,11 +144,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     
     if (drawingMode === 'eraser') {
       // Eraser mode: remove strokes that intersect with the eraser
-      const currentSlideIndex = details?.currentSlide || 1;
-      const currentSlideDrawings = drawings[currentSlideIndex] || [];
-      const eraserRadius = 0.02; // 2% of canvas size
-      
-      const newSlideDrawings = currentSlideDrawings.filter((stroke: DrawingStroke) => {
+              const currentSlideIndex = details?.currentSlide || 1;
+        const currentSlideDrawings = drawings[currentSlideIndex] || [];
+        
+        const newSlideDrawings = currentSlideDrawings.filter((stroke: DrawingStroke) => {
         // Check if any point in the stroke is within eraser radius
         return !stroke.points.some((strokePoint: DrawingPoint) => {
           const distance = Math.sqrt(
@@ -864,11 +864,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 title="Eraser tool"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="10" strokeWidth="2" fill="rgba(239, 68, 68, 0.2)" />
                 </svg>
                 Eraser
               </Button>
-              <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1" title="Clear drawings">
+              <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1 text-red-600 hover:text-red-700" title="Clear drawings">
                 Clear
               </Button>
             </div>
@@ -947,10 +947,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 {/* Custom eraser cursor */}
                 {drawingMode === 'eraser' && (
                   <div 
-                    className="absolute pointer-events-none z-50 w-5 h-5 border-2 border-red-500 rounded-full bg-red-500/20"
+                    className="absolute pointer-events-none z-50 border-2 border-red-500 rounded-full bg-red-500/20"
                     style={{
-                      left: mousePosition.x - 10,
-                      top: mousePosition.y - 10,
+                      width: `${eraserRadius * 200}px`,
+                      height: `${eraserRadius * 200}px`,
+                      left: mousePosition.x - (eraserRadius * 100),
+                      top: mousePosition.y - (eraserRadius * 100),
                       transform: 'translate(0, 0)'
                     }}
                   />
