@@ -824,7 +824,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
               <Button 
                 variant={drawingMode === 'mouse' ? 'primary' : 'ghost'} 
                 onClick={() => setDrawingMode('mouse')}
-                className="p-2"
+                className="p-2 -ml-1"
                 title="Mouse mode"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -870,11 +870,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 title="Eraser tool"
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" strokeWidth="2" fill="rgba(239, 68, 68, 0.2)" style={{ filter: 'brightness(1.2) saturate(1.5)' }} />
+                  <circle cx="12" cy="12" r="10" strokeWidth="2" fill="rgba(239, 68, 68, 0.2)" stroke="rgb(239, 68, 68)" />
                 </svg>
                 Eraser
               </Button>
-              <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1 text-red-600" title="Clear drawings">
+              <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1 !text-red-600" title="Clear drawings">
                 Clear
               </Button>
             </div>
