@@ -130,7 +130,7 @@ export default function AttendancePage() {
 
 
   return (
-    <div ref={containerRef} className="relative h-screen -mt-6 -mb-6">
+    <div ref={containerRef} className="relative" style={{ height: 'calc(100vh - 80px - 48px)' }}>
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
