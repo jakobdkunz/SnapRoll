@@ -18,7 +18,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="/vendor/jquery.min.js"></script>
         <script src="/vendor/jszip.min.js"></script>
         <script src="/vendor/reveal.js"></script>
-        <script dangerouslySetInnerHTML={{ __html: "window.FileReaderJS = window.FileReaderJS || {};" }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.FileReaderJS = window.FileReaderJS || {}; window.FileReaderJS.setSync = window.FileReaderJS.setSync || function(){};",
+          }}
+        />
         <script src="/vendor/pptxjs.min.js"></script>
         <script src="/vendor/divs2slides.min.js"></script>
       </head>
