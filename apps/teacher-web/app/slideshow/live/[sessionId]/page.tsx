@@ -245,9 +245,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
       }
       const host = document.createElement('div');
-      host.style.position = 'absolute';
-      host.style.left = '-10000px';
+      // Make it participate in layout with a known size; fully invisible to user
+      host.style.position = 'fixed';
       host.style.top = '0';
+      host.style.left = '0';
+      host.style.width = '1280px';
+      host.style.height = '720px';
+      host.style.opacity = '0';
+      host.style.pointerEvents = 'none';
+      host.style.background = '#fff';
       (renderHostRef.current || document.body).appendChild(host);
       const $ = (window as any).jQuery as any;
       const pluginExists = $ && $.fn && $.fn.pptxToHtml;
@@ -262,7 +268,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           mediaProcess: true,
           slideType: 'revealjs',
           revealjsPath: '/vendor/',
-          revealjsConfig: { controls: false, progress: false },
+          revealjsConfig: { controls: false, progress: false, embedded: true, width: 1280, height: 720 },
           after: () => { /* not all builds call after reliably */ },
         });
         // Wait for Reveal DOM to appear (fallback readiness signal)
