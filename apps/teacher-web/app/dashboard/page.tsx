@@ -194,7 +194,7 @@ export default function DashboardPage() {
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
           <div className="text-slate-500">Create your first section to begin.</div>
-          <Button className="mt-4 inline-flex items-center gap-2 bg-white border-0" onClick={async () => {
+          <Button className="mt-4 inline-flex items-center gap-2 bg-white border-0 text-slate-900" onClick={async () => {
             const title = prompt('Section title?');
             if (!title) return;
             await apiFetch<{ section: Section }>(`/api/sections`, {
@@ -344,7 +344,7 @@ export default function DashboardPage() {
         </>
       )}
       
-      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 bg-white border-0" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
+      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 bg-white border-0 text-slate-900" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
