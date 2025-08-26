@@ -69,7 +69,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       });
     }
 
-    // No server-side conversion. Client-side will pre-render PPTX/PDF to PNGs.
+    // No server-side conversion. Client-side will pre-render PDF to PNGs.
 
     await prisma.slideshowSession.updateMany({ where: { sectionId, closedAt: null }, data: { closedAt: new Date() } });
     const session = await prisma.slideshowSession.create({
