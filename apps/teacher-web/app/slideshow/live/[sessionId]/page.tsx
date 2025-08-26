@@ -414,7 +414,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   const rawFileUrl = details?.filePath;
   const isPdf = !!details && /pdf/i.test(details.mimeType);
-  const isPpt = !!details && (/(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath));
+  // PPTX support temporarily disabled - will be re-enabled with third-party API conversion
+  const isPpt = false;
   const proxiedFileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
     try {
@@ -430,10 +431,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [rawFileUrl]);
 
-  const pptxSourceUrl = useMemo(() => {
-    // Prefer API proxy (solves CORS) and fall back to raw URL
-    return proxiedFileUrl || rawFileUrl || '';
-  }, [proxiedFileUrl, rawFileUrl]);
+
 
   async function gotoSlide(slideNumber: number) {
     if (working || !details) return;
@@ -798,9 +796,26 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       <div className="flex-1 grid place-items-center p-6">
         <Card className="p-6 max-w-xl w-full">
           <div className="text-lg font-semibold mb-2">Prepare slides for live sync</div>
-          <div className="text-slate-600 mb-4">We will pre-render your {isPdf ? 'PDF' : isPpt ? 'PowerPoint' : 'file'} into per-slide PNGs on your device and upload them for students to view.</div>
+          <div className="text-slate-600 mb-4">
+            {isPdf ? (
+              <>We will pre-render your PDF into per-slide PNGs on your device and upload them for students to view.</>
+            ) : isPpt ? (
+              <>PowerPoint (.pptx) files are not supported yet. We're working on adding support via third-party conversion. Please convert your presentation to PDF format.</>
+            ) : (
+              <>We will pre-render your file into per-slide PNGs on your device and upload them for students to view.</>
+            )}
+          </div>
           <div className="flex items-center gap-3">
-            <Button disabled={rendering} onClick={() => { if (isPdf) void renderPdfToPngs(); else if (isPpt) void renderPptxToPngs(); else setError('Unsupported file'); }}>{rendering ? 'Rendering…' : 'Render now'}</Button>
+            <Button 
+              disabled={rendering || isPpt} 
+              onClick={() => { 
+                if (isPdf) void renderPdfToPngs(); 
+                else if (isPpt) setError('PowerPoint files not supported yet'); 
+                else setError('Unsupported file'); 
+              }}
+            >
+              {rendering ? 'Rendering…' : isPpt ? 'Not Supported' : 'Render now'}
+            </Button>
             {renderMsg && (<div className="text-sm text-slate-500">{renderMsg}</div>)}
           </div>
           {!!renderLogs.length && (
