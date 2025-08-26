@@ -554,7 +554,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       for (let i = 1; i <= doc.numPages; i++) {
         setRenderMsg(`Rendering slide ${i}/${doc.numPages}…`);
         const page = await doc.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
+        const viewport = page.getViewport({ scale: 3 });
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d')!;
         canvas.width = viewport.width;
@@ -742,7 +742,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         await new Promise((r) => setTimeout(r, 150));
         const container = mode === 'reveal' ? (host.querySelector('.reveal') as HTMLElement | null) : (host as HTMLElement);
         if (!container) throw new Error('Render container not found');
-        const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+        const canvas = await html2canvas(container, { 
+          backgroundColor: '#ffffff', 
+          scale: 3, 
+          useCORS: true,
+          allowTaint: false,
+          foreignObjectRendering: true,
+          imageTimeout: 15000,
+          logging: false
+        });
         const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
         await uploadPng(i + 1, blob, canvas.width, canvas.height);
       }
