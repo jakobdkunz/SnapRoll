@@ -9,7 +9,6 @@ import {
   HiOutlineUser,
   HiOutlineUserGroup,
   HiOutlineIdentification,
-  HiOutlineClipboardDocumentCheck,
   HiOutlineClipboardDocument,
   HiOutlineCheckCircle,
   HiOutlineCheckBadge,
@@ -19,9 +18,10 @@ import {
   HiOutlineTicket,
   HiOutlineDocumentText,
   HiOutlineDocumentCheck,
-  HiOutlineClipboardDocumentList,
+  HiOutlineClipboard,
   HiOutlineClipboardCheck,
-  HiOutlineClipboard
+  HiOutlineClipboardDocumentList,
+  HiOutlineClipboardDocumentCheck
 } from 'react-icons/hi2';
 
 const iconOptions = [
@@ -53,7 +53,7 @@ export default function IconOptionsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => router.push('/checkin')}>← Back to Check-in</Button>
+        <Button variant="ghost" onClick={() => router.push('/sections')}>← Back to Sections</Button>
         <div className="font-medium">Icon Options for Attendance Code</div>
       </div>
       
