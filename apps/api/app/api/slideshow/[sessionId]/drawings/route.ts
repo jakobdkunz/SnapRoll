@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@snaproll/lib';
 
-// In-memory storage for drawings (in production, use database)
+// In-memory storage for drawings (optimized to avoid database calls)
 const drawingStorage = new Map<string, any[]>();
 
 export async function GET(
@@ -9,16 +8,9 @@ export async function GET(
   { params }: { params: { sessionId: string } }
 ) {
   try {
-    const session = await db.slideshowSession.findUnique({
-      where: { id: params.sessionId },
-      select: { id: true }
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
-
+    // No database call - just return drawings from memory
     const drawings = drawingStorage.get(params.sessionId) || [];
+    console.log(`Returning ${drawings.length} drawings for session ${params.sessionId}`);
     return NextResponse.json({ drawings });
   } catch (error) {
     console.error('Error fetching drawings:', error);
@@ -31,18 +23,14 @@ export async function POST(
   { params }: { params: { sessionId: string } }
 ) {
   try {
-    const session = await db.slideshowSession.findUnique({
-      where: { id: params.sessionId },
-      select: { id: true }
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
-
-    const { drawings } = await request.json();
+    const body = await request.json();
+    const { drawings } = body;
     
-    // Store drawings in memory
+    if (!Array.isArray(drawings)) {
+      return NextResponse.json({ error: 'Invalid drawings data' }, { status: 400 });
+    }
+    
+    // Store drawings in memory (no database call)
     drawingStorage.set(params.sessionId, drawings);
     
     console.log(`Stored ${drawings.length} drawings for session ${params.sessionId}`);

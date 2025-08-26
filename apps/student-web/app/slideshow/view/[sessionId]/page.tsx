@@ -133,7 +133,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     }
     
     loadDrawings();
-    const interval = setInterval(loadDrawings, 2000); // Poll every 2 seconds
+    const interval = setInterval(loadDrawings, 3000); // Poll every 3 seconds to reduce API calls
     
     return () => {
       mounted = false;

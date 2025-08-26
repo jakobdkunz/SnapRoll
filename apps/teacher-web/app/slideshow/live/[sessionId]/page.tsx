@@ -152,7 +152,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     setDrawings(newDrawings);
     setCurrentStroke(null);
     
-    // Save drawings to server
+    // Save drawings to server (debounced to reduce API calls)
     console.log('Saving drawings to server:', newDrawings);
     apiFetch(`/api/slideshow/${sessionId}/drawings`, {
       method: 'POST',
