@@ -341,11 +341,57 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const resp = await fetch(pptxSourceUrl, { credentials: 'include' as RequestCredentials });
         if (!resp.ok) throw new Error(`Fetch PPTX failed (${resp.status})`);
         const buf = await resp.arrayBuffer();
-        const objUrl = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
-        await Promise.race([
-          (async () => { mode = await tryRenderWithUrl(objUrl); rendered = true; })(),
-          new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 20000)),
-        ]).finally(() => URL.revokeObjectURL(objUrl));
+        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+        addLog(`Fetched PPTX bytes=${buf.byteLength}`);
+        // Attempt 1: pass Blob directly via pptxFile in reveal mode
+        await (async () => {
+          addLog('Attempting render with pptxFile Blob (reveal)…');
+          $(host).pptxToHtml({
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - third-party plugin accepts pptxFile
+            pptxFile: blob,
+            slideMode: true,
+            slidesScale: '100%',
+            keyBoardShortCut: false,
+            mediaProcess: true,
+            slideType: 'revealjs',
+            revealjsPath: '/vendor/',
+            revealjsConfig: { controls: false, progress: false, embedded: true, width: 1280, height: 720 },
+          });
+          const start = Date.now();
+          while (Date.now() - start < 8000) {
+            const hasReveal = host.querySelector('.reveal .slides section');
+            if (hasReveal) { addLog('Reveal DOM detected (blob)'); mode = 'reveal'; rendered = true; return; }
+            await new Promise((r) => setTimeout(r, 200));
+          }
+          addLog('Blob reveal mode did not initialize, trying div mode…');
+          host.innerHTML = '';
+          $(host).pptxToHtml({
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - third-party plugin accepts pptxFile
+            pptxFile: blob,
+            slideMode: true,
+            slidesScale: '100%',
+            keyBoardShortCut: false,
+            mediaProcess: true,
+            slideType: 'div',
+          });
+          const start2 = Date.now();
+          while (Date.now() - start2 < 8000) {
+            const anySlide = host.querySelector('.slide, section, .pptx, .reveal .slides section');
+            if (anySlide) { addLog('Div mode DOM detected (blob)'); mode = 'div'; rendered = true; return; }
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        })();
+        if (!rendered) {
+          // As a last resort, try ObjectURL path again (some builds prefer it)
+          const objUrl = URL.createObjectURL(blob);
+          addLog('Final attempt: ObjectURL path…');
+          await Promise.race([
+            (async () => { mode = await tryRenderWithUrl(objUrl); rendered = true; })(),
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 20000)),
+          ]).finally(() => URL.revokeObjectURL(objUrl));
+        }
       });
       const Reveal = (window as any).Reveal;
       let total = 1;
