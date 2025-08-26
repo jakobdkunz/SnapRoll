@@ -384,7 +384,7 @@ export default function SectionsPage() {
         
         <div className="flex items-center justify-center">
           <button
-            className="text-primary font-medium hover:underline"
+            className="text-blue-500 font-medium hover:underline"
             onClick={() => { if (studentId) window.location.href = '/my-attendance'; }}
           >
             My attendance →
