@@ -55,22 +55,24 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         <div className="text-lg font-semibold truncate">{details.title}</div>
         <div className="ml-auto text-sm text-slate-600">Slide {current}{total ? ` / ${total}` : ''}</div>
       </div>
-      <div className="flex-1 relative">
-        {!slide ? (
-          <div className="absolute inset-0 grid place-items-center p-6">
-            <Card className="p-6 text-center">
-              <div className="text-slate-600">Waiting for slides…</div>
-            </Card>
-          </div>
-        ) : (
-          <div className="absolute inset-0 grid place-items-center p-2 sm:p-4">
-            <img
-              src={slide.imageUrl}
-              alt={`Slide ${slide.index}`}
-              className="max-w-full max-h-full object-contain rounded-lg shadow-sm bg-white"
-            />
-          </div>
-        )}
+      <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+        <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+          {!slide ? (
+            <div className="absolute inset-0 grid place-items-center p-6">
+              <Card className="p-6 text-center">
+                <div className="text-slate-600">Waiting for slides…</div>
+              </Card>
+            </div>
+          ) : (
+            <div className="absolute inset-0 grid place-items-center p-2 sm:p-4">
+              <img
+                src={slide.imageUrl}
+                alt={`Slide ${slide.index}`}
+                className="max-w-full max-h-full object-contain rounded-lg shadow-sm bg-white"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

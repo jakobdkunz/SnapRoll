@@ -484,8 +484,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
           </div>
         </div>
-        <div className="flex-1 relative bg-black">
-          <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="absolute inset-0 w-full h-full object-contain" />
+        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+          <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+            <div className="absolute inset-0 grid place-items-center p-2 sm:p-4">
+              <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="max-w-full max-h-full object-contain rounded-lg shadow-sm bg-white" />
+            </div>
+          </div>
         </div>
       </>
     );
