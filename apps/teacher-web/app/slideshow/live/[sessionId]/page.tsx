@@ -168,6 +168,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (!anyWin.JSZip) { await loadScript('/vendor/jszip.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded JSZip'); }
     if (!anyWin.Reveal) { await loadScript('/vendor/reveal.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded Reveal.js'); }
     if (!anyWin.$ && anyWin.jQuery) anyWin.$ = anyWin.jQuery;
+    try {
+      // Ensure jQuery AJAX uses credentials for our proxy
+      anyWin.$?.ajaxSetup?.({ xhrFields: { withCredentials: true } });
+      // Log ajax errors to render logs
+      anyWin.$?.(document).off('ajaxError.__pptx').on('ajaxError.__pptx', (_evt: any, jqxhr: any, settings: any, thrown: any) => {
+        addLog(`ajaxError: url=${settings?.url} status=${jqxhr?.status} thrown=${thrown}`);
+      });
+    } catch {}
     const w = window as any;
     w.FileReaderJS = w.FileReaderJS || {};
     w.FileReaderJS.setSync = w.FileReaderJS.setSync || function(){};
@@ -406,6 +414,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <Button disabled={rendering} onClick={() => { if (isPdf) void renderPdfToPngs(); else if (isPpt) void renderPptxToPngs(); else setError('Unsupported file'); }}>{rendering ? 'Rendering…' : 'Render now'}</Button>
             {renderMsg && (<div className="text-sm text-slate-500">{renderMsg}</div>)}
           </div>
+          {!!renderLogs.length && (
+            <div className="mt-4 max-h-48 overflow-auto rounded bg-slate-100 text-slate-800 text-xs p-2 whitespace-pre-wrap">
+              {renderLogs.join('\n')}
+            </div>
+          )}
           <div ref={renderHostRef} />
         </Card>
       </div>
