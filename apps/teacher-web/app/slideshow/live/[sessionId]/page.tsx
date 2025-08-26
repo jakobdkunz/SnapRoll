@@ -121,6 +121,32 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => window.removeEventListener('resize', onResize);
   }, [imgAspect]);
 
+  // Keyboard navigation
+  useEffect(() => {
+    if (!slides.length) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const total = slides.length;
+        const current = Math.min(Math.max(1, details?.currentSlide || 1), total);
+        if (current > 1) {
+          gotoSlide(current - 1);
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const total = slides.length;
+        const current = Math.min(Math.max(1, details?.currentSlide || 1), total);
+        if (current < total) {
+          gotoSlide(current + 1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [slides.length, details?.currentSlide, gotoSlide]);
+
   const rawFileUrl = details?.filePath;
   const isPdf = !!details && /pdf/i.test(details.mimeType);
   const isPpt = !!details && (/(powerpoint|\.pptx?$)/i.test(details.mimeType) || /\.pptx?$/i.test(details.filePath));
@@ -533,14 +559,25 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           <div ref={stageRef} className="relative w-full h-full">
             <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
               <div
-                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
+                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center cursor-pointer"
                 style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
+                onClick={() => {
+                  const total = slides.length;
+                  const current = Math.min(Math.max(1, details?.currentSlide || 1), total);
+                  if (current < total) {
+                    gotoSlide(current + 1);
+                  } else {
+                    // Loop back to first slide
+                    gotoSlide(1);
+                  }
+                }}
+                title="Click to advance to next slide"
               >
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}
                   ref={imgRef}
-                  className="block w-full h-full object-contain"
+                  className="block w-full h-full object-contain pointer-events-none"
                   onLoad={() => {
                     const el = imgRef.current;
                     if (!el) return;
