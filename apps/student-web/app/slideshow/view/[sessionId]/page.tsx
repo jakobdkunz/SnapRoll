@@ -4,11 +4,15 @@ import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
 
+type SessionResponse = { id: string; title: string; currentSlide: number };
+ type SlideItem = { id: string; index: number; imageUrl: string };
+ type SlidesResponse = { slides: SlideItem[] };
+
 export default function SlideshowViewPage({ params }: { params: { sessionId: string } }) {
   const router = useRouter();
   const { sessionId } = params;
-  const [details, setDetails] = useState<{ id: string; title: string; currentSlide: number } | null>(null);
-  const [slides, setSlides] = useState<Array<{ id: string; index: number; imageUrl: string }>>([]);
+  const [details, setDetails] = useState<SessionResponse | null>(null);
+  const [slides, setSlides] = useState<SlideItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,8 +21,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     async function load() {
       try {
         setLoading(true);
-        const d = await apiFetch<any>(`/api/slideshow/${sessionId}`);
-        const s = await apiFetch<{ slides: Array<{ id: string; index: number; imageUrl: string }>}>(`/api/slideshow/${sessionId}/slides`);
+        const d = await apiFetch<SessionResponse>(`/api/slideshow/${sessionId}`);
+        const s = await apiFetch<SlidesResponse>(`/api/slideshow/${sessionId}/slides`);
         if (!mounted) return;
         setDetails({ id: d.id, title: d.title, currentSlide: d.currentSlide });
         setSlides(s.slides);
@@ -31,15 +35,17 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     load();
     const id = window.setInterval(async () => {
       try {
-        const d = await apiFetch<any>(`/api/slideshow/${sessionId}`);
-        const s = await apiFetch<{ slides: Array<{ id: string; index: number; imageUrl: string }> }>(`/api/slideshow/${sessionId}/slides`);
+        const d = await apiFetch<SessionResponse>(`/api/slideshow/${sessionId}`);
+        const s = await apiFetch<SlidesResponse>(`/api/slideshow/${sessionId}/slides`);
         if (!mounted) return;
         setDetails(prev => prev ? { ...prev, currentSlide: d.currentSlide } : { id: d.id, title: d.title, currentSlide: d.currentSlide });
         if (slides.length !== s.slides.length) setSlides(s.slides);
-      } catch {}
+      } catch {
+        /* noop */
+      }
     }, 2000);
     return () => { mounted = false; window.clearInterval(id); };
-  }, [sessionId]);
+  }, [sessionId, slides.length]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
@@ -64,12 +70,14 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
               </Card>
             </div>
           ) : (
-            <div className="absolute inset-0 grid place-items-center p-2 sm:p-4">
-              <img
-                src={slide.imageUrl}
-                alt={`Slide ${slide.index}`}
-                className="max-w-full max-h-full object-contain rounded-lg shadow-sm bg-white"
-              />
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="rounded-xl overflow-hidden shadow bg-white">
+                <img
+                  src={slide.imageUrl}
+                  alt={`Slide ${slide.index}`}
+                  className="block max-w-[100vw] max-h-[calc(100dvh-64px)] sm:max-h-[calc(100dvh-72px)] object-contain"
+                />
+              </div>
             </div>
           )}
         </div>
