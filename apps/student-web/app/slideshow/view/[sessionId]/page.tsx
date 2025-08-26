@@ -83,23 +83,28 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
 
   // Compute stage height so page doesn't scroll and nav stays visible
   useEffect(() => {
-    function headerHeight(): number {
-      try {
-        return window.matchMedia('(min-width: 640px)').matches ? 72 : 64;
-      } catch {
-        return 64;
-      }
-    }
     const compute = () => {
-      const hh = headerHeight();
-      const nh = navRef.current ? navRef.current.getBoundingClientRect().height : 0;
-      const h = Math.max(0, window.innerHeight - hh - nh);
-      setStageHeight(h);
+      // Get actual header height from the sticky header
+      const header = document.querySelector('header');
+      const headerHeight = header ? header.getBoundingClientRect().height : 0;
+      
+      // Get nav bar height
+      const navHeight = navRef.current ? navRef.current.getBoundingClientRect().height : 0;
+      
+      // Calculate available height for stage
+      const availableHeight = Math.max(0, window.innerHeight - headerHeight - navHeight);
+      setStageHeight(availableHeight);
+      
       if (imgAspect) recomputeFrame(imgAspect);
     };
-    compute();
+    
+    // Wait for DOM to be ready
+    const timer = setTimeout(compute, 0);
     window.addEventListener('resize', compute);
-    return () => window.removeEventListener('resize', compute);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', compute);
+    };
   }, [imgAspect]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
