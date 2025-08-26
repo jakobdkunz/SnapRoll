@@ -513,7 +513,7 @@ export default function SectionsPage() {
           </div>
           <div className="mt-3 space-y-3">
             {recentSlides.map((r) => (
-              <a key={r.id} href={r.url} download className="block">
+              <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className="block">
                 <div className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 transition-colors">
                   {r.thumbnail ? (
                     <img 
@@ -535,10 +535,8 @@ export default function SectionsPage() {
                     </div>
                   </div>
                   <div className="flex-shrink-0">
-                    <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeWidth="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7,10 12,15 17,10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                     </svg>
                   </div>
                 </div>
