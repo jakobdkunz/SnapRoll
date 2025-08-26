@@ -945,14 +945,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 />
                 
                 {/* Custom eraser cursor */}
-                {drawingMode === 'eraser' && (
+                {drawingMode === 'eraser' && frameSize && (
                   <div 
                     className="absolute pointer-events-none z-50 border-2 border-red-500 rounded-full bg-red-500/20"
                     style={{
-                      width: `${eraserRadius * 200}px`,
-                      height: `${eraserRadius * 200}px`,
-                      left: mousePosition.x - (eraserRadius * 100),
-                      top: mousePosition.y - (eraserRadius * 100),
+                      width: `${eraserRadius * frameSize.w}px`,
+                      height: `${eraserRadius * frameSize.h}px`,
+                      left: mousePosition.x - (eraserRadius * frameSize.w / 2),
+                      top: mousePosition.y - (eraserRadius * frameSize.h / 2),
                       transform: 'translate(0, 0)'
                     }}
                   />
