@@ -18,6 +18,12 @@ function formatDateMDY(dateStr: string) {
   return `${(m).toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}/${y}`;
 }
 
+function formatHeaderDateMD(date: Date) {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${m}/${d}`;
+}
+
 export default function MyAttendancePage() {
   const pathname = usePathname();
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -31,6 +37,7 @@ export default function MyAttendancePage() {
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -139,7 +146,7 @@ export default function MyAttendancePage() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [limit, loadHistory, PER_COL]);
+  }, [limit, loadHistory, data?.totalDays, PER_COL]);
 
   useEffect(() => {
     if (studentId && initialized) {
@@ -220,7 +227,7 @@ export default function MyAttendancePage() {
     <div className="space-y-4 p-6">
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-slate-600 pl-4">
             {data.totalDays > 0
               ? (() => {
                   const end = Math.min(data.totalDays, Math.max(1, data.totalDays - offset));
@@ -257,18 +264,18 @@ export default function MyAttendancePage() {
           </div>
         </div>
         
-        <div ref={containerRef} className="relative overflow-x-auto">
-          <table className="min-w-full text-sm">
+        <div ref={containerRef} className="relative overflow-hidden">
+          <table className="min-w-full border-separate border-spacing-0 table-fixed">
             <thead>
               <tr>
-                <th className="text-left p-2 text-slate-600" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
+                <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
                 {grid.days.map((d) => (
                   <th 
                     key={d.date} 
-                    className="p-2 text-slate-600 whitespace-nowrap text-center"
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
-                    {isMobile ? formatDateMDY(d.date).slice(0, 5) : formatDateMDY(d.date)}
+                    {isMobile ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)}
                   </th>
                 ))}
               </tr>
@@ -277,8 +284,10 @@ export default function MyAttendancePage() {
               {grid.sections.map((s) => {
                 const byDate = grid.recBySection.get(s.id)!;
                 return (
-                  <tr key={s.id} className="border-t">
-                    <td className="p-2 font-medium text-slate-800 whitespace-nowrap" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>{s.title}</td>
+                  <tr key={s.id} className="odd:bg-slate-50">
+                    <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>
+                      <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
+                    </td>
                     {grid.days.map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'BLANK';
@@ -297,7 +306,7 @@ export default function MyAttendancePage() {
                       return (
                         <td 
                           key={d.date} 
-                          className="p-2 text-center align-middle"
+                          className="pl-1 pr-2 py-2 text-center"
                           style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                         >
                           <div className="relative group inline-block">
