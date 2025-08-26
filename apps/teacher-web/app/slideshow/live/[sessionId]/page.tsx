@@ -829,6 +829,28 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
               </Button>
+            </div>
+            
+            {/* Color palette - always visible */}
+            <div className="flex items-center gap-1">
+              {(['red', 'blue', 'green', 'yellow', 'black', 'white'] as DrawingColor[]).map(color => (
+                <button
+                  key={color}
+                  className={`w-6 h-6 rounded-full border-2 ${
+                    drawingColor === color ? 'border-slate-800' : 'border-slate-300'
+                  }`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => {
+                    setDrawingColor(color);
+                    setDrawingMode('pen'); // Switch to pen mode when color is selected
+                  }}
+                  title={color}
+                />
+              ))}
+            </div>
+            
+            {/* Eraser and Clear buttons */}
+            <div className="flex items-center gap-1">
               <Button 
                 variant={drawingMode === 'eraser' ? 'primary' : 'ghost'} 
                 onClick={() => setDrawingMode('eraser')}
@@ -836,35 +858,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 title="Eraser tool"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </Button>
+              <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1" title="Clear drawings">
+                Clear
+              </Button>
             </div>
-            
-            {(drawingMode === 'pen' || drawingMode === 'eraser') && (
-              <>
-                {drawingMode === 'pen' && (
-                  <div className="flex items-center gap-1">
-                    {(['red', 'blue', 'green', 'yellow', 'black', 'white'] as DrawingColor[]).map(color => (
-                      <button
-                        key={color}
-                        className={`w-6 h-6 rounded-full border-2 ${
-                          drawingColor === color ? 'border-slate-800' : 'border-slate-300'
-                        }`}
-                        style={{ backgroundColor: color }}
-                        onClick={() => setDrawingColor(color)}
-                        title={color}
-                      />
-                    ))}
-                  </div>
-                )}
-                <Button variant="ghost" onClick={clearDrawings} className="p-2" title="Clear drawings">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </Button>
-              </>
-            )}
           </div>
           
           <div className="ml-auto flex items-center gap-2">
