@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
+import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
@@ -189,7 +190,10 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
       <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
-        <Button variant="ghost" onClick={() => router.back()}>Back</Button>
+        <Button variant="ghost" onClick={() => router.back()}>
+          <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
+          Back
+        </Button>
         <div className="text-lg font-semibold truncate">{details.title}</div>
         
         {/* Drawing toggle */}

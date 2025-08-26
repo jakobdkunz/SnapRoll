@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
+import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingMode = 'mouse' | 'pen' | 'eraser';
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
@@ -811,9 +812,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       <>
         <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
             Back
           </Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
