@@ -190,7 +190,7 @@ export default function AttendancePage() {
         </div>
 
         {/* Progress Bar Widget - Bottom */}
-        <div className="mb-20">
+        <div className="mb-20 flex justify-center">
           <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
             {status ? (
               <>
