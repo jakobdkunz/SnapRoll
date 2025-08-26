@@ -243,10 +243,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const addLog = (m: string) => { captured.push(m); setRenderLogs((prev) => [...prev, m]); };
       const origError = console.error;
       const origWarn = console.warn;
+      let errHandler: ((e: ErrorEvent) => void) | null = null;
+      let rejHandler: ((e: PromiseRejectionEvent) => void) | null = null;
       (console as any).error = (...args: any[]) => { try { addLog(`console.error: ${args.map(String).join(' ')}`); } catch {} origError.apply(console, args as any); };
       ;(console as any).warn = (...args: any[]) => { try { addLog(`console.warn: ${args.map(String).join(' ')}`); } catch {} origWarn.apply(console, args as any); };
-      const errHandler = (e: ErrorEvent) => addLog(`window.error: ${e.message}`);
-      const rejHandler = (e: PromiseRejectionEvent) => addLog(`unhandledrejection: ${e.reason?.message || String(e.reason)}`);
+      errHandler = (e: ErrorEvent) => addLog(`window.error: ${e.message}`);
+      rejHandler = (e: PromiseRejectionEvent) => addLog(`unhandledrejection: ${e.reason?.message || String(e.reason)}`);
       window.addEventListener('error', errHandler);
       window.addEventListener('unhandledrejection', rejHandler);
       await ensurePptxLibs();
@@ -342,9 +344,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       setError(`${msg}`);
     } finally {
       // restore console and listeners
-      // We intentionally don't restore console.* to keep logs during this session
-      window.removeEventListener('error', () => {} as any);
-      window.removeEventListener('unhandledrejection', () => {} as any);
+      console.error = console.error;
+      console.warn = console.warn;
+      // Remove listeners if they were added
+      // Using bound variables to avoid TS issues
+      try {
+        // @ts-expect-error types ok at runtime
+        if (errHandler) window.removeEventListener('error', errHandler);
+        // @ts-expect-error types ok at runtime
+        if (rejHandler) window.removeEventListener('unhandledrejection', rejHandler);
+      } catch {}
       setRendering(false);
       setRenderMsg('');
     }
