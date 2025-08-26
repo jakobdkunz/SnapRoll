@@ -32,10 +32,26 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const preventJump = (form.get('preventJump') as string) === 'true';
     const officeMode = (form.get('officeMode') as string) === 'true';
     const assetId = (form.get('assetId') as string | null) || null;
+    const sessionId = (form.get('sessionId') as string | null) || null;
     let filePath: string;
     let mimeType: string;
     let finalTitle = title;
-    if (assetId) {
+    
+    if (sessionId) {
+      // Reuse existing session
+      const existingSession = await prisma.slideshowSession.findFirst({
+        where: { 
+          id: sessionId,
+          section: { teacherId: (await prisma.section.findUnique({ where: { id: sectionId } }))?.teacherId }
+        }
+      });
+      if (!existingSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+      
+      // Create new session with same file but new settings
+      filePath = existingSession.filePath;
+      mimeType = existingSession.mimeType;
+      finalTitle = existingSession.title;
+    } else if (assetId) {
       const asset = await prisma.slideshowAsset.findUnique({ where: { id: assetId } });
       if (!asset) return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
       filePath = asset.filePath;
