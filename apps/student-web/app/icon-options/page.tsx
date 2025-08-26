@@ -19,9 +19,7 @@ import {
   HiOutlineDocumentText,
   HiOutlineDocumentCheck,
   HiOutlineClipboard,
-  HiOutlineClipboardCheck,
-  HiOutlineClipboardDocumentList,
-  HiOutlineClipboardDocumentCheck
+  HiOutlineClipboardCheck
 } from 'react-icons/hi2';
 
 const iconOptions = [
@@ -32,7 +30,6 @@ const iconOptions = [
   { name: 'HiOutlineUser', icon: HiOutlineUser, description: 'Single person' },
   { name: 'HiOutlineUserGroup', icon: HiOutlineUserGroup, description: 'Group of people' },
   { name: 'HiOutlineIdentification', icon: HiOutlineIdentification, description: 'ID card' },
-  { name: 'HiOutlineClipboardDocumentCheck', icon: HiOutlineClipboardDocumentCheck, description: 'Clipboard with check' },
   { name: 'HiOutlineClipboardDocument', icon: HiOutlineClipboardDocument, description: 'Clipboard with document' },
   { name: 'HiOutlineCheckCircle', icon: HiOutlineCheckCircle, description: 'Check in circle' },
   { name: 'HiOutlineCheckBadge', icon: HiOutlineCheckBadge, description: 'Check badge' },
@@ -42,7 +39,6 @@ const iconOptions = [
   { name: 'HiOutlineTicket', icon: HiOutlineTicket, description: 'Ticket' },
   { name: 'HiOutlineDocumentText', icon: HiOutlineDocumentText, description: 'Document with text' },
   { name: 'HiOutlineDocumentCheck', icon: HiOutlineDocumentCheck, description: 'Document with check' },
-  { name: 'HiOutlineClipboardDocumentList', icon: HiOutlineClipboardDocumentList, description: 'Clipboard with list' },
   { name: 'HiOutlineClipboardCheck', icon: HiOutlineClipboardCheck, description: 'Clipboard with checkmark' },
   { name: 'HiOutlineClipboard', icon: HiOutlineClipboard, description: 'Simple clipboard' }
 ];
