@@ -54,20 +54,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     async function loadSession() {
       try {
         setDebug('Loading session...');
-        const response = await apiFetch(`/api/slideshow/${sessionId}`);
+        const data = await apiFetch<SessionDetails>(`/api/slideshow/${sessionId}`);
         if (cancelled) return;
         
-        if (!response.ok) {
-          setError('Session not found');
-          return;
-        }
-        
-        const data = await response.json();
         setDetails(data);
         setDebug(`Loaded session: ${data.id}\nmime=${data.mimeType} pdf=${data.mimeType === 'application/pdf'} ppt=${data.mimeType.includes('powerpoint') || data.mimeType.includes('presentation')} officeMode=${data.officeMode || false} url=${data.filePath}`);
       } catch (err) {
         if (cancelled) return;
-        setError((err as Error).message);
+        setError((err as Error).message || 'Session not found');
       } finally {
         if (!cancelled) {
           setLoading(false);
