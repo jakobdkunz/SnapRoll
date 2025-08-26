@@ -18,10 +18,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       instructorLastSeenAt: { gt: cutoff },
       allowDownload: true,
     },
+    include: { asset: true },
     orderBy: { instructorLastSeenAt: 'desc' },
     take: 20,
   });
-  const recents = sessions.map((s) => ({ id: s.id, title: s.title, url: s.filePath, allowDownload: s.allowDownload, lastSeenAt: (s.instructorLastSeenAt ?? s.createdAt).toISOString() }));
+  const recents = sessions.map((s) => ({ id: s.id, title: s.asset.title, url: s.asset.filePath, allowDownload: s.allowDownload, lastSeenAt: (s.instructorLastSeenAt ?? s.createdAt).toISOString() }));
   return NextResponse.json({ recents }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
