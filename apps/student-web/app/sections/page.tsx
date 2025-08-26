@@ -266,8 +266,8 @@ export default function SectionsPage() {
     };
   }, [mounted, studentId]);
 
-  // Don't render anything until client-side hydration is complete
-  if (!isClient) {
+  // Don't render anything until client-side hydration is complete AND we have a student ID
+  if (!isClient || !studentId) {
     return (
       <div className="space-y-6">
         <Card className="p-6 space-y-3">
@@ -296,7 +296,6 @@ export default function SectionsPage() {
   }
 
   if (!mounted) return null;
-  if (!studentId) return <div>Please go back and enter your email.</div>;
 
   if (loading && !initialized) {
     return (
