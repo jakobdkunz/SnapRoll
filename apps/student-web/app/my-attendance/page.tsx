@@ -112,7 +112,20 @@ export default function MyAttendancePage() {
   }, [data]);
 
 
-  if (!studentId) return <div className="p-6">Please go back and enter your email.</div>;
+  if (!studentId) return (
+    <div className="space-y-4 p-6">
+      <Card className="p-4">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <div className="flex gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-6 w-16 rounded" />
+            ))}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
   if (loading) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
