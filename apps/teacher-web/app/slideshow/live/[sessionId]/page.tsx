@@ -30,7 +30,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [details, setDetails] = useState<SessionDetails | null>(null);
   const [working, setWorking] = useState(false);
   const [debug, setDebug] = useState('');
-  
+
   const containerRef = useRef<HTMLDivElement>(null);
   const pptContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -121,6 +121,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('/vendor/jquery.min.js');
       if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('/vendor/jszip.min.js');
       if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('/vendor/reveal.js');
+      // Ensure $ alias exists
+      const wAny = window as unknown as { jQuery?: any; $?: any };
+      if (wAny.jQuery && !wAny.$) {
+        wAny.$ = wAny.jQuery;
+      }
       // Shim FileReaderJS expected by PPTXjs
       (window as unknown as { FileReaderJS?: any }).FileReaderJS = (window as any).FileReaderJS || {};
       (window as any).FileReaderJS.setSync = (window as any).FileReaderJS.setSync || function() {};
@@ -143,15 +148,20 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const wjq = window as unknown as { jQuery?: JQueryFactory };
       const jqFactory: JQueryFactory | undefined = wjq.jQuery;
       if (!jqFactory) return;
-      jqFactory(host).pptxToHtml({
-        pptxFileUrl: fileUrl || directFileUrl,
-        slideMode: true,
-        slidesScale: '100%',
-        keyBoardShortCut: true,
-        mediaProcess: true,
-        slideType: 'revealjs',
-        revealjsConfig: { controls: true, progress: true },
-      });
+      try {
+        jqFactory(host).pptxToHtml({
+          pptxFileUrl: fileUrl || directFileUrl,
+          slideMode: true,
+          slidesScale: '100%',
+          keyBoardShortCut: true,
+          mediaProcess: true,
+          slideType: 'revealjs',
+          revealjsPath: '/vendor/',
+          revealjsConfig: { controls: true, progress: true },
+        });
+      } catch (e) {
+        setDebug((prev) => prev + `\nPPTX: render error: ${(e as Error)?.message || String(e)}`);
+      }
       // After mount, try to sync to current slide and wire changes
       setTimeout(() => {
         const wReveal = (window as unknown as { Reveal?: { on?: (evt: string, cb: (e: any) => void) => void; slide?: (h: number, v?: number) => void } }).Reveal;
@@ -172,6 +182,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           // ignore
         }
       }, 250);
+      // Fallback: if nothing rendered after a few seconds, surface an error
+      setTimeout(() => {
+        if (cancelled || !pptContainerRef.current) return;
+        const hasContent = pptContainerRef.current.innerHTML.trim().length > 0;
+        if (!hasContent) {
+          setError('Failed to load PPTX. Try toggling Office Mode or re-uploading the file.');
+          setDebug((prev) => prev + '\nPPTX: container remained empty after render attempt');
+        }
+      }, 4000);
     }
     render();
     return () => { cancelled = true; };
