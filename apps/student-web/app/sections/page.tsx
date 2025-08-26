@@ -25,6 +25,7 @@ export default function SectionsPage() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [recentSlides, setRecentSlides] = useState<RecentSlidesResponse['recents']>([]);
+  const [isClient, setIsClient] = useState(false);
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -140,6 +141,7 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
+    setIsClient(true);
     // Use a longer delay to ensure localStorage is available and retry if needed
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
@@ -280,7 +282,7 @@ export default function SectionsPage() {
 
 
 
-  if (!mounted) return null;
+  if (!mounted || !isClient) return null;
   if (!studentId) return (
     <div className="space-y-6">
       <Card className="p-6 space-y-3">
