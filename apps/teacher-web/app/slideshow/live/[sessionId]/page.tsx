@@ -95,9 +95,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [rawFileUrl]);
 
   const pptxSourceUrl = useMemo(() => {
-    // Use the direct Blob URL for PPTX to avoid proxy interference
-    return rawFileUrl || '';
-  }, [rawFileUrl]);
+    // Prefer API proxy (solves CORS) and fall back to raw URL
+    return proxiedFileUrl || rawFileUrl || '';
+  }, [proxiedFileUrl, rawFileUrl]);
 
   async function gotoSlide(slideNumber: number) {
     if (working || !details) return;
@@ -236,10 +236,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       await ensurePptxLibs();
       await ensureHtml2Canvas();
       // Quick reachability test for the PPTX file
-      const testUrl = pptxSourceUrl || proxiedFileUrl;
+      const testUrl = pptxSourceUrl;
       if (!testUrl) throw new Error('No file URL found');
       try {
-        const testResp = await fetch(testUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials, mode: 'cors' });
+        const testResp = await fetch(testUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials });
         if (!testResp.ok) throw new Error(`File not reachable (status ${testResp.status})`);
       } catch (e) {
         throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
@@ -252,24 +252,38 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const $ = (window as any).jQuery as any;
       const pluginExists = $ && $.fn && $.fn.pptxToHtml;
       if (!pluginExists) throw new Error('PPTX renderer not available');
-      const renderPromise = new Promise<void>((resolve) => {
-        $(host).pptxToHtml({
-          pptxFileUrl: pptxSourceUrl,
-          slideMode: true,
-          slidesScale: '100%',
-          keyBoardShortCut: false,
-          mediaProcess: true,
-          slideType: 'revealjs',
-          revealjsPath: '/vendor/',
-          revealjsConfig: { controls: false, progress: false },
-          after: () => resolve(),
+      let rendered = false;
+      async function tryRenderWithUrl(url: string): Promise<void> {
+        await new Promise<void>((resolve) => {
+          $(host).pptxToHtml({
+            pptxFileUrl: url,
+            slideMode: true,
+            slidesScale: '100%',
+            keyBoardShortCut: false,
+            mediaProcess: true,
+            slideType: 'revealjs',
+            revealjsPath: '/vendor/',
+            revealjsConfig: { controls: false, progress: false },
+            after: () => resolve(),
+          });
         });
-      });
-      // Timeout guard in case plugin never calls after()
+      }
+      // First attempt: use (proxied) URL
       await Promise.race([
-        renderPromise,
-        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX')), 30000)),
-      ]);
+        (async () => { await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via URL')), 15000)),
+      ]).catch(async () => {
+        // Fallback: fetch as ArrayBuffer and render via Object URL (avoids CORS issues)
+        const resp = await fetch(pptxSourceUrl, { credentials: 'include' as RequestCredentials });
+        if (!resp.ok) throw new Error(`Fetch PPTX failed (${resp.status})`);
+        const buf = await resp.arrayBuffer();
+        const objUrl = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
+        await Promise.race([
+          (async () => { await tryRenderWithUrl(objUrl); rendered = true; })(),
+          new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 15000)),
+        ]);
+        URL.revokeObjectURL(objUrl);
+      });
       const Reveal = (window as any).Reveal;
       const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
       const html2canvas = (window as any).html2canvas as (node: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
