@@ -75,9 +75,9 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
                   {(showLocal ?? session?.showResults) ? (
-                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `${pct}%` }} />
                   ) : (
-                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `0%` }} />
+                                          <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `0%` }} />
                   )}
                   <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
                     <div className="font-medium">{opt}</div>

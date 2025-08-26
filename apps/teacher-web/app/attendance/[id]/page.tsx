@@ -195,14 +195,14 @@ export default function AttendancePage() {
             {status ? (
               <>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-primary">
+                  <div className="text-2xl font-bold text-blue-500">
                     {status.checkedIn}/{status.totalStudents}
                   </div>
                   <div className="text-sm text-slate-500">students checked in</div>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
                   <div 
-                    className="bg-primary h-5 rounded-full transition-all duration-300"
+                    className="bg-blue-500 h-5 rounded-full transition-all duration-300"
                     style={{ width: `${status.progress}%` }}
                   />
                 </div>

@@ -50,7 +50,7 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
               className="inline-block w-5 h-5 rounded-md border border-slate-300 bg-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary grid place-items-center"
               aria-hidden
             >
-              <svg className={`h-4 w-4 text-primary ${showPrompt ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                <svg className={`h-4 w-4 text-blue-500 ${showPrompt ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
             </span>
             <span>Show prompt on student devices</span>
           </label>
@@ -65,7 +65,7 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
               className="inline-block w-5 h-5 rounded-md border border-slate-300 bg-white peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary grid place-items-center"
               aria-hidden
             >
-              <svg className={`h-4 w-4 text-primary ${allowMultiple ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                <svg className={`h-4 w-4 text-blue-500 ${allowMultiple ? 'opacity-100' : 'opacity-0'}`} viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
             </span>
             <span>Allow multiple answers</span>
           </label>
