@@ -141,12 +141,12 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     };
   }, [sessionId]);
 
-  // Redraw all strokes when drawings change or showDrawings changes
+  // Redraw all strokes when drawings change or showDrawings changes or frame size changes
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
-    if (!canvas || !ctx) {
-      console.log('Canvas not ready for redraw:', { canvas: !!canvas, ctx: !!ctx });
+    if (!canvas || !ctx || !frameSize) {
+      console.log('Canvas not ready for redraw:', { canvas: !!canvas, ctx: !!ctx, frameSize });
       return;
     }
     
@@ -162,15 +162,22 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      // Scale coordinates to current canvas size
+      const scaleX = canvas.width / frameSize.w;
+      const scaleY = canvas.height / frameSize.h;
+      
+      const firstPoint = stroke.points[0];
+      ctx.moveTo(firstPoint.x * scaleX, firstPoint.y * scaleY);
       
       for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+        const point = stroke.points[i];
+        ctx.lineTo(point.x * scaleX, point.y * scaleY);
       }
       
       ctx.stroke();
     });
-  }, [drawings, showDrawings]);
+  }, [drawings, showDrawings, frameSize]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
