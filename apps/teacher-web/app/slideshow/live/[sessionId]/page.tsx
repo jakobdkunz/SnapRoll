@@ -254,25 +254,32 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       if (!pluginExists) throw new Error('PPTX renderer not available');
       let rendered = false;
       async function tryRenderWithUrl(url: string): Promise<void> {
-        await new Promise<void>((resolve) => {
-          $(host).pptxToHtml({
-            pptxFileUrl: url,
-            slideMode: true,
-            slidesScale: '100%',
-            keyBoardShortCut: false,
-            mediaProcess: true,
-            slideType: 'revealjs',
-            revealjsPath: '/vendor/',
-            revealjsConfig: { controls: false, progress: false },
-            after: () => resolve(),
-          });
+        $(host).pptxToHtml({
+          pptxFileUrl: url,
+          slideMode: true,
+          slidesScale: '100%',
+          keyBoardShortCut: false,
+          mediaProcess: true,
+          slideType: 'revealjs',
+          revealjsPath: '/vendor/',
+          revealjsConfig: { controls: false, progress: false },
+          after: () => { /* not all builds call after reliably */ },
         });
+        // Wait for Reveal DOM to appear (fallback readiness signal)
+        const start = Date.now();
+        while (Date.now() - start < 15000) {
+          const hasReveal = host.querySelector('.reveal .slides section');
+          if (hasReveal) return;
+          await new Promise((r) => setTimeout(r, 250));
+        }
+        throw new Error('Renderer did not initialize');
       }
       // First attempt: use (proxied) URL
       await Promise.race([
         (async () => { await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
         new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via URL')), 15000)),
-      ]).catch(async () => {
+      ]).catch(async (err) => {
+        console.warn('URL render failed, falling back to ObjectURL:', err);
         // Fallback: fetch as ArrayBuffer and render via Object URL (avoids CORS issues)
         const resp = await fetch(pptxSourceUrl, { credentials: 'include' as RequestCredentials });
         if (!resp.ok) throw new Error(`Fetch PPTX failed (${resp.status})`);
@@ -280,9 +287,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const objUrl = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }));
         await Promise.race([
           (async () => { await tryRenderWithUrl(objUrl); rendered = true; })(),
-          new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 15000)),
-        ]);
-        URL.revokeObjectURL(objUrl);
+          new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 20000)),
+        ]).finally(() => URL.revokeObjectURL(objUrl));
       });
       const Reveal = (window as any).Reveal;
       const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
