@@ -5,41 +5,27 @@ import {
   HiOutlineHandRaised,
   HiOutlineHandThumbUp,
   HiOutlineHandThumbDown,
-  HiOutlineHand,
   HiOutlineUser,
   HiOutlineUserGroup,
-  HiOutlineIdentification,
-  HiOutlineClipboardDocument,
   HiOutlineCheckCircle,
   HiOutlineCheckBadge,
-  HiOutlineFingerPrint,
   HiOutlineKey,
   HiOutlineQrCode,
-  HiOutlineTicket,
   HiOutlineDocumentText,
-  HiOutlineDocumentCheck,
-  HiOutlineClipboard,
-  HiOutlineClipboardCheck
+  HiOutlineClipboard
 } from 'react-icons/hi2';
 
 const iconOptions = [
   { name: 'HiOutlineHandRaised', icon: HiOutlineHandRaised, description: 'Raised hand (waving)' },
   { name: 'HiOutlineHandThumbUp', icon: HiOutlineHandThumbUp, description: 'Thumbs up' },
   { name: 'HiOutlineHandThumbDown', icon: HiOutlineHandThumbDown, description: 'Thumbs down' },
-  { name: 'HiOutlineHand', icon: HiOutlineHand, description: 'Open hand' },
   { name: 'HiOutlineUser', icon: HiOutlineUser, description: 'Single person' },
   { name: 'HiOutlineUserGroup', icon: HiOutlineUserGroup, description: 'Group of people' },
-  { name: 'HiOutlineIdentification', icon: HiOutlineIdentification, description: 'ID card' },
-  { name: 'HiOutlineClipboardDocument', icon: HiOutlineClipboardDocument, description: 'Clipboard with document' },
   { name: 'HiOutlineCheckCircle', icon: HiOutlineCheckCircle, description: 'Check in circle' },
   { name: 'HiOutlineCheckBadge', icon: HiOutlineCheckBadge, description: 'Check badge' },
-  { name: 'HiOutlineFingerPrint', icon: HiOutlineFingerPrint, description: 'Fingerprint' },
   { name: 'HiOutlineKey', icon: HiOutlineKey, description: 'Key' },
   { name: 'HiOutlineQrCode', icon: HiOutlineQrCode, description: 'QR code' },
-  { name: 'HiOutlineTicket', icon: HiOutlineTicket, description: 'Ticket' },
   { name: 'HiOutlineDocumentText', icon: HiOutlineDocumentText, description: 'Document with text' },
-  { name: 'HiOutlineDocumentCheck', icon: HiOutlineDocumentCheck, description: 'Document with check' },
-  { name: 'HiOutlineClipboardCheck', icon: HiOutlineClipboardCheck, description: 'Clipboard with checkmark' },
   { name: 'HiOutlineClipboard', icon: HiOutlineClipboard, description: 'Simple clipboard' }
 ];
 
