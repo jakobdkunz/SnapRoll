@@ -168,8 +168,7 @@ export default function AttendancePage() {
         </div>
       <div className="grid place-items-center gap-4 w-full mt-0">
       <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
-        <div className="text-sm uppercase tracking-wide text-slate-500 flex items-center justify-center gap-2">
-          <HiOutlineUserGroup className="w-5 h-5 text-black" />
+        <div className="text-sm uppercase tracking-wide text-slate-500">
           Attendance Code
         </div>
         {!status ? (
@@ -181,7 +180,8 @@ export default function AttendancePage() {
           <>
             <div className="mt-4 flex items-center justify-center">
               <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
-                <div className="flex gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <HiOutlineUserGroup className="w-8 h-8 text-black flex-shrink-0" />
                   {code.split('').map((ch, i) => (
                     <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
                       {ch}
