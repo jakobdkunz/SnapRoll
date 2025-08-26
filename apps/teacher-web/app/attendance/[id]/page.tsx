@@ -29,7 +29,6 @@ export default function AttendancePage() {
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [sectionTitle, setSectionTitle] = useState<string>('');
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [topOffset, setTopOffset] = useState<number>(0);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -128,23 +127,10 @@ export default function AttendancePage() {
     };
   }, [params.id, start]);
 
-  // Precisely cancel the layout main padding so content sits snug under the navbar
-  useEffect(() => {
-    function updateOffset() {
-      const container = containerRef.current;
-      if (!container) return;
-      const main = container.closest('main');
-      if (!main) return;
-      const padTop = parseFloat(window.getComputedStyle(main).paddingTop || '0') || 0;
-      setTopOffset(padTop);
-    }
-    updateOffset();
-    window.addEventListener('resize', updateOffset);
-    return () => window.removeEventListener('resize', updateOffset);
-  }, []);
+
 
   return (
-    <div ref={containerRef} className="relative min-h-dvh grid px-4 pt-4 overflow-hidden" style={{ top: topOffset ? -topOffset : undefined, position: 'relative' }}>
+    <div ref={containerRef} className="relative">
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
@@ -156,8 +142,8 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 grid w-full">
-        <div className="flex items-center justify-between mb-4">
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
