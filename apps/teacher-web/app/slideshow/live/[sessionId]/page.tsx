@@ -414,8 +414,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   const rawFileUrl = details?.filePath;
   const isPdf = !!details && /pdf/i.test(details.mimeType);
-  // PPTX support temporarily disabled - will be re-enabled with third-party API conversion
-  const isPpt = false;
   const proxiedFileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
     try {
@@ -478,47 +476,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }
 
-  async function ensurePptxLibs() {
-    const addLog = (m: string) => setRenderLogs((prev) => [...prev, m]);
-    // CSS
-      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
-    if (!links.some((l) => l.href.endsWith('/vendor/reveal.css'))) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = '/vendor/reveal.css';
-      document.head.appendChild(link);
-      addLog('Loaded reveal.css');
-    }
-    if (!links.some((l) => l.href.endsWith('/vendor/pptxjs.css'))) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-      link.href = '/vendor/pptxjs.css';
-        document.head.appendChild(link);
-      addLog('Loaded pptxjs.css');
-    }
-    const anyWin = window as unknown as { jQuery?: any; $?: any; JSZip?: any; Reveal?: any };
-    if (!anyWin.jQuery) { await loadScript('/vendor/jquery.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded jQuery'); }
-    if (!anyWin.JSZip) { await loadScript('/vendor/jszip.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded JSZip'); }
-    if (!anyWin.Reveal) { await loadScript('/vendor/reveal.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded Reveal.js'); }
-    if (!anyWin.$ && anyWin.jQuery) anyWin.$ = anyWin.jQuery;
-    try {
-      // Ensure jQuery AJAX uses credentials for our proxy
-      anyWin.$?.ajaxSetup?.({ xhrFields: { withCredentials: true } });
-      // Log ajax errors to render logs
-      anyWin.$?.(document).off('ajaxError.__pptx').on('ajaxError.__pptx', (_evt: any, jqxhr: any, settings: any, thrown: any) => {
-        addLog(`ajaxError: url=${settings?.url} status=${jqxhr?.status} thrown=${thrown}`);
-      });
-    } catch {}
-    const w = window as any;
-    w.FileReaderJS = w.FileReaderJS || {};
-    w.FileReaderJS.setSync = w.FileReaderJS.setSync || function(){};
-    w.FileReaderJS.setupBlob = w.FileReaderJS.setupBlob || function(){};
-    const hasPlugin = !!(anyWin.$ && anyWin.$.fn && anyWin.$.fn.pptxToHtml);
-    if (!hasPlugin) {
-      await loadScript('/vendor/pptxjs.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded pptxjs');
-      await loadScript('/vendor/divs2slides.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded divs2slides');
-    }
-  }
+
 
   async function ensurePdfJs() {
     const anyWin = window as any;
@@ -574,216 +532,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }
 
-  async function renderPptxToPngs() {
-    setRendering(true);
-    setRenderMsg('Loading PowerPoint…');
-    setRenderLogs([]);
-    try {
-      // Intercept errors during render
-      const captured: string[] = [];
-      const addLog = (m: string) => { captured.push(m); setRenderLogs((prev) => [...prev, m]); };
-      const origError = console.error;
-      const origWarn = console.warn;
-      let errHandler: ((e: ErrorEvent) => void) | null = null;
-      let rejHandler: ((e: PromiseRejectionEvent) => void) | null = null;
-      (console as any).error = (...args: any[]) => { try { addLog(`console.error: ${args.map(String).join(' ')}`); } catch {} origError.apply(console, args as any); };
-      ;(console as any).warn = (...args: any[]) => { try { addLog(`console.warn: ${args.map(String).join(' ')}`); } catch {} origWarn.apply(console, args as any); };
-      errHandler = (e: ErrorEvent) => addLog(`window.error: ${e.message}`);
-      rejHandler = (e: PromiseRejectionEvent) => addLog(`unhandledrejection: ${e.reason?.message || String(e.reason)}`);
-      window.addEventListener('error', errHandler);
-      window.addEventListener('unhandledrejection', rejHandler);
-      await ensurePptxLibs();
-      await ensureHtml2Canvas();
-      
-      // Construct the PPTX source URL from the session details
-      if (!details?.filePath) {
-        throw new Error('No file path available in session details');
-      }
-      const pptxSourceUrl = `${getApiBaseUrl()}/api/proxy?url=${encodeURIComponent(details.filePath)}`;
-      
-      // Quick reachability test for the PPTX file
-      const testUrl = pptxSourceUrl;
-      if (!testUrl) throw new Error('No file URL found');
-      try {
-        const testResp = await fetch(testUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials });
-        if (!testResp.ok) throw new Error(`File not reachable (status ${testResp.status})`);
-        const ctype = testResp.headers.get('content-type') || '';
-        addLog(`HEAD ok; content-type: ${ctype}`);
-      } catch (e) {
-        throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
-      }
-      const host = document.createElement('div');
-      // Make it participate in layout with a known size; fully invisible to user
-      host.style.position = 'fixed';
-      host.style.top = '0';
-      host.style.left = '0';
-      host.style.width = '1280px';
-      host.style.height = '720px';
-      host.style.opacity = '0';
-      host.style.pointerEvents = 'none';
-      host.style.background = '#fff';
-      (renderHostRef.current || document.body).appendChild(host);
-      const $ = (window as any).jQuery as any;
-      const pluginExists = $ && $.fn && $.fn.pptxToHtml;
-      if (!pluginExists) throw new Error('PPTX renderer not available');
-      let rendered = false;
-      async function tryRenderWithUrl(url: string): Promise<'reveal' | 'div'> {
-        addLog(`Rendering via URL: ${url.substring(0, 80)}…`);
-        // First attempt: revealjs mode
-        $(host).pptxToHtml({
-          pptxFileUrl: url,
-          slideMode: true,
-          slidesScale: '100%',
-          keyBoardShortCut: false,
-          mediaProcess: true,
-          slideType: 'revealjs',
-          revealjsPath: '/vendor/',
-          revealjsConfig: { controls: false, progress: false, embedded: true, width: 1280, height: 720 },
-          after: () => { /* not all builds call after reliably */ },
-        });
-        let start = Date.now();
-        while (Date.now() - start < 8000) {
-          const hasReveal = host.querySelector('.reveal .slides section');
-          if (hasReveal) { addLog('Reveal DOM detected'); return 'reveal'; }
-          await new Promise((r) => setTimeout(r, 200));
-        }
-        addLog('Reveal mode did not initialize, trying div mode…');
-        host.innerHTML = '';
-        // Second attempt: basic div mode
-        $(host).pptxToHtml({
-          pptxFileUrl: url,
-          slideMode: true,
-          slidesScale: '100%',
-          keyBoardShortCut: false,
-          mediaProcess: true,
-          slideType: 'div',
-          after: () => { /* noop */ },
-        });
-        start = Date.now();
-        while (Date.now() - start < 8000) {
-          const anySlide = host.querySelector('.slide, section, .pptx, .reveal .slides section');
-          if (anySlide) { addLog('Div mode DOM detected'); return 'div'; }
-          await new Promise((r) => setTimeout(r, 200));
-        }
-        const innerLen = host.innerHTML.length;
-        addLog(`Renderer did not initialize; host.innerHTML length=${innerLen}`);
-        throw new Error('Renderer did not initialize');
-      }
-      // First attempt: use (proxied) URL
-      let mode: 'reveal' | 'div' | null = null;
-      await Promise.race([
-        (async () => { mode = await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
-        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via URL')), 15000)),
-      ]).catch(async (err) => {
-        addLog(`URL render failed: ${err instanceof Error ? err.message : String(err)}`);
-        console.warn('URL render failed, falling back to ObjectURL:', err);
-        // Fallback: fetch as ArrayBuffer and render via Object URL (avoids CORS issues)
-        const resp = await fetch(pptxSourceUrl, { credentials: 'include' as RequestCredentials });
-        if (!resp.ok) throw new Error(`Fetch PPTX failed (${resp.status})`);
-        const buf = await resp.arrayBuffer();
-        const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-        addLog(`Fetched PPTX bytes=${buf.byteLength}`);
-        // Attempt 1: pass Blob directly via pptxFile in reveal mode
-        await (async () => {
-          addLog('Attempting render with pptxFile Blob (reveal)…');
-          $(host).pptxToHtml({
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore - third-party plugin accepts pptxFile
-            pptxFile: blob,
-            slideMode: true,
-            slidesScale: '100%',
-            keyBoardShortCut: false,
-            mediaProcess: true,
-            slideType: 'revealjs',
-            revealjsPath: '/vendor/',
-            revealjsConfig: { controls: false, progress: false, embedded: true, width: 1280, height: 720 },
-          });
-          const start = Date.now();
-          while (Date.now() - start < 8000) {
-            const hasReveal = host.querySelector('.reveal .slides section');
-            if (hasReveal) { addLog('Reveal DOM detected (blob)'); mode = 'reveal'; rendered = true; return; }
-            await new Promise((r) => setTimeout(r, 200));
-          }
-          addLog('Blob reveal mode did not initialize, trying div mode…');
-          host.innerHTML = '';
-          $(host).pptxToHtml({
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore - third-party plugin accepts pptxFile
-            pptxFile: blob,
-            slideMode: true,
-            slidesScale: '100%',
-            keyBoardShortCut: false,
-            mediaProcess: true,
-            slideType: 'div',
-          });
-          const start2 = Date.now();
-          while (Date.now() - start2 < 8000) {
-            const anySlide = host.querySelector('.slide, section, .pptx, .reveal .slides section');
-            if (anySlide) { addLog('Div mode DOM detected (blob)'); mode = 'div'; rendered = true; return; }
-            await new Promise((r) => setTimeout(r, 200));
-          }
-        })();
-        if (!rendered) {
-          // As a last resort, try ObjectURL path again (some builds prefer it)
-          const objUrl = URL.createObjectURL(blob);
-          addLog('Final attempt: ObjectURL path…');
-          await Promise.race([
-            (async () => { mode = await tryRenderWithUrl(objUrl); rendered = true; })(),
-            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via ObjectURL')), 20000)),
-          ]).finally(() => URL.revokeObjectURL(objUrl));
-        }
-      });
-      const Reveal = (window as any).Reveal;
-      let total = 1;
-      if (mode === 'reveal') {
-        total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
-      } else {
-        total = host.querySelectorAll('.reveal .slides section, .slide, section').length || 1;
-      }
-      const html2canvas = (window as any).html2canvas as (node: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
-      for (let i = 0; i < total; i++) {
-        setRenderMsg(`Rendering slide ${i + 1}/${total}…`);
-        if (mode === 'reveal' && Reveal && typeof Reveal.slide === 'function') Reveal.slide(i);
-        await new Promise((r) => setTimeout(r, 150));
-        const container = mode === 'reveal' ? (host.querySelector('.reveal') as HTMLElement | null) : (host as HTMLElement);
-        if (!container) throw new Error('Render container not found');
-        const canvas = await html2canvas(container, { 
-          backgroundColor: '#ffffff', 
-          scale: 3, 
-          useCORS: true,
-          allowTaint: false,
-          foreignObjectRendering: true,
-          imageTimeout: 15000,
-          logging: false
-        });
-        const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
-        await uploadPng(i + 1, blob, canvas.width, canvas.height);
-      }
-      host.remove();
-      setRenderMsg('Done. Refreshing…');
-      const res = await apiFetch<{ slides: Slide[] }>(`/api/slideshow/${sessionId}/slides`);
-      setSlides(res.slides);
-      setDetails(prev => prev ? { ...prev, totalSlides: res.slides.length } : prev);
-    } catch (e) {
-      console.error(e);
-      const msg = (e as Error)?.message || 'Failed to render PPTX';
-      setError(`${msg}`);
-    } finally {
-      // restore console and listeners
-      console.error = console.error;
-      console.warn = console.warn;
-      // Remove listeners if they were added
-      // Using bound variables to avoid TS issues
-      try {
-        // @ts-expect-error types ok at runtime
-        if (errHandler) window.removeEventListener('error', errHandler);
-        // @ts-expect-error types ok at runtime
-        if (rejHandler) window.removeEventListener('unhandledrejection', rejHandler);
-      } catch {}
-      setRendering(false);
-      setRenderMsg('');
-    }
-  }
+
 
   let content: ReactNode;
   if (loading) {
@@ -806,22 +555,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           <div className="text-slate-600 mb-4">
             {isPdf ? (
               <>We will pre-render your PDF into per-slide PNGs on your device and upload them for students to view.</>
-            ) : isPpt ? (
-              <>PowerPoint (.pptx) files are not supported yet. We're working on adding support via third-party conversion. Please convert your presentation to PDF format.</>
             ) : (
               <>We will pre-render your file into per-slide PNGs on your device and upload them for students to view.</>
             )}
           </div>
           <div className="flex items-center gap-3">
             <Button 
-              disabled={rendering || isPpt} 
+              disabled={rendering} 
               onClick={() => { 
                 if (isPdf) void renderPdfToPngs(); 
-                else if (isPpt) setError('PowerPoint files not supported yet'); 
                 else setError('Unsupported file'); 
               }}
             >
-              {rendering ? 'Rendering…' : isPpt ? 'Not Supported' : 'Render now'}
+              {rendering ? 'Rendering…' : 'Render now'}
             </Button>
             {renderMsg && (<div className="text-sm text-slate-500">{renderMsg}</div>)}
           </div>
