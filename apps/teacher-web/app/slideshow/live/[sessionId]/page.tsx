@@ -803,11 +803,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     content = (
       <>
         <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
-          <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
+          <Button variant="ghost" onClick={closeAndBack} disabled={working}>
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
           
-          {/* Drawing controls */}
-          <div className="flex items-center gap-2 ml-4">
+          {/* Drawing controls - centered */}
+          <div className="flex items-center gap-2 mx-auto">
             <div className="flex items-center gap-1">
               <Button 
                 variant={drawingMode === 'mouse' ? 'primary' : 'ghost'} 
@@ -854,12 +859,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
               <Button 
                 variant={drawingMode === 'eraser' ? 'primary' : 'ghost'} 
                 onClick={() => setDrawingMode('eraser')}
-                className="p-2"
+                className="text-sm px-2 py-1"
                 title="Eraser tool"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" />
                 </svg>
+                Eraser
               </Button>
               <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1" title="Clear drawings">
                 Clear
@@ -867,7 +873,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             </div>
           </div>
           
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => gotoSlide(current - 1)} disabled={working || current <= 1}>Prev</Button>
             <span className="text-sm text-slate-600">{current} / {total}</span>
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
@@ -903,7 +909,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 <canvas
                   ref={canvasRef}
                   className={`absolute inset-0 w-full h-full ${
-                    drawingMode === 'pen' ? 'cursor-crosshair' : 'cursor-pointer'
+                    drawingMode === 'pen' ? 'cursor-crosshair' : 
+                    drawingMode === 'eraser' ? 'cursor-circle' : 'cursor-pointer'
                   }`}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
