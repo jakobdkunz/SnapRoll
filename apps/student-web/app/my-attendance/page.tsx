@@ -23,13 +23,23 @@ export default function MyAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    // Use a small delay to ensure localStorage is available
+    // Use a longer delay to ensure localStorage is available and retry if needed
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
-      setStudentId(id);
-      const n = localStorage.getItem('snaproll.studentName');
-      if (n) setStudentName(n);
-    }, 100);
+      if (id) {
+        setStudentId(id);
+        const n = localStorage.getItem('snaproll.studentName');
+        if (n) setStudentName(n);
+      } else {
+        // Retry once more after a longer delay
+        setTimeout(() => {
+          const retryId = localStorage.getItem('snaproll.studentId');
+          setStudentId(retryId);
+          const retryName = localStorage.getItem('snaproll.studentName');
+          if (retryName) setStudentName(retryName);
+        }, 500);
+      }
+    }, 200);
     
     return () => clearTimeout(timer);
   }, []);

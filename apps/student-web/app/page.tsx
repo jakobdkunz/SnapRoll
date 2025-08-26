@@ -19,8 +19,16 @@ export default function StudentWelcomePage() {
       const studentId = localStorage.getItem('snaproll.studentId');
       if (studentId) {
         router.push('/sections');
+      } else {
+        // Retry once more after a longer delay
+        setTimeout(() => {
+          const retryStudentId = localStorage.getItem('snaproll.studentId');
+          if (retryStudentId) {
+            router.push('/sections');
+          }
+        }, 500);
       }
-    }, 100);
+    }, 200);
     
     return () => clearTimeout(timer);
   }, [router]);
