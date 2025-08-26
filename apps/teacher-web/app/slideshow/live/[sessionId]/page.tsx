@@ -594,6 +594,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       window.addEventListener('unhandledrejection', rejHandler);
       await ensurePptxLibs();
       await ensureHtml2Canvas();
+      
+      // Construct the PPTX source URL from the session details
+      if (!details?.filePath) {
+        throw new Error('No file path available in session details');
+      }
+      const pptxSourceUrl = `${getApiBaseUrl()}/api/proxy?url=${encodeURIComponent(details.filePath)}`;
+      
       // Quick reachability test for the PPTX file
       const testUrl = pptxSourceUrl;
       if (!testUrl) throw new Error('No file URL found');

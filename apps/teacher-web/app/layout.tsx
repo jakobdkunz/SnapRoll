@@ -15,9 +15,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="stylesheet" href="/vendor/reveal.css" />
         <link rel="stylesheet" href="/vendor/pptxjs.css" />
-        <script src="/vendor/jquery.min.js"></script>
-        <script src="/vendor/jszip.min.js"></script>
-        <script src="/vendor/reveal.js"></script>
       </head>
       <body>
         <div className="min-h-dvh bg-slate-50">
