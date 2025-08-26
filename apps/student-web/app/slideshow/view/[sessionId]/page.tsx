@@ -163,16 +163,13 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       ctx.lineWidth = 3;
       ctx.beginPath();
       
-      // Scale coordinates to current canvas size
-      const scaleX = canvas.width / frameSize.w;
-      const scaleY = canvas.height / frameSize.h;
-      
+      // Scale percentage coordinates to current canvas size
       const firstPoint = stroke.points[0];
-      ctx.moveTo(firstPoint.x * scaleX, firstPoint.y * scaleY);
+      ctx.moveTo(firstPoint.x * canvas.width, firstPoint.y * canvas.height);
       
       for (let i = 1; i < stroke.points.length; i++) {
         const point = stroke.points[i];
-        ctx.lineTo(point.x * scaleX, point.y * scaleY);
+        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
       }
       
       ctx.stroke();

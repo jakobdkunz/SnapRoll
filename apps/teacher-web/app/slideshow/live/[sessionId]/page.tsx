@@ -87,12 +87,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // Scale to frame size (not canvas size) so drawings scale properly on resize
-    const scaleX = frameSize.w / rect.width;
-    const scaleY = frameSize.h / rect.height;
+    // Store as percentages (0-1) of the frame size for proper scaling
+    const percentX = x / rect.width;
+    const percentY = y / rect.height;
     
-    const result = { x: x * scaleX, y: y * scaleY };
-    console.log('Frame coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, scaleX, scaleY, result });
+    const result = { x: percentX, y: percentY };
+    console.log('Percentage coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, percentX, percentY, result });
     return result;
   }, [frameSize]);
 
@@ -216,16 +216,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       ctx.lineWidth = 3;
       ctx.beginPath();
       
-      // Scale coordinates to current canvas size
-      const scaleX = canvas.width / frameSize.w;
-      const scaleY = canvas.height / frameSize.h;
-      
+      // Scale percentage coordinates to current canvas size
       const firstPoint = stroke.points[0];
-      ctx.moveTo(firstPoint.x * scaleX, firstPoint.y * scaleY);
+      ctx.moveTo(firstPoint.x * canvas.width, firstPoint.y * canvas.height);
       
       for (let i = 1; i < stroke.points.length; i++) {
         const point = stroke.points[i];
-        ctx.lineTo(point.x * scaleX, point.y * scaleY);
+        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
       }
       
       ctx.stroke();
