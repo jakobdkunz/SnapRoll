@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="/vendor/reveal.js"></script>
       </head>
       <body>
-        <div className="min-h-dvh">
+        <div className="min-h-dvh bg-slate-50">
           <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
               <WordmarkLink />
