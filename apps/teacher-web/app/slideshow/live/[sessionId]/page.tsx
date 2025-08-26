@@ -484,12 +484,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
           </div>
         </div>
-        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-          <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
-            <div className="absolute inset-0 grid place-items-center">
-              <div className="rounded-xl overflow-hidden shadow bg-white">
-                <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block max-w-[100vw] max-h-[calc(100dvh-64px)] sm:max-h-[calc(100dvh-72px)] object-contain" />
-              </div>
+        {/* Full-viewport slide stage (below sticky header) */}
+        <div className="fixed inset-0 pt-[64px] sm:pt-[72px]">
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="rounded-xl overflow-hidden shadow bg-white">
+              <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block max-w-[100vw] max-h-[calc(100dvh-64px)] sm:max-h-[calc(100dvh-72px)] object-contain" />
             </div>
           </div>
         </div>
