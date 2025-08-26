@@ -30,6 +30,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [working, setWorking] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState('');
+  const [renderLogs, setRenderLogs] = useState<string[]>([]);
   const [debug, setDebug] = useState('');
 
   const renderHostRef = useRef<HTMLDivElement | null>(null);
@@ -145,6 +146,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   async function ensurePptxLibs() {
+    const addLog = (m: string) => setRenderLogs((prev) => [...prev, m]);
     // CSS
     const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
     if (!links.some((l) => l.href.endsWith('/vendor/reveal.css'))) {
@@ -152,17 +154,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       link.rel = 'stylesheet';
       link.href = '/vendor/reveal.css';
       document.head.appendChild(link);
+      addLog('Loaded reveal.css');
     }
     if (!links.some((l) => l.href.endsWith('/vendor/pptxjs.css'))) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = '/vendor/pptxjs.css';
       document.head.appendChild(link);
+      addLog('Loaded pptxjs.css');
     }
     const anyWin = window as unknown as { jQuery?: any; $?: any; JSZip?: any; Reveal?: any };
-    if (!anyWin.jQuery) await loadScript('/vendor/jquery.min.js').catch((e) => { console.error(e); throw e; });
-    if (!anyWin.JSZip) await loadScript('/vendor/jszip.min.js').catch((e) => { console.error(e); throw e; });
-    if (!anyWin.Reveal) await loadScript('/vendor/reveal.js').catch((e) => { console.error(e); throw e; });
+    if (!anyWin.jQuery) { await loadScript('/vendor/jquery.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded jQuery'); }
+    if (!anyWin.JSZip) { await loadScript('/vendor/jszip.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded JSZip'); }
+    if (!anyWin.Reveal) { await loadScript('/vendor/reveal.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded Reveal.js'); }
     if (!anyWin.$ && anyWin.jQuery) anyWin.$ = anyWin.jQuery;
     const w = window as any;
     w.FileReaderJS = w.FileReaderJS || {};
@@ -170,8 +174,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     w.FileReaderJS.setupBlob = w.FileReaderJS.setupBlob || function(){};
     const hasPlugin = !!(anyWin.$ && anyWin.$.fn && anyWin.$.fn.pptxToHtml);
     if (!hasPlugin) {
-      await loadScript('/vendor/pptxjs.min.js').catch((e) => { console.error(e); throw e; });
-      await loadScript('/vendor/divs2slides.min.js').catch((e) => { console.error(e); throw e; });
+      await loadScript('/vendor/pptxjs.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded pptxjs');
+      await loadScript('/vendor/divs2slides.min.js').catch((e) => { console.error(e); throw e; }); addLog('Loaded divs2slides');
     }
   }
 
@@ -232,7 +236,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   async function renderPptxToPngs() {
     setRendering(true);
     setRenderMsg('Loading PowerPoint…');
+    setRenderLogs([]);
     try {
+      // Intercept errors during render
+      const captured: string[] = [];
+      const addLog = (m: string) => { captured.push(m); setRenderLogs((prev) => [...prev, m]); };
+      const origError = console.error;
+      const origWarn = console.warn;
+      (console as any).error = (...args: any[]) => { try { addLog(`console.error: ${args.map(String).join(' ')}`); } catch {} origError.apply(console, args as any); };
+      ;(console as any).warn = (...args: any[]) => { try { addLog(`console.warn: ${args.map(String).join(' ')}`); } catch {} origWarn.apply(console, args as any); };
+      const errHandler = (e: ErrorEvent) => addLog(`window.error: ${e.message}`);
+      const rejHandler = (e: PromiseRejectionEvent) => addLog(`unhandledrejection: ${e.reason?.message || String(e.reason)}`);
+      window.addEventListener('error', errHandler);
+      window.addEventListener('unhandledrejection', rejHandler);
       await ensurePptxLibs();
       await ensureHtml2Canvas();
       // Quick reachability test for the PPTX file
@@ -241,6 +257,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       try {
         const testResp = await fetch(testUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials });
         if (!testResp.ok) throw new Error(`File not reachable (status ${testResp.status})`);
+        const ctype = testResp.headers.get('content-type') || '';
+        addLog(`HEAD ok; content-type: ${ctype}`);
       } catch (e) {
         throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
       }
@@ -260,6 +278,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       if (!pluginExists) throw new Error('PPTX renderer not available');
       let rendered = false;
       async function tryRenderWithUrl(url: string): Promise<void> {
+        addLog(`Rendering via URL: ${url.substring(0, 80)}…`);
         $(host).pptxToHtml({
           pptxFileUrl: url,
           slideMode: true,
@@ -275,9 +294,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const start = Date.now();
         while (Date.now() - start < 15000) {
           const hasReveal = host.querySelector('.reveal .slides section');
-          if (hasReveal) return;
+          if (hasReveal) { addLog('Reveal DOM detected'); return; }
           await new Promise((r) => setTimeout(r, 250));
         }
+        const innerLen = host.innerHTML.length;
+        addLog(`Renderer did not initialize; host.innerHTML length=${innerLen}`);
         throw new Error('Renderer did not initialize');
       }
       // First attempt: use (proxied) URL
@@ -285,6 +306,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         (async () => { await tryRenderWithUrl(pptxSourceUrl); rendered = true; })(),
         new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX via URL')), 15000)),
       ]).catch(async (err) => {
+        addLog(`URL render failed: ${err instanceof Error ? err.message : String(err)}`);
         console.warn('URL render failed, falling back to ObjectURL:', err);
         // Fallback: fetch as ArrayBuffer and render via Object URL (avoids CORS issues)
         const resp = await fetch(pptxSourceUrl, { credentials: 'include' as RequestCredentials });
@@ -316,8 +338,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       setDetails(prev => prev ? { ...prev, totalSlides: res.slides.length } : prev);
     } catch (e) {
       console.error(e);
-      setError((e as Error)?.message || 'Failed to render PPTX');
+      const msg = (e as Error)?.message || 'Failed to render PPTX';
+      setError(`${msg}`);
     } finally {
+      // restore console and listeners
+      // We intentionally don't restore console.* to keep logs during this session
+      window.removeEventListener('error', () => {} as any);
+      window.removeEventListener('unhandledrejection', () => {} as any);
       setRendering(false);
       setRenderMsg('');
     }
