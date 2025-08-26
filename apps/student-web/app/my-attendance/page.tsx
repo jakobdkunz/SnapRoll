@@ -31,6 +31,21 @@ export default function MyAttendancePage() {
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // Column width calculations
+  const COURSE_COL_BASE = 200; // desktop/base px width for course column
+  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
+  const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
+  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+
+  useEffect(() => {
+    const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   useEffect(() => {
     setIsClient(true);
@@ -82,24 +97,68 @@ export default function MyAttendancePage() {
     }
   }, [studentId]);
 
+  // Compute initial columns based on actual measured widths before first fetch
   useEffect(() => {
-    if (studentId) {
-      void loadHistory(offset, limit);
+    if (initialized) return;
+    const measure = () => {
+      const el = containerRef.current;
+      const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+      const CARD_INNER_PADDING = 32; // matches Card p-4
+      const courseWidth = COURSE_COL_BASE;
+      const available = Math.max(0, containerWidth - courseWidth - CARD_INNER_PADDING);
+      const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
+      if (initialLimit !== limit) setLimit(initialLimit);
+      setInitialized(true);
+      loadHistory(offset, initialLimit);
+    };
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(measure);
     } else {
+      measure();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialized, studentId, PER_COL]);
+
+  // Recalculate how many columns fit based on container width
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
+      const CARD_INNER_PADDING = 32;
+      const courseWidth = COURSE_COL_BASE;
+      const available = Math.max(0, containerWidth - courseWidth - CARD_INNER_PADDING);
+      const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
+      if (cols !== limit) {
+        setLimit(cols);
+        // Keep newest page by default after resize
+        const nextOffset = 0;
+        setOffset(nextOffset);
+        loadHistory(nextOffset, cols);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [limit, loadHistory, PER_COL]);
+
+  useEffect(() => {
+    if (studentId && initialized) {
+      void loadHistory(offset, limit);
+    } else if (studentId) {
       setLoading(false);
     }
-  }, [studentId, loadHistory]);
+  }, [studentId, loadHistory, initialized]);
 
   // Refetch when navigating back to this route to avoid stale in-memory state
   useEffect(() => {
-    if (!studentId) return;
+    if (!studentId || !initialized) return;
     void loadHistory(offset, limit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   // Ensure we always show fresh data when navigating to this page or returning to the tab
   useEffect(() => {
-    if (!studentId) return;
+    if (!studentId || !initialized) return;
     const refetch = () => {
       void loadHistory(offset, limit);
     };
@@ -114,7 +173,7 @@ export default function MyAttendancePage() {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('pageshow', refetch);
     };
-  }, [studentId, offset, limit, loadHistory]);
+  }, [studentId, offset, limit, loadHistory, initialized]);
 
   const grid = useMemo(() => {
     if (!data) return null;
@@ -202,9 +261,15 @@ export default function MyAttendancePage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr>
-                <th className="text-left p-2 text-slate-600">Course</th>
+                <th className="text-left p-2 text-slate-600" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
                 {grid.days.map((d) => (
-                  <th key={d.date} className="p-2 text-slate-600 whitespace-nowrap">{formatDateMDY(d.date)}</th>
+                  <th 
+                    key={d.date} 
+                    className="p-2 text-slate-600 whitespace-nowrap text-center"
+                    style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                  >
+                    {isMobile ? formatDateMDY(d.date).slice(0, 5) : formatDateMDY(d.date)}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -213,7 +278,7 @@ export default function MyAttendancePage() {
                 const byDate = grid.recBySection.get(s.id)!;
                 return (
                   <tr key={s.id} className="border-t">
-                    <td className="p-2 font-medium text-slate-800 whitespace-nowrap">{s.title}</td>
+                    <td className="p-2 font-medium text-slate-800 whitespace-nowrap" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>{s.title}</td>
                     {grid.days.map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'BLANK';
@@ -230,7 +295,11 @@ export default function MyAttendancePage() {
                             return '';
                           })();
                       return (
-                        <td key={d.date} className="p-2 text-center align-middle">
+                        <td 
+                          key={d.date} 
+                          className="p-2 text-center align-middle"
+                          style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                        >
                           <div className="relative group inline-block">
                             {status === 'PRESENT' ? (
                               <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
