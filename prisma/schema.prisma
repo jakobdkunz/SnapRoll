@@ -177,6 +177,7 @@ model SlideshowSession {
   createdAt            DateTime @default(now())
   closedAt             DateTime?
   instructorLastSeenAt DateTime?
+  slides               SlideshowSlide[]
 
   @@index([sectionId])
 }
