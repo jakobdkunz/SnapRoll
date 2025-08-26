@@ -143,7 +143,6 @@ export default function SectionsPage() {
     // Use a small delay to ensure localStorage is available
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
-      console.log('Sections: studentId from localStorage:', id);
       setStudentId(id);
     }, 100);
     

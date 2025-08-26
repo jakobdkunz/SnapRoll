@@ -17,7 +17,6 @@ export default function StudentWelcomePage() {
     // Check if already logged in
     const timer = setTimeout(() => {
       const studentId = localStorage.getItem('snaproll.studentId');
-      console.log('Welcome: studentId from localStorage:', studentId);
       if (studentId) {
         router.push('/sections');
       }

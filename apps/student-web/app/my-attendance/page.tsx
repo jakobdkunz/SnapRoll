@@ -26,7 +26,6 @@ export default function MyAttendancePage() {
     // Use a small delay to ensure localStorage is available
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
-      console.log('MyAttendance: studentId from localStorage:', id);
       setStudentId(id);
       const n = localStorage.getItem('snaproll.studentName');
       if (n) setStudentName(n);
