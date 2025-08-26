@@ -142,7 +142,7 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex flex-col h-screen">
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
