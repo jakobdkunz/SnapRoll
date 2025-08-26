@@ -29,13 +29,20 @@ export default function DashboardPage() {
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
   const [slideTeacherAssets, setSlideTeacherAssets] = useState<Array<{ id: string; title: string; filePath: string; mimeType: string }>>([]);
+  const [slideRecentSessions, setSlideRecentSessions] = useState<Array<{
+    id: string;
+    title: string;
+    section: { title: string };
+    slides: Array<{ imageUrl: string; width?: number; height?: number }>;
+    createdAt: string;
+  }>>([]);
   const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<string | null>(null);
+  const [slideSelectedSessionId, setSlideSelectedSessionId] = useState<string | null>(null);
   const [slideTitle, setSlideTitle] = useState('');
   const [slideShowOnDevices, setSlideShowOnDevices] = useState(true);
   const [slideAllowDownload, setSlideAllowDownload] = useState(true);
   const [slideRequireStay, setSlideRequireStay] = useState(false);
   const [slidePreventJump, setSlidePreventJump] = useState(false);
-  const [slideOfficeMode, setSlideOfficeMode] = useState(false);
   const [slideUploadFile, setSlideUploadFile] = useState<File | null>(null);
   const [slideWorking, setSlideWorking] = useState(false);
   const [slideError, setSlideError] = useState<string | null>(null);
@@ -59,14 +66,25 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // Load teacher assets when opening slideshow modal
+    // Load teacher assets and recent sessions when opening slideshow modal
     async function loadAssets() {
       if (!teacherId || !slideOpen) return;
       try {
-        const res = await apiFetch<{ assets: Array<{ id: string; title: string; filePath: string; mimeType: string }> }>(`/api/teachers/${teacherId}/slideshow-assets`);
+        const res = await apiFetch<{ 
+          assets: Array<{ id: string; title: string; filePath: string; mimeType: string }>;
+          recentSessions: Array<{
+            id: string;
+            title: string;
+            section: { title: string };
+            slides: Array<{ imageUrl: string; width?: number; height?: number }>;
+            createdAt: string;
+          }>;
+        }>(`/api/teachers/${teacherId}/recent-slideshows`);
         setSlideTeacherAssets(res.assets);
+        setSlideRecentSessions(res.recentSessions);
       } catch {
         setSlideTeacherAssets([]);
+        setSlideRecentSessions([]);
       }
     }
     loadAssets();
@@ -416,74 +434,316 @@ export default function DashboardPage() {
 
       {/* Present Slideshow Modal */}
       <Modal open={slideOpen && !!slideSectionId} onClose={() => setSlideOpen(false)}>
-        <div className="bg-white rounded-lg p-6 w-[92vw] max-w-2xl mx-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="inline-flex items-center gap-2 text-lg font-semibold"><HiOutlinePlayCircle className="h-6 w-6" /> Present Slideshow</div>
-            <button onClick={() => setSlideOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+        <div className="bg-white rounded-xl p-8 w-[95vw] max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <HiOutlinePlayCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Present Slideshow</h2>
+                <p className="text-sm text-slate-600">Broadcast your slideshow to student devices in real-time</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSlideOpen(false)} 
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Recents Section */}
             <div>
-              <div className="text-sm font-medium text-slate-700 mb-1">Recents</div>
-              <div className="text-xs text-slate-500 mb-2">Slides are kept for 72 hours after last use.</div>
-              <div className="space-y-2 max-h-56 overflow-auto pr-1 bg-slate-50 rounded-lg p-2 border">
-                {slideTeacherAssets.length === 0 && (
-                  <div className="text-sm text-slate-500">No uploads yet.</div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Recent Slideshows</h3>
+                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">72h retention</span>
+              </div>
+              
+              {/* Recent Sessions */}
+              {slideRecentSessions.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-slate-700 mb-3">Active Sessions</h4>
+                  <div className="space-y-3">
+                    {slideRecentSessions.map((session) => (
+                      <div key={session.id} className="group relative">
+                        <button 
+                          onClick={() => { 
+                            setSlideSelectedSessionId(session.id); 
+                            setSlideSelectedAssetId(null); 
+                            setSlideUploadFile(null);
+                            setSlideTitle(session.title);
+                          }} 
+                          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                            slideSelectedSessionId === session.id 
+                              ? 'border-blue-500 bg-blue-50 shadow-md' 
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            {session.slides[0] && (
+                              <img 
+                                src={session.slides[0].imageUrl} 
+                                alt="Slide 1" 
+                                className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+                              />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-slate-900 truncate">{session.title}</div>
+                              <div className="text-sm text-slate-500">{session.section.title}</div>
+                              <div className="text-xs text-slate-400 mt-1">
+                                {new Date(session.createdAt).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?sessionId=${session.id}`, { method: 'DELETE' });
+                              setSlideRecentSessions(prev => prev.filter(s => s.id !== session.id));
+                            } catch (e) {
+                              console.error('Failed to delete session:', e);
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          title="Delete slideshow"
+                        >
+                          <HiOutlineTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Uploaded Assets */}
+              <div>
+                <h4 className="text-sm font-medium text-slate-700 mb-3">Uploaded Files</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {slideTeacherAssets.length === 0 ? (
+                    <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                      No uploaded files yet
+                    </div>
+                  ) : (
+                    slideTeacherAssets.map((asset) => (
+                      <div key={asset.id} className="group relative">
+                        <button 
+                          onClick={() => { 
+                            setSlideSelectedAssetId(asset.id); 
+                            setSlideSelectedSessionId(null);
+                            setSlideUploadFile(null); 
+                            setSlideTitle(asset.title || '');
+                          }} 
+                          className={`w-full text-left p-3 rounded-lg border transition-all ${
+                            slideSelectedAssetId === asset.id 
+                              ? 'border-blue-500 bg-blue-50' 
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="font-medium text-slate-900 truncate">{asset.title}</div>
+                          <div className="text-xs text-slate-500 truncate">{asset.filePath.split('/').pop()}</div>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?assetId=${asset.id}`, { method: 'DELETE' });
+                              setSlideTeacherAssets(prev => prev.filter(a => a.id !== asset.id));
+                            } catch (e) {
+                              console.error('Failed to delete asset:', e);
+                            }
+                          }}
+                          className="absolute top-2 right-2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                          title="Delete file"
+                        >
+                          <HiOutlineTrash className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Upload New File</h3>
+              
+              {/* File Upload */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Select File (PDF only)</label>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
+                  <input 
+                    type="file" 
+                    accept=".pdf,application/pdf"
+                    onChange={(e) => { 
+                      const f = e.target.files?.[0] || null; 
+                      setSlideUploadFile(f); 
+                      setSlideSelectedAssetId(null); 
+                      setSlideSelectedSessionId(null);
+                      if (f) setSlideTitle(f.name.replace(/\.pdf$/i, '')); 
+                    }}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <div className="mx-auto w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">PDF files only</div>
+                  </label>
+                </div>
+                {slideUploadFile && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm font-medium text-green-800">{slideUploadFile.name}</span>
+                    </div>
+                  </div>
                 )}
-                {slideTeacherAssets.map((a) => (
-                  <button key={a.id} onClick={() => { setSlideSelectedAssetId(a.id); setSlideTitle(a.title || ''); setSlideUploadFile(null); }} className={`w-full text-left px-3 py-2 rounded-lg border ${slideSelectedAssetId === a.id ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-                    <div className="font-medium truncate">{a.title}</div>
-                    <div className="text-xs text-slate-500 truncate">{a.filePath.split('/').pop()}</div>
-                  </button>
-                ))}
               </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium text-slate-700 mb-2">Or upload a new file (PDF or PPTX)</div>
-              <input type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={(e) => { const f = e.target.files?.[0] || null; setSlideUploadFile(f); setSlideSelectedAssetId(null); if (f) setSlideTitle(f.name.replace(/\.(pdf|pptx?|PDF|PPTX?)$/, '')); }} />
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
-                <TextInput value={slideTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} placeholder="Slideshow title" />
+
+              {/* Title Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Slideshow Title</label>
+                <TextInput 
+                  value={slideTitle} 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} 
+                  placeholder="Enter a title for your slideshow" 
+                  className="w-full"
+                />
+              </div>
+
+              {/* Settings */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-slate-700">Presentation Settings</h4>
+                
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideShowOnDevices} 
+                    onChange={(e) => setSlideShowOnDevices(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Show on Student Devices</div>
+                    <div className="text-sm text-slate-600">Students can view the slideshow on their devices</div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideAllowDownload} 
+                    onChange={(e) => setSlideAllowDownload(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Allow Students to Download</div>
+                    <div className="text-sm text-slate-600">Students can download the slideshow files</div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideRequireStay} 
+                    onChange={(e) => { 
+                      const v = e.target.checked; 
+                      setSlideRequireStay(v); 
+                      if (v) setSlidePreventJump(false); 
+                    }}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Require Students to Stay on Current Slide</div>
+                    <div className="text-sm text-slate-600">Students cannot navigate away from the current slide</div>
+                  </div>
+                </label>
+
+                {!slideRequireStay && (
+                  <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={slidePreventJump} 
+                      onChange={(e) => setSlidePreventJump(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-900">Prevent Students from Jumping Ahead</div>
+                      <div className="text-sm text-slate-600">Students cannot navigate to future slides</div>
+                    </div>
+                  </label>
+                )}
               </div>
             </div>
           </div>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex items-center gap-2 md:col-span-2"><input type="checkbox" checked={slideOfficeMode} onChange={(e) => setSlideOfficeMode(e.target.checked)} /> <span>Embedded video support (syncing slideshow to student clients will not work)</span></label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={slideShowOnDevices} onChange={(e) => setSlideShowOnDevices(e.target.checked)} /> <span>Show on Student Devices</span></label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={slideAllowDownload} onChange={(e) => setSlideAllowDownload(e.target.checked)} /> <span>Allow Students to Download Slideshow</span></label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={slideRequireStay} onChange={(e) => { const v = e.target.checked; setSlideRequireStay(v); if (v) setSlidePreventJump(false); }} /> <span>Require Students to Stay on Current Slide</span></label>
-            {!slideRequireStay && (
-              <label className="flex items-center gap-2"><input type="checkbox" checked={slidePreventJump} onChange={(e) => setSlidePreventJump(e.target.checked)} /> <span>Prevent Students from Jumping Ahead</span></label>
-            )}
-          </div>
-          {slideError && <div className="mt-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{slideError}</div>}
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setSlideOpen(false)}>Cancel</Button>
-            <Button disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideUploadFile)} onClick={async () => {
-              if (!slideSectionId) return;
-              setSlideWorking(true);
-              setSlideError(null);
-              try {
-                const fd = new FormData();
-                if (slideTitle.trim()) fd.append('title', slideTitle.trim());
-                fd.append('showOnDevices', String(slideShowOnDevices));
-                fd.append('allowDownload', String(slideAllowDownload));
-                fd.append('requireStay', String(slideRequireStay));
-                fd.append('preventJump', String(slidePreventJump));
-                if (slideSelectedAssetId) {
-                  fd.append('assetId', slideSelectedAssetId);
-                } else if (slideUploadFile) {
-                  fd.append('file', slideUploadFile);
+
+          {/* Error Message */}
+          {slideError && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium text-red-800">{slideError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex justify-end gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={() => setSlideOpen(false)}
+              className="px-6"
+            >
+              Cancel
+            </Button>
+            <Button 
+              disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideSelectedSessionId && !slideUploadFile)} 
+              onClick={async () => {
+                if (!slideSectionId) return;
+                setSlideWorking(true);
+                setSlideError(null);
+                try {
+                  const fd = new FormData();
+                  if (slideTitle.trim()) fd.append('title', slideTitle.trim());
+                  fd.append('showOnDevices', String(slideShowOnDevices));
+                  fd.append('allowDownload', String(slideAllowDownload));
+                  fd.append('requireStay', String(slideRequireStay));
+                  fd.append('preventJump', String(slidePreventJump));
+                  if (slideSelectedAssetId) {
+                    fd.append('assetId', slideSelectedAssetId);
+                  } else if (slideSelectedSessionId) {
+                    fd.append('sessionId', slideSelectedSessionId);
+                  } else if (slideUploadFile) {
+                    fd.append('file', slideUploadFile);
+                  }
+                  const data = await apiFetch<{ session: { id: string } }>(`/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
+                  setSlideOpen(false);
+                  setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);
+                } catch (e: unknown) {
+                  setSlideError(e instanceof Error ? e.message : 'Failed to start slideshow');
+                } finally {
+                  setSlideWorking(false);
                 }
-                fd.append('officeMode', String(slideOfficeMode));
-                const data = await apiFetch<{ session: { id: string } }>(`/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
-                setSlideOpen(false);
-                setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);
-              } catch (e: unknown) {
-                setSlideError(e instanceof Error ? e.message : 'Failed to start slideshow');
-              } finally {
-                setSlideWorking(false);
-              }
-            }}>{slideShowOnDevices ? (slideWorking ? 'Presenting…' : 'Present Live') : (slideWorking ? 'Starting…' : 'Present')}</Button>
+              }}
+              className="px-8"
+            >
+              {slideWorking ? 'Starting...' : 'Start Slideshow'}
+            </Button>
           </div>
         </div>
       </Modal>
