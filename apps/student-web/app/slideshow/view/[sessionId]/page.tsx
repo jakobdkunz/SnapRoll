@@ -1,8 +1,12 @@
 "use client";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { apiFetch } from '@snaproll/api-client';
+
+type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
+type DrawingPoint = { x: number; y: number };
+type DrawingStroke = { color: DrawingColor; points: DrawingPoint[] };
 
 type SessionResponse = { id: string; title: string; currentSlide: number };
  type SlideItem = { id: string; index: number; imageUrl: string };
@@ -20,6 +24,12 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const [imgAspect, setImgAspect] = useState<number | null>(null);
   const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
+  
+  // Drawing state
+  const [showDrawings, setShowDrawings] = useState(true);
+  const [drawings, setDrawings] = useState<DrawingStroke[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -91,6 +101,71 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     return () => window.removeEventListener('resize', onResize);
   }, [imgAspect]);
 
+  // Initialize canvas when frame size changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !frameSize) return;
+    
+    canvas.width = frameSize.w;
+    canvas.height = frameSize.h;
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctxRef.current = ctx;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+  }, [frameSize]);
+
+  // Load and sync drawings
+  useEffect(() => {
+    let mounted = true;
+    async function loadDrawings() {
+      try {
+        const response = await apiFetch<{ drawings: DrawingStroke[] }>(`/api/slideshow/${sessionId}/drawings`);
+        if (mounted) {
+          setDrawings(response.drawings);
+        }
+      } catch (error) {
+        console.error('Failed to load drawings:', error);
+      }
+    }
+    
+    loadDrawings();
+    const interval = setInterval(loadDrawings, 2000); // Poll every 2 seconds
+    
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [sessionId]);
+
+  // Redraw all strokes when drawings change or showDrawings changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (!showDrawings) return;
+    
+    drawings.forEach(stroke => {
+      if (stroke.points.length < 2) return;
+      
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      
+      ctx.stroke();
+    });
+  }, [drawings, showDrawings]);
+
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
 
@@ -103,6 +178,20 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
         <Button variant="ghost" onClick={() => router.back()}>Back</Button>
         <div className="text-lg font-semibold truncate">{details.title}</div>
+        
+        {/* Drawing toggle */}
+        <div className="flex items-center gap-2 ml-4">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showDrawings}
+              onChange={(e) => setShowDrawings(e.target.checked)}
+              className="w-4 h-4"
+            />
+            Show drawings
+          </label>
+        </div>
+        
         <div className="ml-auto text-sm text-slate-600">Slide {current}{total ? ` / ${total}` : ''}</div>
       </div>
       {/* Full-width stage that fills remaining space */}
@@ -120,7 +209,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
           ) : (
             <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
               <div
-                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
+                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center relative"
                 style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
               >
                 <img
@@ -139,6 +228,12 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
                       recomputeFrame(aspect);
                     }
                   }}
+                />
+                
+                {/* Drawing canvas overlay */}
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0 w-full h-full pointer-events-none"
                 />
               </div>
             </div>

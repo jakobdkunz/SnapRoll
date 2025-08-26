@@ -1,9 +1,14 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
+
+type DrawingMode = 'mouse' | 'pen';
+type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
+type DrawingPoint = { x: number; y: number };
+type DrawingStroke = { color: DrawingColor; points: DrawingPoint[] };
 
 type SessionDetails = {
   id: string;
@@ -37,6 +42,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [imgAspect, setImgAspect] = useState<number | null>(null);
   const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
+  
+  // Drawing state
+  const [drawingMode, setDrawingMode] = useState<DrawingMode>('mouse');
+  const [drawingColor, setDrawingColor] = useState<DrawingColor>('red');
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
+  const [drawings, setDrawings] = useState<DrawingStroke[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -60,6 +74,137 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   const renderHostRef = useRef<HTMLDivElement | null>(null);
+
+  // Drawing functions
+  const getCanvasCoordinates = useCallback((e: React.MouseEvent | MouseEvent): DrawingPoint | null => {
+    const canvas = canvasRef.current;
+    if (!canvas || !frameSize) return null;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Scale to canvas size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return { x: x * scaleX, y: y * scaleY };
+  }, [frameSize]);
+
+  const startDrawing = useCallback((e: React.MouseEvent) => {
+    if (drawingMode !== 'pen') return;
+    
+    const point = getCanvasCoordinates(e);
+    if (!point) return;
+    
+    setIsDrawing(true);
+    const newStroke: DrawingStroke = { color: drawingColor, points: [point] };
+    setCurrentStroke(newStroke);
+    
+    // Draw initial point
+    const ctx = ctxRef.current;
+    if (ctx) {
+      ctx.strokeStyle = drawingColor;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(point.x, point.y);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+    }
+  }, [drawingMode, drawingColor, getCanvasCoordinates]);
+
+  const draw = useCallback((e: React.MouseEvent) => {
+    if (!isDrawing || drawingMode !== 'pen' || !currentStroke) return;
+    
+    const point = getCanvasCoordinates(e);
+    if (!point) return;
+    
+    const updatedStroke = { ...currentStroke, points: [...currentStroke.points, point] };
+    setCurrentStroke(updatedStroke);
+    
+    // Draw line
+    const ctx = ctxRef.current;
+    if (ctx) {
+      ctx.strokeStyle = drawingColor;
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(currentStroke.points[currentStroke.points.length - 1].x, currentStroke.points[currentStroke.points.length - 1].y);
+      ctx.lineTo(point.x, point.y);
+      ctx.stroke();
+    }
+  }, [isDrawing, drawingMode, currentStroke, drawingColor, getCanvasCoordinates]);
+
+  const stopDrawing = useCallback(() => {
+    if (!isDrawing || !currentStroke) return;
+    
+    setIsDrawing(false);
+    const newDrawings = [...drawings, currentStroke];
+    setDrawings(newDrawings);
+    setCurrentStroke(null);
+    
+    // Save drawings to server
+    apiFetch(`/api/slideshow/${sessionId}/drawings`, {
+      method: 'POST',
+      body: JSON.stringify({ drawings: newDrawings })
+    }).catch(console.error);
+  }, [isDrawing, currentStroke, drawings, sessionId]);
+
+  const clearDrawings = useCallback(() => {
+    setDrawings([]);
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (canvas && ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Save empty drawings to server
+    apiFetch(`/api/slideshow/${sessionId}/drawings`, {
+      method: 'POST',
+      body: JSON.stringify({ drawings: [] })
+    }).catch(console.error);
+  }, [sessionId]);
+
+  // Initialize canvas when frame size changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !frameSize) return;
+    
+    canvas.width = frameSize.w;
+    canvas.height = frameSize.h;
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctxRef.current = ctx;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
+  }, [frameSize]);
+
+  // Redraw all strokes when drawings change
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawings.forEach(stroke => {
+      if (stroke.points.length < 2) return;
+      
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      
+      ctx.stroke();
+    });
+  }, [drawings]);
 
   // Load session details
   useEffect(() => {
@@ -548,36 +693,67 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
-            <div className="ml-auto flex items-center gap-2">
+          
+          {/* Drawing controls */}
+          <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-1">
+              <Button 
+                variant={drawingMode === 'mouse' ? 'primary' : 'ghost'} 
+                onClick={() => setDrawingMode('mouse')}
+                className="text-sm px-2 py-1"
+              >
+                Mouse
+              </Button>
+              <Button 
+                variant={drawingMode === 'pen' ? 'primary' : 'ghost'} 
+                onClick={() => setDrawingMode('pen')}
+                className="text-sm px-2 py-1"
+              >
+                Pen
+              </Button>
+            </div>
+            
+            {drawingMode === 'pen' && (
+              <>
+                <div className="flex items-center gap-1">
+                  {(['red', 'blue', 'green', 'yellow', 'black', 'white'] as DrawingColor[]).map(color => (
+                    <button
+                      key={color}
+                      className={`w-6 h-6 rounded-full border-2 ${
+                        drawingColor === color ? 'border-slate-800' : 'border-slate-300'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setDrawingColor(color)}
+                      title={color}
+                    />
+                  ))}
+                </div>
+                <Button variant="ghost" onClick={clearDrawings} className="text-sm px-2 py-1">
+                  Clear
+                </Button>
+              </>
+            )}
+          </div>
+          
+          <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" onClick={() => gotoSlide(current - 1)} disabled={working || current <= 1}>Prev</Button>
             <span className="text-sm text-slate-600">{current} / {total}</span>
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
-            </div>
+          </div>
         </div>
         {/* Full-width stage that fills remaining space */}
         <div className="flex-1 relative">
           <div ref={stageRef} className="relative w-full h-full">
             <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
               <div
-                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center cursor-pointer"
+                className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center relative"
                 style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
-                onClick={() => {
-                  const total = slides.length;
-                  const current = Math.min(Math.max(1, details?.currentSlide || 1), total);
-                  if (current < total) {
-                    gotoSlide(current + 1);
-                  } else {
-                    // Loop back to first slide
-                    gotoSlide(1);
-                  }
-                }}
-                title="Click to advance to next slide"
               >
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}
                   ref={imgRef}
-                  className="block w-full h-full object-contain pointer-events-none"
+                  className="block w-full h-full object-contain"
                   onLoad={() => {
                     const el = imgRef.current;
                     if (!el) return;
@@ -589,6 +765,28 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                       recomputeFrame(aspect);
                     }
                   }}
+                />
+                
+                {/* Drawing canvas overlay */}
+                <canvas
+                  ref={canvasRef}
+                  className="absolute inset-0 w-full h-full cursor-crosshair"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onClick={(e) => {
+                    if (drawingMode === 'mouse') {
+                      const total = slides.length;
+                      const current = Math.min(Math.max(1, details?.currentSlide || 1), total);
+                      if (current < total) {
+                        gotoSlide(current + 1);
+                      } else {
+                        gotoSlide(1);
+                      }
+                    }
+                  }}
+                  title={drawingMode === 'mouse' ? 'Click to advance to next slide' : 'Draw on the slide'}
                 />
               </div>
             </div>
