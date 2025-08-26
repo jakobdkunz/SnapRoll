@@ -16,6 +16,7 @@ const preset: Partial<Config> = {
       },
       boxShadow: {
         soft: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)',
+        'white-button': '0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)',
       },
     },
   },
