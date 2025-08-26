@@ -193,3 +193,17 @@ model SlideshowAsset {
 
   @@index([teacherId])
 }
+
+model SlideshowSlide {
+  id         String            @id @default(cuid())
+  session    SlideshowSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId  String
+  index      Int
+  imageUrl   String
+  width      Int?
+  height     Int?
+  createdAt  DateTime          @default(now())
+
+  @@unique([sessionId, index])
+  @@index([sessionId])
+}
