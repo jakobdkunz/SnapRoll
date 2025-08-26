@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { Card, Skeleton, TextInput, Button } from '@snaproll/ui';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
+import { HiOutlineHandRaised } from 'react-icons/hi2';
 
 type Section = { id: string; title: string; gradient?: string };
 
@@ -15,6 +16,7 @@ type CheckinResponse = { ok: boolean; status: string; section?: { id: string; ti
 
 export default function SectionsPage() {
   const pathname = usePathname();
+  const router = useRouter();
   const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -351,7 +353,16 @@ export default function SectionsPage() {
       {/* Attendance / Check In */}
       <Card className="p-6 space-y-3">
         <div className="text-center">
-          <div className="font-medium">Attendance</div>
+          <div className="font-medium flex items-center justify-center gap-2">
+            Attendance
+            <button 
+              onClick={() => router.push('/icon-options')}
+              className="p-1 hover:bg-slate-100 rounded transition-colors"
+              title="View icon options"
+            >
+              <HiOutlineHandRaised className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
         <div className="flex items-center justify-center gap-3">
