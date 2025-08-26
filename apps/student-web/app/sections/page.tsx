@@ -140,11 +140,19 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Use a small delay to ensure localStorage is available
+    // Use a longer delay to ensure localStorage is available and retry if needed
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
-      setStudentId(id);
-    }, 100);
+      if (id) {
+        setStudentId(id);
+      } else {
+        // Retry once more after a longer delay
+        setTimeout(() => {
+          const retryId = localStorage.getItem('snaproll.studentId');
+          setStudentId(retryId);
+        }, 500);
+      }
+    }, 200);
     
     return () => clearTimeout(timer);
   }, []);
