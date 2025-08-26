@@ -114,8 +114,8 @@ export default function MyAttendancePage() {
   }, [data]);
 
 
-  if (!isClient) return null;
-  if (!studentId) return (
+  // Always render the same skeleton on both server and client to avoid hydration mismatch
+  if (!isClient || !studentId) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
         <div className="space-y-2">

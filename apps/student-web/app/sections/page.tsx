@@ -282,8 +282,8 @@ export default function SectionsPage() {
 
 
 
-  if (!mounted || !isClient) return null;
-  if (!studentId) return (
+  // Always render the same skeleton on both server and client to avoid hydration mismatch
+  if (!mounted || !isClient || !studentId) return (
     <div className="space-y-6">
       <Card className="p-6 space-y-3">
         <div className="text-center">
