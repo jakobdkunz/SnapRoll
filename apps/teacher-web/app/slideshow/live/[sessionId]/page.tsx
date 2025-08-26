@@ -90,7 +90,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       const host = u.hostname.toLowerCase();
       // Proxy blob hosts to avoid CORS/Range issues in PDF.js
       if (host.endsWith('.vercel-storage.com') || host.endsWith('blob.vercel-storage.com')) {
-        const api = getApiBaseUrl().replace(/\\/$/, '');
+        const api = getApiBaseUrl().replace(/\/$/, '');
         const proxied = `${api}/api/proxy?url=${encodeURIComponent(rawFileUrl)}`;
         return proxied;
       }
