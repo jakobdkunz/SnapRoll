@@ -106,75 +106,142 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     
     console.log('Start drawing at:', point);
     setIsDrawing(true);
-    const newStroke: DrawingStroke = { color: drawingColor, points: [point], mode: drawingMode };
-    setCurrentStroke(newStroke);
     
-    // Draw initial point
-    const ctx = ctxRef.current;
-    if (ctx) {
-      ctx.strokeStyle = drawingMode === 'eraser' ? '#ffffff' : drawingColor;
-      ctx.lineWidth = drawingMode === 'eraser' ? 20 : 3;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
+    if (drawingMode === 'eraser') {
+      // For eraser, we'll handle stroke removal in the draw function
+      setCurrentStroke(null);
+    } else {
+      const newStroke: DrawingStroke = { color: drawingColor, points: [point], mode: drawingMode };
+      setCurrentStroke(newStroke);
       
-      // Convert percentage coordinates to canvas pixels for real-time drawing
-      const canvas = canvasRef.current;
-      if (canvas) {
-        ctx.moveTo(point.x * canvas.width, point.y * canvas.height);
-        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
-        ctx.stroke();
+      // Draw initial point
+      const ctx = ctxRef.current;
+      if (ctx) {
+        ctx.strokeStyle = drawingColor;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        
+        // Convert percentage coordinates to canvas pixels for real-time drawing
+        const canvas = canvasRef.current;
+        if (canvas) {
+          ctx.moveTo(point.x * canvas.width, point.y * canvas.height);
+          ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+          ctx.stroke();
+        }
       }
     }
   }, [drawingMode, drawingColor, getCanvasCoordinates]);
 
   const draw = useCallback((e: React.MouseEvent) => {
-    if (!isDrawing || (drawingMode !== 'pen' && drawingMode !== 'eraser') || !currentStroke) return;
+    if (!isDrawing || (drawingMode !== 'pen' && drawingMode !== 'eraser')) return;
     
     e.preventDefault();
     const point = getCanvasCoordinates(e);
     if (!point) return;
     
-    const updatedStroke = { ...currentStroke, points: [...currentStroke.points, point] };
-    setCurrentStroke(updatedStroke);
-    
-    // Draw line in real-time
-    const ctx = ctxRef.current;
-    if (ctx) {
-      ctx.strokeStyle = drawingMode === 'eraser' ? '#ffffff' : drawingColor;
-      ctx.lineWidth = drawingMode === 'eraser' ? 20 : 3;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
+    if (drawingMode === 'eraser') {
+      // Eraser mode: remove strokes that intersect with the eraser
+      const currentSlideIndex = details?.currentSlide || 1;
+      const currentSlideDrawings = drawings[currentSlideIndex] || [];
+      const eraserRadius = 0.02; // 2% of canvas size
       
-      // Convert percentage coordinates to canvas pixels for real-time drawing
-      const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+      const newSlideDrawings = currentSlideDrawings.filter((stroke: DrawingStroke) => {
+        // Check if any point in the stroke is within eraser radius
+        return !stroke.points.some((strokePoint: DrawingPoint) => {
+          const distance = Math.sqrt(
+            Math.pow(strokePoint.x - point.x, 2) + Math.pow(strokePoint.y - point.y, 2)
+          );
+          return distance < eraserRadius;
+        });
+      });
+      
+      const newDrawings = { ...drawings, [currentSlideIndex]: newSlideDrawings };
+      setDrawings(newDrawings);
+      
+      // Redraw canvas immediately
       const canvas = canvasRef.current;
-      if (canvas) {
-        ctx.moveTo(lastPoint.x * canvas.width, lastPoint.y * canvas.height);
-        ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
-        ctx.stroke();
+      const ctx = ctxRef.current;
+      if (canvas && ctx && frameSize) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        newSlideDrawings.forEach((stroke: DrawingStroke) => {
+          if (stroke.points.length < 2) return;
+          
+          ctx.strokeStyle = stroke.color;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          
+          const firstPoint = stroke.points[0];
+          ctx.moveTo(firstPoint.x * canvas.width, firstPoint.y * canvas.height);
+          
+          for (let i = 1; i < stroke.points.length; i++) {
+            const strokePoint = stroke.points[i];
+            ctx.lineTo(strokePoint.x * canvas.width, strokePoint.y * canvas.height);
+          }
+          
+          ctx.stroke();
+        });
+      }
+    } else {
+      // Pen mode: continue drawing
+      if (!currentStroke) return;
+      
+      const updatedStroke = { ...currentStroke, points: [...currentStroke.points, point] };
+      setCurrentStroke(updatedStroke);
+      
+      // Draw line in real-time
+      const ctx = ctxRef.current;
+      if (ctx) {
+        ctx.strokeStyle = drawingColor;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        
+        // Convert percentage coordinates to canvas pixels for real-time drawing
+        const lastPoint = currentStroke.points[currentStroke.points.length - 1];
+        const canvas = canvasRef.current;
+        if (canvas) {
+          ctx.moveTo(lastPoint.x * canvas.width, lastPoint.y * canvas.height);
+          ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+          ctx.stroke();
+        }
       }
     }
-  }, [isDrawing, drawingMode, currentStroke, drawingColor, getCanvasCoordinates]);
+  }, [isDrawing, drawingMode, currentStroke, drawingColor, getCanvasCoordinates, drawings, details?.currentSlide, frameSize]);
 
   const stopDrawing = useCallback(() => {
-    if (!isDrawing || !currentStroke) return;
+    if (!isDrawing) return;
     
     setIsDrawing(false);
-    const currentSlideIndex = details?.currentSlide || 1;
-    const currentSlideDrawings = drawings[currentSlideIndex] || [];
-    const newSlideDrawings = [...currentSlideDrawings, currentStroke];
-    const newDrawings = { ...drawings, [currentSlideIndex]: newSlideDrawings };
-    setDrawings(newDrawings);
-    setCurrentStroke(null);
     
-    // Save drawings to server (debounced to reduce API calls)
-    console.log('Saving drawings to server:', newDrawings);
-    apiFetch(`/api/slideshow/${sessionId}/drawings`, {
-      method: 'POST',
-      body: JSON.stringify({ drawings: newDrawings })
-    }).then(() => console.log('Drawings saved successfully'))
-      .catch(error => console.error('Failed to save drawings:', error));
-  }, [isDrawing, currentStroke, drawings, sessionId, details?.currentSlide]);
+    if (drawingMode === 'eraser') {
+      // For eraser, we don't need to save anything since we already updated the drawings state
+      // Just save the current state to server
+      console.log('Saving drawings after eraser use:', drawings);
+      apiFetch(`/api/slideshow/${sessionId}/drawings`, {
+        method: 'POST',
+        body: JSON.stringify({ drawings })
+      }).then(() => console.log('Drawings saved successfully'))
+        .catch(error => console.error('Failed to save drawings:', error));
+    } else if (currentStroke) {
+      // Pen mode: save the completed stroke
+      const currentSlideIndex = details?.currentSlide || 1;
+      const currentSlideDrawings = drawings[currentSlideIndex] || [];
+      const newSlideDrawings = [...currentSlideDrawings, currentStroke];
+      const newDrawings = { ...drawings, [currentSlideIndex]: newSlideDrawings };
+      setDrawings(newDrawings);
+      setCurrentStroke(null);
+      
+      // Save drawings to server
+      console.log('Saving drawings to server:', newDrawings);
+      apiFetch(`/api/slideshow/${sessionId}/drawings`, {
+        method: 'POST',
+        body: JSON.stringify({ drawings: newDrawings })
+      }).then(() => console.log('Drawings saved successfully'))
+        .catch(error => console.error('Failed to save drawings:', error));
+    }
+  }, [isDrawing, currentStroke, drawings, sessionId, details?.currentSlide, drawingMode]);
 
   const clearDrawings = useCallback(() => {
     const currentSlideIndex = details?.currentSlide || 1;
@@ -769,7 +836,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 title="Eraser tool"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                 </svg>
               </Button>
             </div>
