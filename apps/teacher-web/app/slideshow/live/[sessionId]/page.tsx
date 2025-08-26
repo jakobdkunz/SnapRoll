@@ -910,7 +910,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                   ref={canvasRef}
                   className={`absolute inset-0 w-full h-full ${
                     drawingMode === 'pen' ? 'cursor-crosshair' : 
-                    drawingMode === 'eraser' ? 'cursor-circle' : 'cursor-pointer'
+                    drawingMode === 'eraser' ? 'cursor-grab' : 'cursor-pointer'
                   }`}
                   onMouseDown={startDrawing}
                   onMouseMove={draw}
