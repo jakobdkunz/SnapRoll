@@ -142,7 +142,7 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col min-h-screen">
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
@@ -152,76 +152,82 @@ export default function AttendancePage() {
           </div>
           <div className="w-[88px]" />
         </div>
-      <div className="grid place-items-center gap-4 w-full">
-      <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
-        <div className="text-sm uppercase tracking-wide text-slate-500">
-          Attendance Code
-        </div>
-        {!status ? (
-          <div className="mt-4 grid place-items-center gap-4">
-            <Skeleton className="h-12 w-48" />
-            <Skeleton className="h-10 w-40" />
-          </div>
-        ) : (
-          <>
-            <div className="mt-4 flex items-center justify-center">
-                                              <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
-                  <div className="flex items-center">
-                    <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0 mr-6 sm:mr-8" />
-                    <div className="flex gap-3 sm:gap-4">
-                      {code.split('').map((ch, i) => (
-                        <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
-                          {ch}
-                        </div>
-                      ))}
+        
+        {/* Attendance Code Widget - Centered */}
+        <div className="flex-1 flex items-center justify-center">
+          <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
+            <div className="text-sm uppercase tracking-wide text-slate-500">
+              Attendance Code
+            </div>
+            {!status ? (
+              <div className="mt-4 grid place-items-center gap-4">
+                <Skeleton className="h-12 w-48" />
+                <Skeleton className="h-10 w-40" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 flex items-center justify-center">
+                  <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
+                    <div className="flex items-center">
+                      <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0 mr-6 sm:mr-8" />
+                      <div className="flex gap-3 sm:gap-4">
+                        {code.split('').map((ch, i) => (
+                          <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
+                            {ch}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-            </div>
-            <div className="mt-6 text-slate-600 text-sm flex items-center justify-center gap-4">
-              <span className="inline-flex items-center gap-1"><HiOutlineGlobeAlt className="h-5 w-5" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
-              <span className="inline-flex items-center gap-1"><HiOutlineDevicePhoneMobile className="h-5 w-5" /> or use the SnapRoll app</span>
-            </div>
-          </>
-        )}
-      </Card>
+                <div className="mt-6 text-slate-600 text-sm flex items-center justify-center gap-4">
+                  <span className="inline-flex items-center gap-1"><HiOutlineGlobeAlt className="h-5 w-5" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
+                  <span className="inline-flex items-center gap-1"><HiOutlineDevicePhoneMobile className="h-5 w-5" /> or use the SnapRoll app</span>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
 
-      <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
-        {status ? (
-          <>
-            <div className="text-center mb-4">
-              <div className="text-2xl font-bold text-primary">
-                {status.checkedIn}/{status.totalStudents}
-              </div>
-              <div className="text-sm text-slate-500">students checked in</div>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
-              <div 
-                className="bg-primary h-5 rounded-full transition-all duration-300"
-                style={{ width: `${status.progress}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-center mb-4">
-              <div className="mt-2 grid place-items-center gap-2">
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-            </div>
-            <Skeleton className="w-full h-5 rounded-full" />
-          </>
-        )}
-      </Card>
-      {/* Bottom action: Generate new code */}
-      <div className="fixed bottom-5 left-0 right-0 flex justify-center px-4">
-        <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
-          <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
-        </Button>
+        {/* Progress Bar Widget - Bottom */}
+        <div className="mb-20">
+          <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
+            {status ? (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-2xl font-bold text-primary">
+                    {status.checkedIn}/{status.totalStudents}
+                  </div>
+                  <div className="text-sm text-slate-500">students checked in</div>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
+                  <div 
+                    className="bg-primary h-5 rounded-full transition-all duration-300"
+                    style={{ width: `${status.progress}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center mb-4">
+                  <div className="mt-2 grid place-items-center gap-2">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                </div>
+                <Skeleton className="w-full h-5 rounded-full" />
+              </>
+            )}
+          </Card>
+        </div>
+
+        {/* Bottom action: Generate new code */}
+        <div className="fixed bottom-5 left-0 right-0 flex justify-center px-4">
+          <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
+            <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
+          </Button>
+        </div>
       </div>
-      </div>
-    </div>
     </div>
   );
 }
