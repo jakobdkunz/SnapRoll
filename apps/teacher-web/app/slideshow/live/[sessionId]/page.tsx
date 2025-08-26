@@ -26,8 +26,9 @@ type PdfPage = {
   getViewport: (opts: { scale: number }) => PdfViewport;
   render: (context: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }) => { promise: Promise<void>; cancel: () => void };
 };
+type PdfDocument = { numPages: number; getPage: (pageNum: number) => Promise<PdfPage> };
 type PdfJsLib = {
-  getDocument: (data: ArrayBuffer) => Promise<{ numPages: number; getPage: (pageNum: number) => Promise<PdfPage> }>;
+  getDocument: (data: ArrayBuffer) => { promise: Promise<PdfDocument> };
 };
 
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
@@ -355,7 +356,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <div className="ml-auto flex items-center gap-2">
               <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide - 1)} disabled={working || details.currentSlide <= 1}>Prev</Button>
               <span className="text-sm text-slate-600">{details.currentSlide} / {details.totalSlides || '?'}</span>
-              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working || (details.totalSlides && details.currentSlide >= details.totalSlides)}>Next</Button>
+              <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working || (!!details.totalSlides && details.currentSlide >= details.totalSlides)}>Next</Button>
             </div>
           ) : isPpt && pptxSlides.length > 0 ? (
             <div className="ml-auto flex items-center gap-2">
@@ -390,8 +391,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         
         {isPdf && (
           <div className="px-4 py-3 flex items-center gap-3 border-t">
-            <Button variant={tool === 'pen' ? 'default' : 'ghost'} onClick={() => setTool('pen')}>Pen</Button>
-            <Button variant={tool === 'eraser' ? 'default' : 'ghost'} onClick={() => setTool('eraser')}>Eraser</Button>
+            <Button variant={tool === 'pen' ? 'primary' : 'ghost'} onClick={() => setTool('pen')}>Pen</Button>
+            <Button variant={tool === 'eraser' ? 'primary' : 'ghost'} onClick={() => setTool('eraser')}>Eraser</Button>
             <Button variant="ghost" onClick={() => {
               if (overlayCanvasRef.current) {
                 const ctx = overlayCanvasRef.current.getContext('2d')!;
