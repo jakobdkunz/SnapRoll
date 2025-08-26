@@ -15,10 +15,15 @@ export default function StudentWelcomePage() {
   useEffect(() => {
     setMounted(true);
     // Check if already logged in
-    const studentId = localStorage.getItem('snaproll.studentId');
-    if (studentId) {
-      router.push('/sections');
-    }
+    const timer = setTimeout(() => {
+      const studentId = localStorage.getItem('snaproll.studentId');
+      console.log('Welcome: studentId from localStorage:', studentId);
+      if (studentId) {
+        router.push('/sections');
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, [router]);
 
   async function onContinue() {

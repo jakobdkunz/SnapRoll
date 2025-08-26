@@ -23,10 +23,16 @@ export default function MyAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    const id = localStorage.getItem('snaproll.studentId');
-    setStudentId(id);
-    const n = localStorage.getItem('snaproll.studentName');
-    if (n) setStudentName(n);
+    // Use a small delay to ensure localStorage is available
+    const timer = setTimeout(() => {
+      const id = localStorage.getItem('snaproll.studentId');
+      console.log('MyAttendance: studentId from localStorage:', id);
+      setStudentId(id);
+      const n = localStorage.getItem('snaproll.studentName');
+      if (n) setStudentName(n);
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
