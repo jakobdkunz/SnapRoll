@@ -18,11 +18,31 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       instructorLastSeenAt: { gt: cutoff },
       allowDownload: true,
     },
-    include: { asset: true },
+    include: { 
+      asset: {
+        include: {
+          slides: {
+            where: { index: 1 },
+            take: 1
+          }
+        }
+      }
+    },
     orderBy: { instructorLastSeenAt: 'desc' },
     take: 20,
   });
-  const recents = sessions.map((s) => ({ id: s.id, title: s.asset.title, url: s.asset.filePath, allowDownload: s.allowDownload, lastSeenAt: (s.instructorLastSeenAt ?? s.createdAt).toISOString() }));
+  
+  // Filter out sessions with missing assets and map to include thumbnail
+  const recents = sessions
+    .filter((s) => s.asset && s.asset.filePath) // Only include sessions with valid assets
+    .map((s) => ({ 
+      id: s.id, 
+      title: s.asset.title, 
+      url: s.asset.filePath, 
+      allowDownload: s.allowDownload, 
+      lastSeenAt: (s.instructorLastSeenAt ?? s.createdAt).toISOString(),
+      thumbnail: s.asset.slides[0]?.imageUrl || null
+    }));
   return NextResponse.json({ recents }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
