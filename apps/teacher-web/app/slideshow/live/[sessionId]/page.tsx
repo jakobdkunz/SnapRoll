@@ -37,7 +37,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [imgAspect, setImgAspect] = useState<number | null>(null);
   const [frameSize, setFrameSize] = useState<{ w: number; h: number } | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
-  const [stageHeight, setStageHeight] = useState<number | null>(null);
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -111,30 +110,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => window.removeEventListener('resize', onResize);
   }, [imgAspect]);
 
-  // Compute stage height so page doesn't scroll and nav stays visible
+  // Recompute frame when aspect changes or on resize
   useEffect(() => {
-    const compute = () => {
-      // Get actual header height from the sticky header
-      const header = document.querySelector('header');
-      const headerHeight = header ? header.getBoundingClientRect().height : 0;
-      
-      // Get nav bar height
-      const navHeight = navRef.current ? navRef.current.getBoundingClientRect().height : 0;
-      
-      // Calculate available height for stage
-      const availableHeight = Math.max(0, window.innerHeight - headerHeight - navHeight);
-      setStageHeight(availableHeight);
-      
-      if (imgAspect) recomputeFrame(imgAspect);
-    };
-    
-    // Wait for DOM to be ready
-    const timer = setTimeout(compute, 0);
-    window.addEventListener('resize', compute);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', compute);
-    };
+    if (!imgAspect) return;
+    const onResize = () => recomputeFrame(imgAspect);
+    window.addEventListener('resize', onResize);
+    onResize();
+    return () => window.removeEventListener('resize', onResize);
   }, [imgAspect]);
 
   const rawFileUrl = details?.filePath;
@@ -535,7 +517,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const slide = slides[current - 1];
     content = (
       <>
-        <div ref={navRef} className="px-4 py-3 flex items-center gap-3">
+        <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
             <div className="ml-auto flex items-center gap-2">
@@ -544,9 +526,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
             </div>
         </div>
-        {/* Full-width stage within normal flow (no scroll lock) */}
-        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
-          <div ref={stageRef} className="relative" style={stageHeight != null ? { height: `${stageHeight}px` } : undefined}>
+        {/* Full-width stage that fills remaining space */}
+        <div className="flex-1 relative">
+          <div ref={stageRef} className="relative w-full h-full">
             <div className="absolute inset-0 p-2 sm:p-4 grid place-items-center">
               <div
                 className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center"
@@ -578,7 +560,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   return (
-    <div className="min-h-dvh flex flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
       {content}
     </div>
   );
