@@ -13,7 +13,6 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       section: {
         teacherId: teacherId
       },
-      closedAt: null, // Only active sessions
       slides: {
         some: {} // Only sessions that have been converted to PNGs
       }
