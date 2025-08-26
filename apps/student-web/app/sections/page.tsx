@@ -357,7 +357,7 @@ export default function SectionsPage() {
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
         <div className="flex items-center justify-center gap-3">
-          <HiOutlineUserGroup className="w-8 h-8 text-black" />
+          <HiOutlineUserGroup className="w-10 h-10 text-black" />
           {digits.map((d, i) => (
             <input
               key={i}
