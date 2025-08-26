@@ -153,11 +153,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           const distance = Math.sqrt(
             Math.pow(strokePoint.x - point.x, 2) + Math.pow(strokePoint.y - point.y, 2)
           );
-          // The visual circle uses eraserRadius * Math.min(frameSize.w, frameSize.h) pixels
-          // Convert to percentage: divide by the smaller frame dimension
-          const minFrameSize = Math.min(frameSize?.w || 1, frameSize?.h || 1);
-          const effectiveRadius = eraserRadius / minFrameSize;
-          return distance < effectiveRadius;
+          // Use eraserRadius directly as a percentage (0-1)
+          return distance < eraserRadius;
         });
       });
       
