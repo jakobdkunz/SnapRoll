@@ -97,7 +97,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const slide = slides[current - 1];
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
       <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
         <Button variant="ghost" onClick={() => router.back()}>Back</Button>
         <div className="text-lg font-semibold truncate">{details.title}</div>

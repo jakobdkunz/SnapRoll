@@ -560,7 +560,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
       {content}
     </div>
   );
