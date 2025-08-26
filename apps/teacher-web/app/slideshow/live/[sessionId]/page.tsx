@@ -155,9 +155,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       document.head.appendChild(link);
     }
     const anyWin = window as unknown as { jQuery?: any; $?: any; JSZip?: any; Reveal?: any };
-    if (!anyWin.jQuery) await loadScript('/vendor/jquery.min.js');
-    if (!anyWin.JSZip) await loadScript('/vendor/jszip.min.js');
-    if (!anyWin.Reveal) await loadScript('/vendor/reveal.js');
+    if (!anyWin.jQuery) await loadScript('/vendor/jquery.min.js').catch((e) => { console.error(e); throw e; });
+    if (!anyWin.JSZip) await loadScript('/vendor/jszip.min.js').catch((e) => { console.error(e); throw e; });
+    if (!anyWin.Reveal) await loadScript('/vendor/reveal.js').catch((e) => { console.error(e); throw e; });
     if (!anyWin.$ && anyWin.jQuery) anyWin.$ = anyWin.jQuery;
     const w = window as any;
     w.FileReaderJS = w.FileReaderJS || {};
@@ -165,8 +165,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     w.FileReaderJS.setupBlob = w.FileReaderJS.setupBlob || function(){};
     const hasPlugin = !!(anyWin.$ && anyWin.$.fn && anyWin.$.fn.pptxToHtml);
     if (!hasPlugin) {
-      await loadScript('/vendor/pptxjs.min.js');
-      await loadScript('/vendor/divs2slides.min.js');
+      await loadScript('/vendor/pptxjs.min.js').catch((e) => { console.error(e); throw e; });
+      await loadScript('/vendor/divs2slides.min.js').catch((e) => { console.error(e); throw e; });
     }
   }
 
@@ -230,13 +230,23 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     try {
       await ensurePptxLibs();
       await ensureHtml2Canvas();
+      // Quick reachability test for the PPTX file
+      if (!proxiedFileUrl) throw new Error('No file URL found');
+      try {
+        const testResp = await fetch(proxiedFileUrl, { method: 'HEAD', credentials: 'include' as RequestCredentials });
+        if (!testResp.ok) throw new Error(`File not reachable (status ${testResp.status})`);
+      } catch (e) {
+        throw new Error(`Unable to load PPTX. ${e instanceof Error ? e.message : ''}`);
+      }
       const host = document.createElement('div');
       host.style.position = 'absolute';
       host.style.left = '-10000px';
       host.style.top = '0';
       (renderHostRef.current || document.body).appendChild(host);
       const $ = (window as any).jQuery as any;
-      await new Promise<void>((resolve) => {
+      const pluginExists = $ && $.fn && $.fn.pptxToHtml;
+      if (!pluginExists) throw new Error('PPTX renderer not available');
+      const renderPromise = new Promise<void>((resolve) => {
         $(host).pptxToHtml({
           pptxFileUrl: proxiedFileUrl,
           slideMode: true,
@@ -249,6 +259,11 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           after: () => resolve(),
         });
       });
+      // Timeout guard in case plugin never calls after()
+      await Promise.race([
+        renderPromise,
+        new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Timed out loading PPTX')), 10000)),
+      ]);
       const Reveal = (window as any).Reveal;
       const total = typeof Reveal?.getTotalSlides === 'function' ? Reveal.getTotalSlides() : (host.querySelectorAll('.reveal .slides section').length || 1);
       const html2canvas = (window as any).html2canvas as (node: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
@@ -268,6 +283,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       setSlides(res.slides);
       setDetails(prev => prev ? { ...prev, totalSlides: res.slides.length } : prev);
     } catch (e) {
+      console.error(e);
       setError((e as Error)?.message || 'Failed to render PPTX');
     } finally {
       setRendering(false);
