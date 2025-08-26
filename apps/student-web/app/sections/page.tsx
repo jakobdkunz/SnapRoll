@@ -513,7 +513,7 @@ export default function SectionsPage() {
           </div>
           <div className="mt-3 space-y-3">
             {recentSlides.map((r) => (
-              <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className="block">
+              <a key={r.id} href={r.url} download className="block">
                 <div className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 transition-colors">
                   {r.thumbnail ? (
                     <img 
