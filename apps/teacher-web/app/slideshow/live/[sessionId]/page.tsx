@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
-import JSZip from 'jszip';
 
 type SessionDetails = {
   id: string;
@@ -20,16 +19,7 @@ type SessionDetails = {
   preventJump: boolean;
 };
 
-// Minimal PDF.js types to avoid 'any'
-type PdfViewport = { width: number; height: number };
-type PdfPage = {
-  getViewport: (opts: { scale: number }) => PdfViewport;
-  render: (context: { canvasContext: CanvasRenderingContext2D; viewport: PdfViewport }) => { promise: Promise<void>; cancel: () => void };
-};
-type PdfDocument = { numPages: number; getPage: (pageNum: number) => Promise<PdfPage> };
-type PdfJsLib = {
-  getDocument: (data: ArrayBuffer) => { promise: Promise<PdfDocument> };
-};
+// PDFs are rendered via iframe viewer
 
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
@@ -39,15 +29,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [details, setDetails] = useState<SessionDetails | null>(null);
   const [working, setWorking] = useState(false);
   const [debug, setDebug] = useState('');
-  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
-  const [pdfReadyTick, setPdfReadyTick] = useState(0);
-  const [pptxSlides, setPptxSlides] = useState<string[]>([]);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-
-  const pageCanvasRef = useRef<HTMLCanvasElement>(null);
-  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  
   const containerRef = useRef<HTMLDivElement>(null);
-  const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
+  const pptContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Load session details
   useEffect(() => {
@@ -100,92 +84,101 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return rawFileUrl; // Direct URL for PPTX
   }, [rawFileUrl]);
 
-  // PPTX rendering using JSZip
+  const pageUrl = useMemo(() => {
+    if (!details) return '';
+    const page = Math.max(1, details.currentSlide || 1);
+    const cacheBust = `r=${page}`;
+    return `${fileUrl}?${cacheBust}#page=${page}&zoom=page-fit&toolbar=0`;
+  }, [details, fileUrl]);
+
+  // (Removed legacy JSZip fallback; using PPTX.js integration below)
+
+  // PPTX rendering using PPTX.js + Reveal.js (instructor view)
   useEffect(() => {
-    if (!isPpt || !directFileUrl) return;
-    
+    if (!details || !isPpt || details.officeMode) return;
     let cancelled = false;
-    async function renderPptx() {
-      try {
-        setDebug((prev) => prev + `\nPPTX: Starting JSZip-based rendering`);
-        setDebug((prev) => prev + `\nPPTX: Fetching from: ${directFileUrl}`);
-        
-        const response = await fetch(directFileUrl);
-        if (cancelled) return;
-        
-        if (!response.ok) {
-          setDebug((prev) => prev + `\nPPTX: Fetch failed: ${response.status} ${response.statusText}`);
-          return;
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        setDebug((prev) => prev + `\nPPTX: Fetched ${arrayBuffer.byteLength} bytes`);
-        
-        const zip = new JSZip();
-        const zipContent = await zip.loadAsync(arrayBuffer);
-        
-        // Extract slide XML files
-        const slideFiles: string[] = [];
-        for (const [filename, file] of Object.entries(zipContent.files)) {
-          if (filename.startsWith('ppt/slides/slide') && filename.endsWith('.xml')) {
-            const content = await file.async('string');
-            slideFiles.push(content);
-          }
-        }
-        
-        if (cancelled) return;
-        
-        setDebug((prev) => prev + `\nPPTX: Found ${slideFiles.length} slides`);
-        
-        // Parse slides and convert to HTML
-        const htmlSlides = slideFiles.map((slideXml, index) => {
-          try {
-            // Simple XML parsing to extract text content
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(slideXml, 'text/xml');
-            
-            // Extract text from all text elements
-            const textElements = xmlDoc.querySelectorAll('a:t, t');
-            const texts: string[] = [];
-            textElements.forEach(el => {
-              const text = el.textContent?.trim();
-              if (text) texts.push(text);
-            });
-            
-            // Create a simple HTML slide
-            const slideHtml = `
-              <div class="slide" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; padding: 40px; box-sizing: border-box;">
-                <h1 style="font-size: 2.5rem; margin-bottom: 1rem; text-align: center;">Slide ${index + 1}</h1>
-                <div style="font-size: 1.2rem; text-align: center; line-height: 1.6;">
-                  ${texts.map(text => `<p style="margin: 0.5rem 0;">${text}</p>`).join('')}
-                </div>
-              </div>
-            `;
-            
-            return slideHtml;
-          } catch (err) {
-            setDebug((prev) => prev + `\nPPTX: Error parsing slide ${index + 1}: ${(err as Error).message}`);
-            return `
-              <div class="slide" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: white;">
-                <h1>Slide ${index + 1}</h1>
-              </div>
-            `;
-          }
-        });
-        
-        if (cancelled) return;
-        
-        setPptxSlides(htmlSlides);
-        setDebug((prev) => prev + `\nPPTX: Successfully parsed ${htmlSlides.length} slides`);
-        
-      } catch (err) {
-        setDebug((prev) => prev + `\nPPTX: JSZip rendering error: ${(err as Error)?.message || String(err)}`);
+    async function loadScript(src: string) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(s);
+      });
+    }
+    function ensureCss(href: string) {
+      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      if (!links.some((l) => l.href === href)) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        document.head.appendChild(link);
       }
     }
-    
-    renderPptx();
+    async function ensureDeps() {
+      ensureCss('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css');
+      ensureCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/css/pptxjs.css');
+      if (!(window as unknown as { jQuery?: unknown }).jQuery) await loadScript('https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js');
+      if (!(window as unknown as { JSZip?: unknown }).JSZip) await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+      if (!(window as unknown as { Reveal?: unknown }).Reveal) await loadScript('https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js');
+      const w = window as unknown as { $?: { fn?: { pptxToHtml?: unknown } } };
+      const hasPlugin = w?.$?.fn?.pptxToHtml;
+      if (!hasPlugin) {
+        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/pptxjs.min.js');
+        await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@3.8.0/js/divs2slides.min.js');
+      }
+    }
+    async function render() {
+      await ensureDeps();
+      if (cancelled || !pptContainerRef.current) return;
+      const host = document.createElement('div');
+      pptContainerRef.current.innerHTML = '';
+      pptContainerRef.current.appendChild(host);
+      type JQueryInstance = { pptxToHtml: (opts: Record<string, unknown>) => void };
+      type JQueryFactory = (el: HTMLElement) => JQueryInstance;
+      const wjq = window as unknown as { jQuery?: JQueryFactory };
+      const jqFactory: JQueryFactory | undefined = wjq.jQuery;
+      if (!jqFactory) return;
+      jqFactory(host).pptxToHtml({
+        pptxFileUrl: directFileUrl || fileUrl,
+        slideMode: true,
+        slidesScale: '100%',
+        keyBoardShortCut: true,
+        mediaProcess: true,
+        slideType: 'revealjs',
+        revealjsConfig: { controls: true, progress: true },
+      });
+      // After mount, try to sync to current slide and wire changes
+      setTimeout(() => {
+        const wReveal = (window as unknown as { Reveal?: { on?: (evt: string, cb: (e: any) => void) => void; slide?: (h: number, v?: number) => void } }).Reveal;
+        if (!wReveal) return;
+        try {
+          if (details?.currentSlide && typeof wReveal.slide === 'function') {
+            wReveal.slide(Math.max(0, details.currentSlide - 1));
+          }
+          if (typeof wReveal.on === 'function') {
+            wReveal.on('slidechanged', (e: any) => {
+              const index = (e && (e.indexh ?? e.index)) ?? 0;
+              const target = Number(index) + 1;
+              setDetails(prev => prev ? { ...prev, currentSlide: target } : prev);
+              void apiFetch(`/api/slideshow/${sessionId}/goto`, { method: 'POST', body: JSON.stringify({ slide: target }) }).catch(() => {});
+            });
+          }
+        } catch {
+          // ignore
+        }
+      }, 250);
+    }
+    render();
     return () => { cancelled = true; };
-  }, [isPpt, directFileUrl]);
+  }, [details, isPpt, directFileUrl, fileUrl, sessionId]);
+
+  // Heartbeat to keep session alive
+  useEffect(() => {
+    const id = window.setInterval(() => { void apiFetch(`/api/slideshow/${sessionId}/heartbeat`, { method: 'POST' }); }, 5000);
+    return () => window.clearInterval(id);
+  }, [sessionId]);
 
   async function closeAndBack() {
     if (working) return;
@@ -201,137 +194,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }
 
-  // PDF rendering
-  useEffect(() => {
-    if (!isPdf || !fileUrl || !pageCanvasRef.current || !overlayCanvasRef.current || !containerRef.current) return;
-    
-    let cancelled = false;
-    async function renderPdf() {
-      try {
-        setDebug((prev) => prev + `\nPDF: Starting render`);
-        const pdfjsLib = (window as any).pdfjsLib as PdfJsLib;
-        if (!pdfjsLib) {
-          setDebug((prev) => prev + `\nPDF: pdfjsLib not available`);
-          return;
-        }
-
-        const response = await fetch(fileUrl);
-        if (cancelled) return;
-        
-        if (!response.ok) {
-          setDebug((prev) => prev + `\nPDF: Fetch failed: ${response.status}`);
-          return;
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        if (cancelled) return;
-
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-        if (cancelled) return;
-
-        const page = await pdf.getPage(details?.currentSlide || 1);
-        if (cancelled) return;
-
-        const canvas = pageCanvasRef.current!;
-        const context = canvas.getContext('2d')!;
-        
-        const viewport = page.getViewport({ scale: 1.5 });
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
-        
-        const renderTask = page.render(renderContext);
-        renderTaskRef.current = renderTask;
-        
-        await renderTask.promise;
-        if (cancelled) return;
-        
-        setPdfReadyTick(prev => prev + 1);
-        setDebug((prev) => prev + `\nPDF: Render complete`);
-      } catch (err) {
-        setDebug((prev) => prev + `\nPDF: Render error: ${(err as Error)?.message || String(err)}`);
-      }
-    }
-    
-    renderPdf();
-    
-    return () => {
-      cancelled = true;
-      if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
-      }
-    };
-  }, [isPdf, fileUrl, pdfReadyTick]);
-
-  // Drawing functionality
-  useEffect(() => {
-    if (!overlayCanvasRef.current || !pageCanvasRef.current) return;
-    
-    const overlayCanvas = overlayCanvasRef.current;
-    const pageCanvas = pageCanvasRef.current;
-    const ctx = overlayCanvas.getContext('2d')!;
-    
-    // Match overlay canvas size to page canvas
-    overlayCanvas.width = pageCanvas.width;
-    overlayCanvas.height = pageCanvas.height;
-    
-    let isDrawing = false;
-    let lastX = 0;
-    let lastY = 0;
-    
-    function getMousePos(e: MouseEvent) {
-      const rect = overlayCanvas.getBoundingClientRect();
-      const scaleX = overlayCanvas.width / rect.width;
-      const scaleY = overlayCanvas.height / rect.height;
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
-      };
-    }
-    
-    function startDrawing(e: MouseEvent) {
-      isDrawing = true;
-      const pos = getMousePos(e);
-      lastX = pos.x;
-      lastY = pos.y;
-    }
-    
-    function draw(e: MouseEvent) {
-      if (!isDrawing) return;
-      
-      const pos = getMousePos(e);
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.strokeStyle = tool === 'pen' ? '#000' : '#fff';
-      ctx.lineWidth = tool === 'pen' ? 2 : 10;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-      
-      lastX = pos.x;
-      lastY = pos.y;
-    }
-    
-    function stopDrawing() {
-      isDrawing = false;
-    }
-    
-    overlayCanvas.addEventListener('mousedown', startDrawing);
-    overlayCanvas.addEventListener('mousemove', draw);
-    overlayCanvas.addEventListener('mouseup', stopDrawing);
-    overlayCanvas.addEventListener('mouseout', stopDrawing);
-    
-    return () => {
-      overlayCanvas.removeEventListener('mousedown', startDrawing);
-      overlayCanvas.removeEventListener('mousemove', draw);
-      overlayCanvas.removeEventListener('mouseup', stopDrawing);
-      overlayCanvas.removeEventListener('mouseout', stopDrawing);
-    };
-  }, [tool, pdfReadyTick]);
+  // PDF rendering replaced by iframe; drawing tools removed for now
 
   let content: ReactNode;
   if (loading) {
@@ -358,30 +221,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
               <span className="text-sm text-slate-600">{details.currentSlide} / {details.totalSlides || '?'}</span>
               <Button variant="ghost" onClick={() => gotoSlide(details.currentSlide + 1)} disabled={working || (!!details.totalSlides && details.currentSlide >= details.totalSlides)}>Next</Button>
             </div>
-          ) : isPpt && pptxSlides.length > 0 ? (
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="ghost" onClick={() => setCurrentSlideIndex(Math.max(0, currentSlideIndex - 1))} disabled={currentSlideIndex <= 0}>Prev</Button>
-              <span className="text-sm text-slate-600">{currentSlideIndex + 1} / {pptxSlides.length}</span>
-              <Button variant="ghost" onClick={() => setCurrentSlideIndex(Math.min(pptxSlides.length - 1, currentSlideIndex + 1))} disabled={currentSlideIndex >= pptxSlides.length - 1}>Next</Button>
-            </div>
           ) : null}
         </div>
         
         <div className="flex-1 relative overflow-hidden" ref={containerRef}>
           {isPdf ? (
-            <>
-              <canvas ref={pageCanvasRef} className="absolute inset-0 w-full h-full" />
-              <canvas ref={overlayCanvasRef} className="absolute inset-0 w-full h-full pointer-events-auto" />
-            </>
-          ) : isPpt && pptxSlides.length > 0 ? (
-            <div 
-              className="w-full h-full"
-              dangerouslySetInnerHTML={{ __html: pptxSlides[currentSlideIndex] }}
-            />
+            <iframe title="slides" src={pageUrl} className="absolute inset-0 w-full h-full border-0 overflow-hidden" />
+          ) : (isPpt && details?.officeMode) ? (
+            <iframe title="slides" src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(directFileUrl || fileUrl)}`} className="absolute inset-0 w-full h-full border-0 overflow-hidden" />
           ) : isPpt ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-slate-600">Loading PowerPoint...</div>
-            </div>
+            <div ref={pptContainerRef} className="absolute inset-0 overflow-hidden" />
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-slate-600">Unsupported file type</div>
@@ -389,18 +238,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           )}
         </div>
         
-        {isPdf && (
-          <div className="px-4 py-3 flex items-center gap-3 border-t">
-            <Button variant={tool === 'pen' ? 'primary' : 'ghost'} onClick={() => setTool('pen')}>Pen</Button>
-            <Button variant={tool === 'eraser' ? 'primary' : 'ghost'} onClick={() => setTool('eraser')}>Eraser</Button>
-            <Button variant="ghost" onClick={() => {
-              if (overlayCanvasRef.current) {
-                const ctx = overlayCanvasRef.current.getContext('2d')!;
-                ctx.clearRect(0, 0, overlayCanvasRef.current.width, overlayCanvasRef.current.height);
-              }
-            }}>Clear</Button>
-          </div>
-        )}
+        {/* No overlay tools for PDF in iframe mode */}
       </>
     );
   }
@@ -411,7 +249,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     try {
       await apiFetch(`/api/slideshow/${sessionId}/goto`, {
         method: 'POST',
-        body: JSON.stringify({ slideNumber })
+        body: JSON.stringify({ slide: slideNumber })
       });
       setDetails(prev => prev ? { ...prev, currentSlide: slideNumber } : null);
     } catch (e) {
