@@ -127,16 +127,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }
 
   // Helpers to load scripts
-  async function loadScript(src: string) {
-    await new Promise<void>((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error(`Failed to load ${src}`));
-      document.head.appendChild(s);
-    });
-  }
+    async function loadScript(src: string) {
+      await new Promise<void>((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(s);
+      });
+    }
 
   async function ensureHtml2Canvas() {
     const w = window as unknown as { html2canvas?: any };
@@ -148,7 +148,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   async function ensurePptxLibs() {
     const addLog = (m: string) => setRenderLogs((prev) => [...prev, m]);
     // CSS
-    const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
     if (!links.some((l) => l.href.endsWith('/vendor/reveal.css'))) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
@@ -157,10 +157,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       addLog('Loaded reveal.css');
     }
     if (!links.some((l) => l.href.endsWith('/vendor/pptxjs.css'))) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
       link.href = '/vendor/pptxjs.css';
-      document.head.appendChild(link);
+        document.head.appendChild(link);
       addLog('Loaded pptxjs.css');
     }
     const anyWin = window as unknown as { jQuery?: any; $?: any; JSZip?: any; Reveal?: any };
@@ -478,17 +478,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         <div className="px-4 py-3 flex items-center gap-3">
           <Button variant="ghost" onClick={closeAndBack} disabled={working}>Back</Button>
           <div className="text-lg font-semibold truncate">{details.title}</div>
-          <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" onClick={() => gotoSlide(current - 1)} disabled={working || current <= 1}>Prev</Button>
             <span className="text-sm text-slate-600">{current} / {total}</span>
             <Button variant="ghost" onClick={() => gotoSlide(current + 1)} disabled={working || current >= total}>Next</Button>
-          </div>
+            </div>
         </div>
-        {/* Full-viewport slide stage (below sticky header) */}
-        <div className="fixed inset-0 pt-[64px] sm:pt-[72px]">
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="rounded-xl overflow-hidden shadow bg-white">
-              <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block max-w-[100vw] max-h-[calc(100dvh-64px)] sm:max-h-[calc(100dvh-72px)] object-contain" />
+        {/* Full-width stage within normal flow (no scroll lock) */}
+        <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen">
+          <div className="relative h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)]">
+            <div className="absolute inset-0 p-2 sm:p-4">
+              <div className="w-full h-full rounded-xl overflow-hidden shadow bg-white flex items-center justify-center">
+                <img src={slide.imageUrl} alt={`Slide ${slide.index}`} className="block max-w-full max-h-full object-contain" />
+              </div>
             </div>
           </div>
         </div>
