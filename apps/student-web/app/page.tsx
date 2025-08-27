@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { isValidEmail } from '@snaproll/lib';
 
 export default function StudentWelcomePage() {
@@ -11,6 +13,9 @@ export default function StudentWelcomePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+
+  // Convex mutations
+  const authenticateStudent = useMutation(api.auth.authenticateStudent);
 
   useEffect(() => {
     setMounted(true);
@@ -41,10 +46,7 @@ export default function StudentWelcomePage() {
     setLoading(true);
     setError('');
     try {
-      const { student } = await apiFetch<{ student: { id: string; email: string; firstName: string; lastName: string } }>('/api/auth/student', {
-        method: 'POST',
-        body: JSON.stringify({ email }),
-      });
+      const { student } = await authenticateStudent({ email: email.trim() });
       localStorage.setItem('snaproll.studentId', student.id);
       localStorage.setItem('snaproll.studentName', `${student.firstName} ${student.lastName}`);
       localStorage.setItem('snaproll.studentEmail', student.email);
