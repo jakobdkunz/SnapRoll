@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
 import { isValidEmail } from '@snaproll/lib';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 export default function TeacherWelcomePage() {
   const router = useRouter();
@@ -14,6 +16,9 @@ export default function TeacherWelcomePage() {
   const [mounted, setMounted] = useState(false);
   const [needsNames, setNeedsNames] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Convex mutations
+  const authenticateTeacher = useMutation(api.auth.authenticateTeacher);
 
   useEffect(() => {
     setMounted(true);
@@ -34,10 +39,7 @@ export default function TeacherWelcomePage() {
     setLoading(true);
     try {
       // Try email-only login
-      const res = await apiFetch<{ teacher?: { id: string; email: string; firstName: string; lastName: string }; found?: boolean }>(
-        '/api/auth/teacher',
-        { method: 'POST', body: JSON.stringify({ email: cleanEmail }) }
-      );
+      const res = await authenticateTeacher({ email: cleanEmail });
       if (res.teacher) {
         const t = res.teacher;
         localStorage.setItem('snaproll.teacherId', t.id);
@@ -64,10 +66,11 @@ export default function TeacherWelcomePage() {
     }
     setLoading(true);
     try {
-      const { teacher } = await apiFetch<{ teacher: { id: string; email: string; firstName: string; lastName: string } }>(
-        '/api/auth/teacher',
-        { method: 'POST', body: JSON.stringify({ email: cleanEmail, firstName: firstName.trim(), lastName: lastName.trim() }) }
-      );
+      const { teacher } = await authenticateTeacher({ 
+        email: cleanEmail, 
+        firstName: firstName.trim(), 
+        lastName: lastName.trim() 
+      });
       localStorage.setItem('snaproll.teacherId', teacher.id);
       localStorage.setItem('snaproll.teacherName', `${teacher.firstName} ${teacher.lastName}`);
       localStorage.setItem('snaproll.teacherEmail', teacher.email);
