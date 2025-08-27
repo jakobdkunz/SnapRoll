@@ -36,8 +36,7 @@ function generateEmail(firstName: string, lastName: string) {
 function generateAttendanceStatus() {
   const rand = Math.random();
   if (rand < 0.85) return 'PRESENT'; // 85% present
-  if (rand < 0.92) return 'ABSENT';  // 7% absent
-  return 'BLANK'; // 8% blank (EXCUSED only exists as manual changes)
+  return 'BLANK'; // 15% blank (ABSENT and EXCUSED only exist as manual changes)
 }
 
 async function generateDemoData() {
