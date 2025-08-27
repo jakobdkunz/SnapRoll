@@ -33,22 +33,19 @@ export default function SectionsPage() {
   // Convex hooks
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
   
-  // Get student data
-  const student = useQuery(
-    api.functions.users.get,
-    studentId ? { id: studentId as Id<'users'> } : "skip"
-  );
-
-  // Fallback: resolve student by email if ID is missing or stale
+  // Resolve student by email first to obtain a valid Convex Id
   const studentByEmail = useQuery(
     api.functions.auth.getUserByEmail,
     studentEmail ? { email: studentEmail } : "skip"
   );
   
+  // Use the resolved Convex Id for all subsequent queries/mutations
+  const effectiveUserId = (studentByEmail?._id as Id<'users'> | undefined);
+
   // Get student's enrolled sections
   const enrollments = useQuery(
     api.functions.enrollments.getByStudent,
-    studentId ? { studentId: studentId as Id<'users'> } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId } : "skip"
   );
   
   // Get sections data
@@ -74,12 +71,12 @@ export default function SectionsPage() {
     setConfirmMsg(null);
     setCheckinError(null);
     const code = digits.join('');
-    if (!/^[0-9]{4}$/.test(code) || !studentId || checking) return;
+    if (!/^[0-9]{4}$/.test(code) || !effectiveUserId || checking) return;
     try {
       setChecking(true);
       
       // Use Convex mutation
-      const recordId = await checkInMutation({ attendanceCode: code, studentId: studentId as any });
+      const recordId = await checkInMutation({ attendanceCode: code, studentId: effectiveUserId });
       
       if (recordId) {
         setConfirmMsg(`Checked in successfully!`);
@@ -177,10 +174,10 @@ export default function SectionsPage() {
 
   // Set student name from Convex data
   useEffect(() => {
-    if (student) {
-      setStudentName(`${student.firstName} ${student.lastName}`);
+    if (studentByEmail) {
+      setStudentName(`${studentByEmail.firstName} ${studentByEmail.lastName}`);
     }
-  }, [student]);
+  }, [studentByEmail]);
 
   // If we resolved a user by email, cache the fresh ID
   useEffect(() => {
