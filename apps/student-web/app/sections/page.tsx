@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Button } from '@snaproll/ui';
 import { api } from '../../../../convex/_generated/api';
+import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 
 type CheckinResponse = {
@@ -24,6 +25,7 @@ export default function SectionsPage() {
   const [mounted, setMounted] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentEmail, setStudentEmail] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -32,10 +34,22 @@ export default function SectionsPage() {
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
   
   // Get student data
-  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
+  const student = useQuery(
+    api.functions.users.get,
+    studentId ? { id: studentId as Id<'users'> } : "skip"
+  );
+
+  // Fallback: resolve student by email if ID is missing or stale
+  const studentByEmail = useQuery(
+    api.functions.auth.getUserByEmail,
+    studentEmail ? { email: studentEmail } : "skip"
+  );
   
   // Get student's enrolled sections
-  const enrollments = useQuery(api.functions.enrollments.getByStudent, studentId ? { studentId: studentId as any } : "skip");
+  const enrollments = useQuery(
+    api.functions.enrollments.getByStudent,
+    studentId ? { studentId: studentId as Id<'users'> } : "skip"
+  );
   
   // Get sections data
   const sectionsData = useQuery(api.functions.sections.list);
@@ -144,13 +158,16 @@ export default function SectionsPage() {
     // Use a longer delay to ensure localStorage is available and retry if needed
     const timer = setTimeout(() => {
       const id = localStorage.getItem('snaproll.studentId');
-      if (id) {
-        setStudentId(id);
-      } else {
+      const email = localStorage.getItem('snaproll.studentEmail');
+      if (id) setStudentId(id);
+      if (email) setStudentEmail(email);
+      if (!id && !email) {
         // Retry once more after a longer delay
         setTimeout(() => {
           const retryId = localStorage.getItem('snaproll.studentId');
-          setStudentId(retryId);
+          const retryEmail = localStorage.getItem('snaproll.studentEmail');
+          if (retryId) setStudentId(retryId);
+          if (retryEmail) setStudentEmail(retryEmail);
         }, 500);
       }
     }, 200);
@@ -164,6 +181,17 @@ export default function SectionsPage() {
       setStudentName(`${student.firstName} ${student.lastName}`);
     }
   }, [student]);
+
+  // If we resolved a user by email, cache the fresh ID
+  useEffect(() => {
+    if (studentByEmail && studentByEmail._id && studentByEmail._id !== studentId) {
+      const newId = studentByEmail._id as unknown as string;
+      setStudentId(newId);
+      try {
+        localStorage.setItem('snaproll.studentId', newId);
+      } catch {}
+    }
+  }, [studentByEmail, studentId]);
 
 
 
