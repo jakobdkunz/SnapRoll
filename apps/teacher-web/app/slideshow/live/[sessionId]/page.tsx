@@ -40,7 +40,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   // Convex hooks
   const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: params.sessionId as any });
-  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any }) as any[];
+  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any }) as any[];
+  const [slides, setSlides] = useState<any[]>([]);
   const drawings = (useQuery(api.functions.slideshow.getDrawings, { sessionId: params.sessionId as any }) as any) || {};
   const heartbeat = useMutation(api.functions.slideshow.heartbeat);
   const closeSession = useMutation(api.functions.slideshow.closeSession);
@@ -63,6 +64,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const eraserRadius = 0.025; // 2.5% of canvas size - matches visual circle
+
+  // Sync local slides state from Convex query
+  useEffect(() => {
+    if (Array.isArray(slidesQuery)) {
+      setSlides(slidesQuery as any[]);
+    }
+  }, [slidesQuery]);
 
   function recomputeFrame(aspect: number) {
     const stage = stageRef.current;
@@ -501,7 +509,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const json = await res.json();
         setRenderMsg('');
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (slides as any) = (json as any)?.slides || [];
+        setSlides(((json as any)?.slides || []) as any[]);
       } catch {
         // ignore
       }
