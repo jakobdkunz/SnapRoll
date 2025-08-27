@@ -2,7 +2,9 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
@@ -11,10 +13,34 @@ type Student = { id: string; email: string; firstName: string; lastName: string 
 
 export default function ModifyPage() {
   const params = useParams<{ id: string }>();
-  const [students, setStudents] = useState<Student[]>([]);
   const [newEmail, setNewEmail] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
+
+  // Convex hooks
+  const section = useQuery(api.sections.get, params.id ? { id: params.id } : "skip");
+  const enrollments = useQuery(api.enrollments.getBySection, params.id ? { sectionId: params.id } : "skip");
+  const allStudents = useQuery(api.users.list, { role: "STUDENT" });
+  
+  // Combine enrollments with student data
+  const students = useMemo(() => {
+    if (!enrollments || !allStudents) return [];
+    return enrollments.map(enrollment => {
+      const student = allStudents.find(s => s._id === enrollment.studentId);
+      return student ? {
+        id: student._id,
+        email: student.email,
+        firstName: student.firstName,
+        lastName: student.lastName
+      } : null;
+    }).filter(Boolean) as Student[];
+  }, [enrollments, allStudents]);
+
+  // Convex mutations
+  const createUser = useMutation(api.users.create);
+  const createEnrollment = useMutation(api.enrollments.create);
+  const removeEnrollment = useMutation(api.enrollments.remove);
+  const updateUser = useMutation(api.users.update);
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState('');
@@ -23,6 +49,14 @@ export default function ModifyPage() {
   const [needNames, setNeedNames] = useState(false);
   const [sectionTitle, setSectionTitle] = useState<string>('Roster');
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
+
+  // Update section data when Convex query returns
+  useEffect(() => {
+    if (section) {
+      setSectionTitle(section.title);
+      setSectionGradient(section.gradient || 'gradient-1');
+    }
+  }, [section]);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importWorking, setImportWorking] = useState(false);
@@ -92,37 +126,7 @@ export default function ModifyPage() {
     await Promise.all(workers);
   }
 
-  async function load() {
-    try {
-      setLoadingStudents(true);
-      const roster = await apiFetch<{ students: Student[] }>(`/api/sections/${params.id}/students`);
-      setStudents(roster.students);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load students';
-      alert(errorMessage);
-    } finally {
-      setLoadingStudents(false);
-    }
-  }
 
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.id]);
-
-  useEffect(() => {
-    async function loadSection() {
-      try {
-        const res = await apiFetch<{ section: { title: string; gradient: string } }>(`/api/sections/${params.id}`);
-        setSectionTitle(res.section.title);
-        setSectionGradient(res.section.gradient);
-        setSectionLoaded(true);
-      } catch (err) {
-        console.warn('Failed to load section details', err);
-      }
-    }
-    loadSection();
-  }, [params.id]);
 
   async function handleAdd() {
     if (!newEmail.trim() || !isValidEmail(newEmail.trim())) {
@@ -131,34 +135,32 @@ export default function ModifyPage() {
     }
     try {
       if (!needNames) {
-        const lookup = await apiFetch<{ found: boolean; student?: { firstName: string; lastName: string } }>(
-          '/api/students/lookup',
-          { method: 'POST', body: JSON.stringify({ email: newEmail }) }
-        );
-        if (lookup.found) {
-          await apiFetch(`/api/sections/${params.id}/students`, {
-            method: 'POST',
-            body: JSON.stringify({ email: newEmail, firstName: lookup.student!.firstName, lastName: lookup.student!.lastName }),
-          });
+        // Check if student exists by email
+        const existingStudent = allStudents?.find(s => s.email.toLowerCase() === newEmail.trim().toLowerCase());
+        if (existingStudent) {
+          // Student exists, just enroll them
+          await createEnrollment(params.id!, existingStudent._id);
           setNewEmail('');
           setNewFirstName('');
           setNewLastName('');
           setNeedNames(false);
-          load();
         } else {
           setNeedNames(true);
         }
       } else {
         if (!newFirstName.trim() || !newLastName.trim()) return;
-        await apiFetch(`/api/sections/${params.id}/students`, {
-          method: 'POST',
-          body: JSON.stringify({ email: newEmail, firstName: newFirstName.trim(), lastName: newLastName.trim() }),
+        // Create new student and enroll them
+        const studentId = await createUser({
+          email: newEmail.trim(),
+          firstName: newFirstName.trim(),
+          lastName: newLastName.trim(),
+          role: "STUDENT"
         });
+        await createEnrollment(params.id!, studentId);
         setNewEmail('');
         setNewFirstName('');
         setNewLastName('');
         setNeedNames(false);
-        load();
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to add student';
@@ -186,12 +188,11 @@ export default function ModifyPage() {
       return;
     }
     try {
-      await apiFetch(`/api/sections/${params.id}/students/${studentId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ email: editEmail, firstName: editFirstName, lastName: editLastName }),
+      await updateUser(studentId, { 
+        firstName: editFirstName.trim(), 
+        lastName: editLastName.trim() 
       });
       cancelEdit();
-      load();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
       alert(errorMessage);
@@ -416,7 +417,7 @@ export default function ModifyPage() {
           </div>
         )}
         <div className="space-y-3">
-          {(!sectionLoaded || loadingStudents) ? (
+          {(!section || !enrollments || !allStudents) ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -459,13 +460,12 @@ export default function ModifyPage() {
                       setDeletingIds((prev) => new Set(prev).add(s.id));
                       try {
                         const snapshot = [...students];
-                        await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                        await removeEnrollment(params.id!, s.id);
                         setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
                         setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
                         setToastVisible(true);
                         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                         toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
-                        await load();
                       } catch {
                         alert('Failed to remove student');
                       } finally {
