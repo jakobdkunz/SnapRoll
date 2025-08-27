@@ -1,5 +1,5 @@
 const nextConfig = {
-  transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/api-client'],
+  transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
   experimental: { typedRoutes: true },
   // Force static file serving in development
   async rewrites() {
