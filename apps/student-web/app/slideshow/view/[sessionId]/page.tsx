@@ -2,7 +2,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
@@ -17,10 +19,12 @@ type SessionResponse = { id: string; title: string; currentSlide: number };
 export default function SlideshowViewPage({ params }: { params: { sessionId: string } }) {
   const router = useRouter();
   const { sessionId } = params;
-  const [details, setDetails] = useState<SessionResponse | null>(null);
-  const [slides, setSlides] = useState<SlideItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Convex hooks
+  const details = useQuery(api.slideshow.getActiveSession, { sessionId });
+  const slides = useQuery(api.slideshow.getSlides, { sessionId });
+  const drawings = useQuery(api.slideshow.getDrawings, { sessionId });
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -29,7 +33,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   
   // Drawing state
   const [showDrawings, setShowDrawings] = useState(true);
-  const [drawings, setDrawings] = useState<SlideDrawings>({});
+  const [localDrawings, setLocalDrawings] = useState<SlideDrawings>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -54,36 +58,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     setFrameSize({ w, h });
   }
 
-  useEffect(() => {
-    let mounted = true;
-    async function load() {
-      try {
-        setLoading(true);
-        const d = await apiFetch<SessionResponse>(`/api/slideshow/${sessionId}`);
-        const s = await apiFetch<SlidesResponse>(`/api/slideshow/${sessionId}/slides`);
-        if (!mounted) return;
-        setDetails({ id: d.id, title: d.title, currentSlide: d.currentSlide });
-        setSlides(s.slides);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Failed to load slideshow');
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-    const id = window.setInterval(async () => {
-      try {
-        const d = await apiFetch<SessionResponse>(`/api/slideshow/${sessionId}`);
-        const s = await apiFetch<SlidesResponse>(`/api/slideshow/${sessionId}/slides`);
-        if (!mounted) return;
-        setDetails(prev => prev ? { ...prev, currentSlide: d.currentSlide } : { id: d.id, title: d.title, currentSlide: d.currentSlide });
-        if (slides.length !== s.slides.length) setSlides(s.slides);
-      } catch {
-        /* noop */
-      }
-    }, 2000);
-    return () => { mounted = false; window.clearInterval(id); };
-  }, [sessionId, slides.length]);
+  // Set loading state based on Convex queries
+  const loading = !details || !slides;
 
   // Recompute frame on resize
   useEffect(() => {
@@ -119,29 +95,8 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     }
   }, [frameSize]);
 
-  // Load and sync drawings
-  useEffect(() => {
-    let mounted = true;
-    async function loadDrawings() {
-      try {
-        const response = await apiFetch<{ drawings: SlideDrawings }>(`/api/slideshow/${sessionId}/drawings`);
-        if (mounted) {
-          console.log('Received drawings:', response.drawings);
-          setDrawings(response.drawings);
-        }
-      } catch (error) {
-        console.error('Failed to load drawings:', error);
-      }
-    }
-    
-    loadDrawings();
-    const interval = setInterval(loadDrawings, 3000); // Poll every 3 seconds to reduce API calls
-    
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [sessionId]);
+  // Extract drawings from Convex data
+  const slideDrawings = drawings || {};
 
   // Redraw all strokes when drawings change or showDrawings changes or frame size changes
   useEffect(() => {
@@ -153,7 +108,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     }
     
     const currentSlideIndex = details?.currentSlide || 1;
-    const currentSlideDrawings = drawings[currentSlideIndex] || [];
+    const currentSlideDrawings = slideDrawings[currentSlideIndex] || [];
     console.log('Redrawing canvas with', currentSlideDrawings.length, 'strokes, showDrawings:', showDrawings);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -178,7 +133,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
       
       ctx.stroke();
     });
-  }, [drawings, showDrawings, frameSize, details?.currentSlide]);
+  }, [slideDrawings, showDrawings, frameSize, details?.currentSlide]);
 
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
