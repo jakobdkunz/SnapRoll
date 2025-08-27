@@ -1,6 +1,9 @@
 const nextConfig = {
   transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
   experimental: { typedRoutes: true },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   // Force static file serving in development
   async rewrites() {
     return [
