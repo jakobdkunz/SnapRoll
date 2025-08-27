@@ -38,3 +38,22 @@ export const list = query({
     return await ctx.db.query("sections").collect();
   },
 });
+
+export const update = mutation({
+  args: {
+    id: v.id("sections"),
+    title: v.optional(v.string()),
+    gradient: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    return await ctx.db.patch(id, updates);
+  },
+});
+
+export const deleteSection = mutation({
+  args: { id: v.id("sections") },
+  handler: async (ctx, args) => {
+    return await ctx.db.delete(args.id);
+  },
+});
