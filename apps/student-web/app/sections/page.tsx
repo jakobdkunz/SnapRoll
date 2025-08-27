@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Button } from '@snaproll/ui';
-import { apiFetch, ConvexApiClient, useCheckIn } from '@snaproll/api-client';
+import { convexApi } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 type CheckinResponse = {
   ok: boolean;
@@ -24,13 +26,33 @@ export default function SectionsPage() {
   const [isClient, setIsClient] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
-  const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Convex hooks
-  const checkInMutation = useCheckIn();
+  const checkInMutation = useMutation(convexApi.attendance.checkIn);
+  
+  // Get student data
+  const student = useQuery(convexApi.users.get, studentId ? { id: studentId } : "skip");
+  
+  // Get student's enrolled sections
+  const enrollments = useQuery(convexApi.enrollments.getByStudent, studentId ? { studentId } : "skip");
+  
+  // Get sections data
+  const sectionsData = useQuery(convexApi.sections.list);
+  
+  // Combine enrollments with sections data
+  const sections = useMemo(() => {
+    if (!enrollments || !sectionsData) return [];
+    return enrollments.map(enrollment => {
+      const section = sectionsData.find(s => s._id === enrollment.sectionId);
+      return section ? {
+        id: section._id,
+        title: section.title,
+        gradient: section.gradient || 'gradient-1'
+      } : null;
+    }).filter(Boolean) as Section[];
+  }, [enrollments, sectionsData]);
 
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
@@ -43,19 +65,15 @@ export default function SectionsPage() {
     try {
       setChecking(true);
       
-      // Use Convex instead of REST API
-      const res = await ConvexApiClient.checkIn(code, studentId);
+      // Use Convex mutation
+      const recordId = await checkInMutation(code, studentId);
       
-      if (res.ok) {
-        const className = res.section?.title ?? 'class';
-        setConfirmMsg(`Checked in to ${className}!`);
-        if (res.section?.id) {
-          setCheckedInIds((prev) => (prev.includes(res.section!.id) ? prev : [...prev, res.section!.id]));
-        }
+      if (recordId) {
+        setConfirmMsg(`Checked in successfully!`);
         setDigits(['', '', '', '']);
         inputRefs[0].current?.focus();
       } else {
-        setCheckinError(res.error || 'Failed to check in. Please try again.');
+        setCheckinError('Failed to check in. Please try again.');
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to check in.';
@@ -165,36 +183,14 @@ export default function SectionsPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Set student name from Convex data
   useEffect(() => {
-    async function refreshProfile(id: string) {
-      try {
-        const res = await apiFetch<{ user: { firstName: string; lastName: string } }>(`/api/students/${id}`);
-        setStudentName(`${res.user.firstName} ${res.user.lastName}`);
-      } catch {
-        // ignore
-      }
+    if (student) {
+      setStudentName(`${student.firstName} ${student.lastName}`);
     }
-    if (studentId) {
-      refreshProfile(studentId);
-    }
-  }, [studentId]);
+  }, [student]);
 
-  useEffect(() => {
-    async function loadSections() {
-      if (!studentId) return;
-      try {
-        setLoading(true);
-        const res = await apiFetch<{ sections: Section[]; checkedInSectionIds: string[] }>(`/api/students/${studentId}/sections`);
-        setSections(res.sections);
-        setCheckedInIds(res.checkedInSectionIds);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to load sections');
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSections();
-  }, [studentId]);
+
 
   // Auto-submit when 4 digits are entered
   useEffect(() => {
@@ -294,7 +290,7 @@ export default function SectionsPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-slate-800 text-center">Your Sections</h2>
           
-          {loading ? (
+          {!enrollments || !sectionsData ? (
             <div className="text-center text-slate-600">Loading sections...</div>
           ) : error ? (
             <div className="text-center text-red-600">{error}</div>
