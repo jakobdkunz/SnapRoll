@@ -37,8 +37,7 @@ function generateAttendanceStatus() {
   const rand = Math.random();
   if (rand < 0.85) return 'PRESENT'; // 85% present
   if (rand < 0.92) return 'ABSENT';  // 7% absent
-  if (rand < 0.97) return 'EXCUSED'; // 5% excused
-  return 'BLANK'; // 3% blank
+  return 'BLANK'; // 8% blank (EXCUSED only exists as manual changes)
 }
 
 async function generateDemoData() {
@@ -221,9 +220,9 @@ async function generateDemoData() {
             });
           }
           
-          // Add some manual changes (but not to BLANK)
-          if (Math.random() < 0.05 && status !== 'BLANK') { // 5% chance of manual change
-            const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'].filter(s => s !== status);
+          // Add some manual changes (including to PRESENT)
+          if (Math.random() < 0.05) { // 5% chance of manual change
+            const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
             const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
             
             await prisma.manualStatusChange.create({
@@ -282,9 +281,9 @@ async function generateDemoData() {
           });
         }
         
-        // Add some manual changes (but not to BLANK)
-        if (Math.random() < 0.03 && status !== 'BLANK') { // 3% chance of manual change
-          const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'].filter(s => s !== status);
+        // Add some manual changes (including to PRESENT)
+        if (Math.random() < 0.03) { // 3% chance of manual change
+          const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
           const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
           
           await prisma.manualStatusChange.create({
