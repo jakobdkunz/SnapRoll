@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Card, TextInput } from '@snaproll/ui';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
@@ -10,27 +12,26 @@ export default function StudentProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  // Get student data
+  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.studentId');
     setStudentId(id);
-    async function load(idVal: string) {
-      setLoading(true);
-      try {
-        const data = await apiFetch<StudentProfile>(`/api/students/${idVal}`);
-        setFirstName(data.student.firstName);
-        setLastName(data.student.lastName);
-        setEmail(data.student.email);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (id) load(id);
   }, []);
 
+  // Update form when student data loads
+  useEffect(() => {
+    if (student) {
+      setFirstName(student.firstName);
+      setLastName(student.lastName);
+      setEmail(student.email);
+    }
+  }, [student]);
+
   if (!studentId) return null;
-  if (loading) return <div>Loading...</div>;
+  if (!student) return <div>Loading...</div>;
 
   return (
     <div className="max-w-lg mx-auto">

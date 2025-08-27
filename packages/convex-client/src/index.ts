@@ -25,6 +25,8 @@ export const convexApi = {
     getByEmail: (email: string) => api.users.getByEmail({ email }),
     create: (data: { email: string; firstName: string; lastName: string; role: "TEACHER" | "STUDENT" }) => 
       api.users.create(data),
+    update: (id: string, data: { firstName?: string; lastName?: string }) => 
+      api.users.update({ id: id as any, ...data }),
     list: (role?: "TEACHER" | "STUDENT") => api.users.list({ role }),
   },
   
