@@ -119,38 +119,14 @@ export default function SectionsPage() {
     sectionId: string;
   };
 
-  const [interactive, setInteractive] = useState<
-    | null
-    | InteractiveWordCloud
-    | InteractivePoll
-    | InteractiveSlideshow
-  >(null);
+
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const submittedOnceRef = useRef<boolean>(false);
   const lastSeenRef = useRef<number>(Date.now());
 
-  // Poll for interactive activity
-  useEffect(() => {
-    if (!studentId) return;
-    let mounted = true;
-    async function tick() {
-      try {
-        const res = await apiFetch<{ interactive: InteractiveWordCloud | InteractivePoll | null }>(`/api/students/${studentId}/interactive/active`);
-        if (!mounted) return;
-        setInteractive(res.interactive);
-        lastSeenRef.current = Date.now();
-      } catch {
-        /* ignore */
-      }
-    }
-    tick();
-    const interval = window.setInterval(tick, 2000);
-    return () => {
-      mounted = false;
-      window.clearInterval(interval);
-    };
-  }, [studentId]);
+  // Get interactive activity from Convex
+  const interactive = useQuery(api.students.getActiveInteractive, studentId ? { studentId } : "skip");
 
   // Reset local single-submit state when a new session starts
   useEffect(() => {
