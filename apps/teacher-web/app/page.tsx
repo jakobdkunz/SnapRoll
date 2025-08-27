@@ -18,7 +18,7 @@ export default function TeacherWelcomePage() {
   const [error, setError] = useState<string | null>(null);
 
   // Convex mutations
-  const authenticateTeacher = useMutation(api.auth.authenticateTeacher);
+  const authenticateTeacher = useMutation(api.functions.auth.authenticateTeacher);
 
   useEffect(() => {
     setMounted(true);
@@ -41,8 +41,8 @@ export default function TeacherWelcomePage() {
       // Try email-only login
       const res = await authenticateTeacher({ email: cleanEmail });
       if (res.teacher) {
-        const t = res.teacher;
-        localStorage.setItem('snaproll.teacherId', t.id);
+        const t = res.teacher as any;
+        localStorage.setItem('snaproll.teacherId', t._id);
         localStorage.setItem('snaproll.teacherName', `${t.firstName} ${t.lastName}`);
         localStorage.setItem('snaproll.teacherEmail', t.email);
         router.push('/dashboard');
@@ -71,9 +71,9 @@ export default function TeacherWelcomePage() {
         firstName: firstName.trim(), 
         lastName: lastName.trim() 
       });
-      localStorage.setItem('snaproll.teacherId', teacher.id);
-      localStorage.setItem('snaproll.teacherName', `${teacher.firstName} ${teacher.lastName}`);
-      localStorage.setItem('snaproll.teacherEmail', teacher.email);
+      localStorage.setItem('snaproll.teacherId', (teacher as any)._id);
+      localStorage.setItem('snaproll.teacherName', `${(teacher as any).firstName} ${(teacher as any).lastName}`);
+      localStorage.setItem('snaproll.teacherEmail', (teacher as any).email);
       router.push('/dashboard');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to create account');

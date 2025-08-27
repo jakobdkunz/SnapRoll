@@ -24,9 +24,9 @@ export default function AttendancePage() {
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
 
   // Convex hooks
-  const startAttendance = useMutation(api.attendance.startAttendance);
-  const getAttendanceStatus = useQuery(api.attendance.getAttendanceStatus, params.id ? { sectionId: params.id } : "skip");
-  const section = useQuery(api.sections.get, params.id ? { id: params.id } : "skip");
+  const startAttendance = useMutation(api.functions.attendance.startAttendance);
+  const getAttendanceStatus = useQuery(api.functions.attendance.getAttendanceStatus, params.id ? { sectionId: params.id as any } : "skip");
+  const section = useQuery(api.functions.sections.get, params.id ? { id: params.id as any } : "skip");
 
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
@@ -57,7 +57,7 @@ export default function AttendancePage() {
     isStartingRef.current = true;
     setIsStarting(true);
     try {
-      const classDayId = await startAttendance(params.id);
+      const classDayId = await startAttendance({ sectionId: params.id as any });
       if (classDayId) {
         // The attendance status will be updated via the Convex query
         await loadStatus();

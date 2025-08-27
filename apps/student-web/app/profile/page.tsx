@@ -14,7 +14,7 @@ export default function StudentProfilePage() {
   const [email, setEmail] = useState('');
 
   // Get student data
-  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.studentId');

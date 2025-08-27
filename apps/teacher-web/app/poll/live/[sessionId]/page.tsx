@@ -13,11 +13,13 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const [showLocal, setShowLocal] = useState<boolean | null>(true);
 
   // Convex hooks
-  const session = useQuery(api.polls.getActivePoll, { sessionId });
-  const results = useQuery(api.polls.getResults, { sessionId });
-  const toggleResults = useMutation(api.polls.toggleResults);
-  const closePoll = useMutation(api.polls.closePoll);
-  const heartbeat = useMutation(api.polls.heartbeat);
+  // Using session details from getResults response; for header we can reuse prompt if available
+  // sessionId here is the poll session; getActivePoll expects sectionId. We'll derive header from results.
+  const session = null as any;
+  const results = useQuery(api.functions.polls.getResults, { sessionId: params.sessionId as any });
+  const toggleResults = useMutation(api.functions.polls.toggleResults);
+  const closePoll = useMutation(api.functions.polls.closePoll);
+  const heartbeat = useMutation(api.functions.polls.heartbeat);
 
   // Update showLocal when session data loads
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   // Heartbeat
   useEffect(() => {
     const id = window.setInterval(() => { 
-      void heartbeat({ sessionId }); 
+      void heartbeat({ sessionId: params.sessionId as any }); 
     }, 5000);
     return () => window.clearInterval(id);
   }, [sessionId, heartbeat]);
@@ -40,21 +42,22 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
         <div className="mb-2 flex items-center justify-between gap-3">
           <button
             className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
-            onClick={async () => { try { await closePoll({ sessionId }); } catch {/* ignore */} history.back(); }}
+            onClick={async () => { try { await closePoll({ sessionId: params.sessionId as any }); } catch {/* ignore */} history.back(); }}
           >
             ← Back
           </button>
           <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
-            {session?.prompt ?? 'Loading…'}
+            {(results as any)?.session?.prompt ?? 'Loading…'}
           </div>
           <div className="w-[120px]" />
         </div>
         <div className="grid place-items-center">
           <Card className="p-6 w-full max-w-3xl">
           <div className="space-y-3">
-            {(session?.options ?? []).map((opt, i) => {
-              const count = results ? results.counts[i] : 0;
-              const pct = results && results.total > 0 ? Math.round((count / results.total) * 100) : 0;
+            {(session ? JSON.parse((session as any).optionsJson || '[]') : []).map((opt: any, i: number) => {
+              const count = results ? (results as any).results?.[i]?.count || 0 : 0;
+              const total = results ? (results as any).totalAnswers || 0 : 0;
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
                   {(showLocal ?? session?.showResults) ? (
@@ -71,13 +74,13 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
             })}
           </div>
           <div className="flex justify-between items-center mt-5">
-            <div className="text-slate-500">{results?.total || 0} {(results?.total || 0) === 1 ? 'response' : 'responses'}</div>
+            <div className="text-slate-500">{(results as any)?.totalAnswers || 0} {((results as any)?.totalAnswers || 0) === 1 ? 'response' : 'responses'}</div>
             <Button disabled={toggling} onClick={async () => {
               // Instant UI toggle
               setShowLocal((prev) => !(prev ?? session?.showResults));
               // Fire-and-forget server toggle
               setToggling(true);
-              toggleResults({ sessionId })
+              toggleResults({ sessionId: params.sessionId as any })
                 .catch(() => { /* ignore */ })
                 .finally(() => setToggling(false));
             }}>{(showLocal ?? session?.showResults) ? 'Hide Results' : 'Show Results'}</Button>

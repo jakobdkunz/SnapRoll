@@ -21,8 +21,8 @@ export function TeacherHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const teacher = useQuery(api.users.get, teacherId ? { id: teacherId } : "skip");
-  const updateUser = useMutation(api.users.update);
+  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as any } : "skip");
+  const updateUser = useMutation(api.functions.users.update);
 
   useEffect(() => {
     setIsClient(true);
@@ -84,13 +84,8 @@ export function TeacherHeaderRight() {
     if (!id || !firstName.trim() || !lastName.trim()) return;
     setSaving(true);
     try {
-      await updateUser({ 
-        id, 
-        firstName: firstName.trim(), 
-        lastName: lastName.trim() 
-      });
+      await updateUser({ id: id as any, firstName: firstName.trim(), lastName: lastName.trim() });
       const full = `${firstName.trim()} ${lastName.trim()}`;
-      setName(full);
       localStorage.setItem('snaproll.teacherName', full);
       setProfileOpen(false);
     } finally {

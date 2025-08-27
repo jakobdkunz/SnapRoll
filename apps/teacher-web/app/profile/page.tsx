@@ -17,10 +17,10 @@ export default function TeacherProfilePage() {
   const [saving, setSaving] = useState(false);
 
   // Convex hooks
-  const updateUser = useMutation(api.users.update);
+  const updateUser = useMutation(api.functions.users.update);
 
   // Get teacher data
-  const teacher = useQuery(api.users.get, teacherId ? { id: teacherId } : "skip");
+  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as any } : "skip");
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
@@ -40,7 +40,7 @@ export default function TeacherProfilePage() {
     if (!teacherId) return;
     setSaving(true);
     try {
-      await updateUser(teacherId, { firstName, lastName });
+      await updateUser({ id: teacherId as any, firstName, lastName });
       const name = `${firstName} ${lastName}`;
       localStorage.setItem('snaproll.teacherName', name);
       try { router.refresh(); } catch {

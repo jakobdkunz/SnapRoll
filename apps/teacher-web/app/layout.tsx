@@ -3,6 +3,7 @@ import './globals.css';
 import { TeacherHeaderRight } from './_components/TeacherHeaderRight';
 import { WordmarkLink } from './_components/WordmarkLink';
 import { AuthGuard } from './_components/AuthGuard';
+import { ConvexProvider, convex } from '@snaproll/convex-client';
 
 export const metadata: Metadata = {
   title: 'SnapRoll – Instructor',
@@ -15,7 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
       </head>
       <body>
-        <div className="min-h-dvh bg-slate-50">
+        <ConvexProvider client={convex}>
+          <div className="min-h-dvh bg-slate-50">
           <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
               <WordmarkLink />
@@ -25,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthGuard />
           <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 pb-6 sm:pb-8">{children}</main>
         </div>
+        </ConvexProvider>
       </body>
     </html>
   );

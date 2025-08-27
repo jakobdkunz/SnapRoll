@@ -12,18 +12,18 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   const sessionId = params.sessionId;
 
   // Convex hooks
-  const session = useQuery(api.wordcloud.getActiveSession, { sessionId });
-  const answers = useQuery(api.wordcloud.getAnswers, { sessionId });
-  const heartbeat = useMutation(api.wordcloud.heartbeat);
-  const closeSession = useMutation(api.wordcloud.closeSession);
+  const session = useQuery(api.functions.wordcloud.getActiveSession, { sessionId: params.sessionId as any });
+  const answers = useQuery(api.functions.wordcloud.getAnswers, { sessionId: params.sessionId as any });
+  const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
+  const closeSession = useMutation(api.functions.wordcloud.closeSession);
 
   // Extract words from Convex data
-  const words = answers?.words || [];
+  const words = (answers as any) || [];
 
   // Heartbeat to keep session active
   useEffect(() => {
     const interval = window.setInterval(() => {
-      void heartbeat({ sessionId });
+      void heartbeat({ sessionId: params.sessionId as any });
     }, 5000);
     return () => window.clearInterval(interval);
   }, [sessionId, heartbeat]);
@@ -313,7 +313,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
             className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
             onClick={async () => {
               try {
-                await closeSession({ sessionId });
+                await closeSession({ sessionId: params.sessionId as any });
               } catch {/* ignore */}
               history.back();
             }}

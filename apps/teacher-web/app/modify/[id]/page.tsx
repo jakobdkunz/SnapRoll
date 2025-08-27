@@ -1,10 +1,10 @@
 "use client";
 import { useParams } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
-import { useQuery, useMutation } from 'convex/react';
 import { convex } from '@snaproll/convex-client';
+import { api } from '../../../../../convex/_generated/api';
+import { useQuery, useMutation } from 'convex/react';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
@@ -18,9 +18,9 @@ export default function ModifyPage() {
   const [newLastName, setNewLastName] = useState('');
 
   // Convex hooks
-  const section = useQuery(api.sections.get, params.id ? { id: params.id } : "skip");
-  const enrollments = useQuery(api.enrollments.getBySection, params.id ? { sectionId: params.id } : "skip");
-  const allStudents = useQuery(api.users.list, { role: "STUDENT" });
+  const section = useQuery(api.functions.sections.get, params.id ? { id: params.id as any } : "skip");
+  const enrollments = useQuery(api.functions.enrollments.getBySection, params.id ? { sectionId: params.id as any } : "skip");
+  const allStudents = useQuery(api.functions.users.list, { role: "STUDENT" });
   
   // Combine enrollments with student data
   const students = useMemo(() => {
@@ -37,10 +37,10 @@ export default function ModifyPage() {
   }, [enrollments, allStudents]);
 
   // Convex mutations
-  const createUser = useMutation(api.users.create);
-  const createEnrollment = useMutation(api.enrollments.create);
-  const removeEnrollment = useMutation(api.enrollments.remove);
-  const updateUser = useMutation(api.users.update);
+  const createUser = useMutation(api.functions.users.create);
+  const createEnrollment = useMutation(api.functions.enrollments.create);
+  const removeEnrollment = useMutation(api.functions.enrollments.remove);
+  const updateUser = useMutation(api.functions.users.update);
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editEmail, setEditEmail] = useState('');
@@ -139,7 +139,7 @@ export default function ModifyPage() {
         const existingStudent = allStudents?.find(s => s.email.toLowerCase() === newEmail.trim().toLowerCase());
         if (existingStudent) {
           // Student exists, just enroll them
-          await createEnrollment(params.id!, existingStudent._id);
+          await createEnrollment({ sectionId: params.id as any, studentId: existingStudent._id });
           setNewEmail('');
           setNewFirstName('');
           setNewLastName('');
@@ -156,7 +156,7 @@ export default function ModifyPage() {
           lastName: newLastName.trim(),
           role: "STUDENT"
         });
-        await createEnrollment(params.id!, studentId);
+        await createEnrollment({ sectionId: params.id as any, studentId });
         setNewEmail('');
         setNewFirstName('');
         setNewLastName('');
@@ -188,10 +188,7 @@ export default function ModifyPage() {
       return;
     }
     try {
-      await updateUser(studentId, { 
-        firstName: editFirstName.trim(), 
-        lastName: editLastName.trim() 
-      });
+      await updateUser({ id: studentId as any, firstName: editFirstName.trim(), lastName: editLastName.trim() });
       cancelEdit();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
@@ -356,7 +353,7 @@ export default function ModifyPage() {
           role: 'STUDENT'
         });
         await createEnrollment({ 
-          sectionId: params.id, 
+          sectionId: params.id as any, 
           studentId: userId
         });
         added += 1;
@@ -365,7 +362,6 @@ export default function ModifyPage() {
         // continue
       }
     }
-    await load();
     const parts: string[] = [];
     if (invalidEmailCount > 0) parts.push(`${invalidEmailCount} ${invalidEmailCount === 1 ? 'invalid email' : 'invalid emails'}`);
     const totalMissing = missingLastCount + missingFirstCount;
@@ -466,7 +462,7 @@ export default function ModifyPage() {
                       setDeletingIds((prev) => new Set(prev).add(s.id));
                       try {
                         const snapshot = [...students];
-                        await removeEnrollment(params.id!, s.id);
+                        await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
                         setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
                         setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
                         setToastVisible(true);
@@ -690,9 +686,8 @@ export default function ModifyPage() {
                   setConfirmWorking(true);
                   const snapshot = [...students];
                   await runWithConcurrency(snapshot, 10, async (s) => {
-                    await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                    await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
                   });
-                  await load();
                   setLastAction({ type: 'remove_all', snapshot, label: 'All students removed.' });
                   setToastMessage('All students removed.');
                   setToastVisible(true);
@@ -728,16 +723,13 @@ export default function ModifyPage() {
                   const toAdd = snapshot.filter((s) => !currentIds.has(s.id));
                   await Promise.all([
                     runWithConcurrency(toDelete, 10, async (s) => {
-                      await apiFetch(`/api/sections/${params.id}/students/${s.id}`, { method: 'DELETE' });
+                      await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
                     }),
                     runWithConcurrency(toAdd, 8, async (s) => {
-                      await apiFetch(`/api/sections/${params.id}/students`, {
-                        method: 'POST',
-                        body: JSON.stringify({ email: s.email, firstName: s.firstName, lastName: s.lastName }),
-                      });
+                      const userId = await createUser({ email: s.email, firstName: s.firstName, lastName: s.lastName, role: "STUDENT" });
+                      await createEnrollment({ sectionId: params.id as any, studentId: userId });
                     })
                   ]);
-                  await load();
                   setToastVisible(false);
                 } catch {
                   alert('Failed to undo.');

@@ -11,130 +11,93 @@ export { api, ConvexProvider };
 export const convexApi = {
   // Auth functions
   auth: {
-    authenticateTeacher: (email: string, firstName?: string, lastName?: string) => 
-      api.auth.authenticateTeacher({ email, firstName, lastName }),
-    authenticateStudent: (email: string) => 
-      api.auth.authenticateStudent({ email }),
-    getUser: (id: string) => api.auth.getUser({ id: id as any }),
-    getUserByEmail: (email: string) => api.auth.getUserByEmail({ email }),
+    authenticateTeacher: api.functions.auth.authenticateTeacher,
+    authenticateStudent: api.functions.auth.authenticateStudent,
+    getUser: api.functions.auth.getUser,
+    getUserByEmail: api.functions.auth.getUserByEmail,
   },
 
   // User functions
   users: {
-    get: (id: string) => api.users.get({ id: id as any }),
-    getByEmail: (email: string) => api.users.getByEmail({ email }),
-    create: (data: { email: string; firstName: string; lastName: string; role: "TEACHER" | "STUDENT" }) => 
-      api.users.create(data),
-    update: (id: string, data: { firstName?: string; lastName?: string }) => 
-      api.users.update({ id: id as any, ...data }),
-    list: (role?: "TEACHER" | "STUDENT") => api.users.list({ role }),
+    get: api.functions.users.get,
+    getByEmail: api.functions.users.getByEmail,
+    create: api.functions.users.create,
+    update: api.functions.users.update,
+    list: api.functions.users.list,
   },
   
   // Section functions
   sections: {
-    get: (id: string) => api.sections.get({ id: id as any }),
-    getByTeacher: (teacherId: string) => api.sections.getByTeacher({ teacherId: teacherId as any }),
-    create: (data: { title: string; gradient?: string; teacherId: string }) => 
-      api.sections.create(data),
-    update: (id: string, data: { title?: string; gradient?: string }) => 
-      api.sections.update({ id: id as any, ...data }),
-    delete: (id: string) => api.sections.deleteSection({ id: id as any }),
-    list: () => api.sections.list(),
+    get: api.functions.sections.get,
+    getByTeacher: api.functions.sections.getByTeacher,
+    create: api.functions.sections.create,
+    update: api.functions.sections.update,
+    deleteSection: api.functions.sections.deleteSection,
+    list: api.functions.sections.list,
   },
   
   // Attendance functions
   attendance: {
-    getClassDay: (sectionId: string, date: number) => 
-      api.attendance.getClassDay({ sectionId: sectionId as any, date }),
-    createClassDay: (data: { sectionId: string; date: number; attendanceCode: string; attendanceCodeExpiresAt?: number }) => 
-      api.attendance.createClassDay(data),
-    checkIn: (attendanceCode: string, studentId: string) => 
-      api.attendance.checkIn({ attendanceCode, studentId: studentId as any }),
-    getAttendanceStatus: (sectionId: string) => 
-      api.attendance.getAttendanceStatus({ sectionId: sectionId as any }),
-    getAttendanceRecords: (classDayId: string) => 
-      api.attendance.getAttendanceRecords({ classDayId: classDayId as any }),
-    updateManualStatus: (data: { classDayId: string; studentId: string; status: "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK"; teacherId: string }) => 
-      api.attendance.updateManualStatus(data),
-    getManualStatusChanges: (classDayId: string) => 
-      api.attendance.getManualStatusChanges({ classDayId: classDayId as any }),
-    startAttendance: (sectionId: string) => 
-      api.attendance.startAttendance({ sectionId: sectionId as any }),
+    getClassDay: api.functions.attendance.getClassDay,
+    createClassDay: api.functions.attendance.createClassDay,
+    checkIn: api.functions.attendance.checkIn,
+    getAttendanceStatus: api.functions.attendance.getAttendanceStatus,
+    getAttendanceRecords: api.functions.attendance.getAttendanceRecords,
+    updateManualStatus: api.functions.attendance.updateManualStatus,
+    getManualStatusChanges: api.functions.attendance.getManualStatusChanges,
+    startAttendance: api.functions.attendance.startAttendance,
   },
   
   // Enrollment functions
   enrollments: {
-    create: (sectionId: string, studentId: string) => 
-      api.enrollments.create({ sectionId: sectionId as any, studentId: studentId as any }),
-    getBySection: (sectionId: string) => 
-      api.enrollments.getBySection({ sectionId: sectionId as any }),
-    getByStudent: (studentId: string) => 
-      api.enrollments.getByStudent({ studentId: studentId as any }),
-    remove: (sectionId: string, studentId: string) => 
-      api.enrollments.remove({ sectionId: sectionId as any, studentId: studentId as any }),
+    create: api.functions.enrollments.create,
+    getBySection: api.functions.enrollments.getBySection,
+    getByStudent: api.functions.enrollments.getByStudent,
+    remove: api.functions.enrollments.remove,
   },
   
   // History functions
   history: {
-    getSectionHistory: (sectionId: string, offset: number, limit: number) => 
-      api.history.getSectionHistory({ sectionId: sectionId as any, offset, limit }),
-    getStudentHistory: (studentId: string, offset: number, limit: number) => 
-      api.history.getStudentHistory({ studentId: studentId as any, offset, limit }),
+    getSectionHistory: api.functions.history.getSectionHistory,
+    getStudentHistory: api.functions.history.getStudentHistory,
   },
   
   // Poll functions
   polls: {
-    startPoll: (sectionId: string, prompt: string, options: string[], showResults?: boolean) => 
-      api.polls.startPoll({ sectionId: sectionId as any, prompt, options, showResults }),
-    getActivePoll: (sectionId: string) => 
-      api.polls.getActivePoll({ sectionId: sectionId as any }),
-    submitAnswer: (sessionId: string, studentId: string, optionIdx: number) => 
-      api.polls.submitAnswer({ sessionId: sessionId as any, studentId: studentId as any, optionIdx }),
-    getResults: (sessionId: string) => 
-      api.polls.getResults({ sessionId: sessionId as any }),
-    toggleResults: (sessionId: string) => 
-      api.polls.toggleResults({ sessionId: sessionId as any }),
-    closePoll: (sessionId: string) => 
-      api.polls.closePoll({ sessionId: sessionId as any }),
-    heartbeat: (sessionId: string) => 
-      api.polls.heartbeat({ sessionId: sessionId as any }),
+    startPoll: api.functions.polls.startPoll,
+    getActivePoll: api.functions.polls.getActivePoll,
+    submitAnswer: api.functions.polls.submitAnswer,
+    getResults: api.functions.polls.getResults,
+    toggleResults: api.functions.polls.toggleResults,
+    closePoll: api.functions.polls.closePoll,
+    heartbeat: api.functions.polls.heartbeat,
   },
   
   // WordCloud functions
   wordcloud: {
-    startWordCloud: (sectionId: string, prompt: string, showPromptToStudents?: boolean, allowMultipleAnswers?: boolean) => 
-      api.wordcloud.startWordCloud({ sectionId: sectionId as any, prompt, showPromptToStudents, allowMultipleAnswers }),
-    getActiveWordCloud: (sectionId: string) => 
-      api.wordcloud.getActiveWordCloud({ sectionId: sectionId as any }),
-    submitAnswer: (sessionId: string, studentId: string, text: string) => 
-      api.wordcloud.submitAnswer({ sessionId: sessionId as any, studentId: studentId as any, text }),
-    getResults: (sessionId: string) => 
-      api.wordcloud.getResults({ sessionId: sessionId as any }),
-    closeWordCloud: (sessionId: string) => 
-      api.wordcloud.closeWordCloud({ sessionId: sessionId as any }),
-    heartbeat: (sessionId: string) => 
-      api.wordcloud.heartbeat({ sessionId: sessionId as any }),
+    startWordCloud: api.functions.wordcloud.startWordCloud,
+    getActiveWordCloud: api.functions.wordcloud.getActiveWordCloud,
+    submitAnswer: api.functions.wordcloud.submitAnswer,
+    getResults: api.functions.wordcloud.getResults,
+    closeWordCloud: api.functions.wordcloud.closeWordCloud,
+    heartbeat: api.functions.wordcloud.heartbeat,
   },
   
   // Slideshow functions
   slideshow: {
-    createAsset: (teacherId: string, title: string, filePath: string, mimeType: string, totalSlides?: number) => 
-      api.slideshow.createAsset({ teacherId: teacherId as any, title, filePath, mimeType, totalSlides }),
-    getAssetsByTeacher: (teacherId: string) => 
-      api.slideshow.getAssetsByTeacher({ teacherId: teacherId as any }),
-    startSlideshow: (sectionId: string, assetId: string, options?: any) => 
-      api.slideshow.startSlideshow({ sectionId: sectionId as any, assetId: assetId as any, ...options }),
-    getActiveSlideshow: (sectionId: string) => 
-      api.slideshow.getActiveSlideshow({ sectionId: sectionId as any }),
-    closeSlideshow: (sessionId: string) => 
-      api.slideshow.closeSlideshow({ sessionId: sessionId as any }),
-    gotoSlide: (sessionId: string, slideNumber: number) => 
-      api.slideshow.gotoSlide({ sessionId: sessionId as any, slideNumber }),
-    heartbeat: (sessionId: string) => 
-      api.slideshow.heartbeat({ sessionId: sessionId as any }),
-    addSlide: (options: any) => 
-      api.slideshow.addSlide(options),
-    getSlides: (options: any) => 
-      api.slideshow.getSlides(options),
+    createAsset: api.functions.slideshow.createAsset,
+    getAssetsByTeacher: api.functions.slideshow.getAssetsByTeacher,
+    startSlideshow: api.functions.slideshow.startSlideshow,
+    getActiveSlideshow: api.functions.slideshow.getActiveSlideshow,
+    closeSlideshow: api.functions.slideshow.closeSlideshow,
+    gotoSlide: api.functions.slideshow.gotoSlide,
+    heartbeat: api.functions.slideshow.heartbeat,
+    addSlide: api.functions.slideshow.addSlide,
+    getSlides: api.functions.slideshow.getSlides,
+  },
+
+  // Students functions
+  students: {
+    getActiveInteractive: api.functions.students.getActiveInteractive,
   },
 };

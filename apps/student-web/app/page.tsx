@@ -15,7 +15,7 @@ export default function StudentWelcomePage() {
   const [mounted, setMounted] = useState(false);
 
   // Convex mutations
-  const authenticateStudent = useMutation(api.auth.authenticateStudent);
+  const authenticateStudent = useMutation(api.functions.auth.authenticateStudent);
 
   useEffect(() => {
     setMounted(true);
@@ -47,9 +47,9 @@ export default function StudentWelcomePage() {
     setError('');
     try {
       const { student } = await authenticateStudent({ email: email.trim() });
-      localStorage.setItem('snaproll.studentId', student.id);
-      localStorage.setItem('snaproll.studentName', `${student.firstName} ${student.lastName}`);
-      localStorage.setItem('snaproll.studentEmail', student.email);
+      localStorage.setItem('snaproll.studentId', (student as any)._id);
+      localStorage.setItem('snaproll.studentName', `${(student as any).firstName} ${(student as any).lastName}`);
+      localStorage.setItem('snaproll.studentEmail', (student as any).email);
       router.push('/sections');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unable to sign in. Please try again.';

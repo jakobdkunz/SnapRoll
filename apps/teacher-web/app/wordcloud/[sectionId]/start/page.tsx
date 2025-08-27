@@ -16,19 +16,19 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
   const [allowMultiple, setAllowMultiple] = useState(false);
 
   // Convex mutations
-  const startWordCloud = useMutation(api.wordcloud.startWordCloud);
+  const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
 
   async function start() {
     try {
       const session = await startWordCloud({ 
-        sectionId, 
+        sectionId: sectionId as any, 
         prompt, 
         showPromptToStudents: showPrompt, 
         allowMultipleAnswers: allowMultiple 
       });
       setOpen(false);
       // delay to allow modal animation to dismiss before navigating
-      setTimeout(() => router.push(`/wordcloud/live/${session.id}`), 120);
+      setTimeout(() => router.push(`/wordcloud/live/${(session as any)._id}`), 120);
     } catch {
       alert('Failed to start word cloud. Please try again.');
     }
