@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "build/**"],
-      "env": ["DATABASE_URL", "NEXTAUTH_SECRET"]
+      "env": ["NEXTAUTH_SECRET"]
     },
     "dev": {
       "cache": false,

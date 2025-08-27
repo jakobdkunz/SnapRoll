@@ -1,14 +1,14 @@
 # SnapRoll Monorepo
 
-A Turborepo monorepo for SnapRoll with Next.js apps for teachers and students, shared packages, and Prisma + PostgreSQL backend.
+A Turborepo monorepo for SnapRoll with Next.js apps for teachers and students, shared packages, and Convex backend.
 
 ## Prerequisites
 - PNPM 9+
 - Node 18+
-- PostgreSQL 14+
+- Convex account
 
 ## Getting Started
-1. Copy env example and set DATABASE_URL
+1. Copy env example and set up environment variables
 ```bash
 cp .env.example .env
 ```
@@ -16,11 +16,9 @@ cp .env.example .env
 ```bash
 pnpm install
 ```
-3. Setup database
+3. Setup Convex
 ```bash
-pnpm prisma:generate
-pnpm prisma:migrate
-pnpm prisma:seed
+pnpm convex:dev
 ```
 4. Run dev servers (all)
 ```bash
@@ -30,18 +28,18 @@ pnpm dev
 ## Apps
 - apps/teacher-web: Desktop-only teacher app
 - apps/student-web: Mobile-first PWA
-- apps/api: API routes (Next.js)
 
 ## Packages
 - packages/ui: Shared UI components (Tailwind + Radix + shadcn-style)
 - packages/lib: Utilities and helpers
-- packages/api-client: Typed API client
+- packages/convex-client: Typed Convex client
 - packages/config: Shared configs (Tailwind preset, env)
 
 ## Scripts
 - dev, build, start, lint, typecheck
-- prisma:generate, prisma:migrate, prisma:seed
+- convex:dev, convex:deploy
 
 ## Notes
 - Tailwind preset is in `@snaproll/config/tailwind-preset`.
 - PWA support is enabled in `apps/student-web` with manifest and service worker.
+- Backend is powered by Convex with real-time subscriptions.
