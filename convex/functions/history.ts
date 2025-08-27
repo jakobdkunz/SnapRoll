@@ -34,13 +34,13 @@ export const getSectionHistory = query({
     // Get attendance records for the paginated class days
     const attendanceRecords = await ctx.db
       .query("attendanceRecords")
-      .filter((q) => q.eq(q.field("classDayId"), classDayIds))
+      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect();
     
     // Get manual status changes for the paginated class days
     const manualChanges = await ctx.db
       .query("manualStatusChanges")
-      .filter((q) => q.eq(q.field("classDayId"), classDayIds))
+      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect();
     
     // Create lookup maps
@@ -127,7 +127,7 @@ export const getStudentHistory = query({
     // Get all class days across these sections
     const allClassDays = await ctx.db
       .query("classDays")
-      .filter((q) => q.eq(q.field("sectionId"), sectionIds))
+      .filter((q) => q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id))))
       .order("desc")
       .collect();
     
@@ -140,14 +140,14 @@ export const getStudentHistory = query({
     const attendanceRecords = await ctx.db
       .query("attendanceRecords")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
-      .filter((q) => q.eq(q.field("classDayId"), classDayIds))
+      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect();
     
     // Get manual status changes for this student
     const manualChanges = await ctx.db
       .query("manualStatusChanges")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
-      .filter((q) => q.eq(q.field("classDayId"), classDayIds))
+      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect();
     
     // Create lookup maps

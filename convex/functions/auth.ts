@@ -33,12 +33,13 @@ export const authenticateTeacher = mutation({
         throw new Error("First and last name required");
       }
 
-      teacher = await ctx.db.insert("users", {
+      const teacherId = await ctx.db.insert("users", {
         email: cleanEmail,
         firstName,
         lastName,
         role: "TEACHER",
       });
+      teacher = await ctx.db.get(teacherId);
 
       return { teacher };
     }
