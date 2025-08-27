@@ -2,7 +2,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 type HistoryResponse = {
   sections: { id: string; title: string }[];
@@ -41,6 +43,10 @@ export default function MyAttendancePage() {
   const [isMobile, setIsMobile] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  // Convex hooks
+  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
+  const history = useQuery(api.history.getStudentHistory, studentId ? { studentId, offset, limit } : "skip");
+
   // Column width calculations
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
@@ -77,110 +83,32 @@ export default function MyAttendancePage() {
     return () => clearTimeout(timer);
   }, []);
 
-  const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
-    if (!studentId) return;
-    
-    const reqId = ++requestIdRef.current;
-    setIsFetching(true);
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const res = await apiFetch<HistoryResponse>(`/api/students/${studentId}/history?offset=${currentOffset}&limit=${currentLimit}&_=${Date.now()}`);
-      if (reqId !== requestIdRef.current) return; // ignore stale requests
-      
-      setData(res);
-      setOffset(res.offset ?? currentOffset);
-      setLimit(res.limit ?? currentLimit);
-    } catch (e: unknown) {
-      if (reqId === requestIdRef.current) {
-        setError(e instanceof Error ? e.message : 'Failed to load attendance');
-      }
-    } finally {
-      if (reqId === requestIdRef.current) {
-        setIsFetching(false);
-        setLoading(false);
-      }
-    }
-  }, [studentId]);
-
-  // Compute initial columns based on actual measured widths before first fetch
+  // Update data when Convex query returns
   useEffect(() => {
-    if (initialized) return;
-    const measure = () => {
-      const el = containerRef.current;
-      const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const CARD_INNER_PADDING = 32; // matches Card p-4
-      const courseWidth = COURSE_COL_BASE;
-      const available = Math.max(0, containerWidth - courseWidth - CARD_INNER_PADDING);
-      const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
-      if (initialLimit !== limit) setLimit(initialLimit);
-      setInitialized(true);
-      loadHistory(offset, initialLimit);
-    };
-    if (typeof window !== 'undefined') {
-      requestAnimationFrame(measure);
+    if (history) {
+      setData(history);
+      setLoading(false);
+      setError(null);
+    }
+  }, [history]);
+
+  // Update student name when student data loads
+  useEffect(() => {
+    if (student) {
+      setStudentName(`${student.firstName} ${student.lastName}`);
+    }
+  }, [student]);
+
+  // Set loading state based on Convex query
+  useEffect(() => {
+    if (!studentId) {
+      setLoading(false);
+    } else if (!history) {
+      setLoading(true);
     } else {
-      measure();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, studentId, PER_COL]);
-
-  // Recalculate how many columns fit based on container width
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const CARD_INNER_PADDING = 32;
-      const courseWidth = COURSE_COL_BASE;
-      const available = Math.max(0, containerWidth - courseWidth - CARD_INNER_PADDING);
-      const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
-      if (cols !== limit) {
-        setLimit(cols);
-        // Keep newest page by default after resize
-        const nextOffset = 0;
-        setOffset(nextOffset);
-        loadHistory(nextOffset, cols);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [limit, loadHistory, data?.totalDays, PER_COL]);
-
-  useEffect(() => {
-    if (studentId && initialized) {
-      void loadHistory(offset, limit);
-    } else if (studentId) {
       setLoading(false);
     }
-  }, [studentId, loadHistory, initialized]);
-
-  // Refetch when navigating back to this route to avoid stale in-memory state
-  useEffect(() => {
-    if (!studentId || !initialized) return;
-    void loadHistory(offset, limit);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
-  // Ensure we always show fresh data when navigating to this page or returning to the tab
-  useEffect(() => {
-    if (!studentId || !initialized) return;
-    const refetch = () => {
-      void loadHistory(offset, limit);
-    };
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') refetch();
-    };
-    window.addEventListener('focus', refetch);
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pageshow', refetch);
-    return () => {
-      window.removeEventListener('focus', refetch);
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pageshow', refetch);
-    };
-  }, [studentId, offset, limit, loadHistory, initialized]);
+  }, [studentId, history]);
 
   const grid = useMemo(() => {
     if (!data) return null;
@@ -243,7 +171,6 @@ export default function MyAttendancePage() {
               onClick={() => { 
                 const next = Math.min(Math.max(0, data.totalDays - 1), offset + limit); 
                 setOffset(next); 
-                void loadHistory(next, limit); 
               }} 
               disabled={offset + grid.days.length >= data.totalDays}
             >
@@ -255,7 +182,6 @@ export default function MyAttendancePage() {
               onClick={() => { 
                 const next = Math.max(0, offset - limit); 
                 setOffset(next); 
-                void loadHistory(next, limit); 
               }} 
               disabled={offset === 0}
             >

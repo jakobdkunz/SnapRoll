@@ -49,3 +49,15 @@ export const list = query({
     return await ctx.db.query("users").collect();
   },
 });
+
+export const update = mutation({
+  args: {
+    id: v.id("users"),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...updates } = args;
+    return await ctx.db.patch(id, updates);
+  },
+});
