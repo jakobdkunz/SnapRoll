@@ -1,58 +1,34 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 type Word = { word: string; count: number };
 type Session = { id: string; prompt: string; showPromptToStudents: boolean; allowMultipleAnswers: boolean };
 
 export default function WordCloudLivePage({ params }: { params: { sessionId: string } }) {
   const sessionId = params.sessionId;
-  const [words, setWords] = useState<Word[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
 
-  // Load session meta
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await apiFetch<{ session: Session }>(`/api/wordcloud/${sessionId}`);
-        if (mounted) setSession(res.session);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => { mounted = false; };
-  }, [sessionId]);
+  // Convex hooks
+  const session = useQuery(api.wordcloud.getActiveSession, { sessionId });
+  const answers = useQuery(api.wordcloud.getAnswers, { sessionId });
+  const heartbeat = useMutation(api.wordcloud.heartbeat);
+  const closeSession = useMutation(api.wordcloud.closeSession);
+
+  // Extract words from Convex data
+  const words = answers?.words || [];
 
   // Heartbeat to keep session active
   useEffect(() => {
     const interval = window.setInterval(() => {
-      void apiFetch(`/api/wordcloud/${sessionId}/heartbeat`, { method: 'POST' });
+      void heartbeat({ sessionId });
     }, 5000);
     return () => window.clearInterval(interval);
-  }, [sessionId]);
+  }, [sessionId, heartbeat]);
 
-  // Poll answers
-  useEffect(() => {
-    let mounted = true;
-    async function tick() {
-      try {
-        const res = await apiFetch<{ words: Word[] }>(`/api/wordcloud/${sessionId}/answers`);
-        if (mounted) setWords(res.words);
-      } catch {
-        /* ignore transient fetch errors */
-      }
-    }
-    tick();
-    const interval = window.setInterval(tick, 1500);
-    return () => {
-      mounted = false;
-      window.clearInterval(interval);
-    };
-  }, [sessionId]);
-
-  const maxCount = Math.max(1, ...words.map((w) => w.count));
+  const maxCount = Math.max(1, ...words.map((w: Word) => w.count));
 
   // Real-time physics simulation with per-word DOM refs for measuring size and applying positions imperatively
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -76,7 +52,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     const nWords = words.length;
     const shrink = nWords <= 20 ? 1 : Math.max(0.5, 1 - (nWords - 20) * 0.015);
     globalScaleRef.current = shrink;
-    const maxCountLocal = Math.max(1, ...words.map((w) => w.count));
+    const maxCountLocal = Math.max(1, ...words.map((w: Word) => w.count));
     // Add new words at center with tiny random push
     for (const w of words) {
       if (!map[w.word]) {
@@ -107,7 +83,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     }
     // Remove nodes for words that no longer exist
     for (const key of Object.keys(map)) {
-      if (!words.find((w) => w.word === key)) delete map[key];
+      if (!words.find((w: Word) => w.word === key)) delete map[key];
     }
     // Update target scales for existing nodes when counts change
     for (const w of words) {
@@ -160,7 +136,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
       const { w: W, h: H } = containerSize.current;
       const cx = W / 2;
       const cy = H / 2;
-      const wordsList = words.map((w) => w.word);
+      const wordsList = words.map((w: Word) => w.word);
       const dt = 0.016;
       const baseK = 0.08;
       const centerK = baseK + 0.06 * Math.min(1, wordsList.length / 20);
@@ -337,7 +313,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
             className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
             onClick={async () => {
               try {
-                await apiFetch(`/api/wordcloud/${sessionId}/close`, { method: 'POST' });
+                await closeSession({ sessionId });
               } catch {/* ignore */}
               history.back();
             }}
@@ -357,7 +333,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           {words.length === 0 && (
             <div className="absolute inset-0 grid place-items-center text-slate-400">Waiting for answers…</div>
           )}
-          {words.map((w) => {
+          {words.map((w: Word) => {
             const scale = 0.9 + (w.count / maxCount) * 1.8;
             return (
               <span
