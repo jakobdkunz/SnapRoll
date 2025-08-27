@@ -145,9 +145,10 @@ async function generateDemoData() {
     const sectionStudents = students.slice(sectionIndex * 23, (sectionIndex + 1) * 23);
     
     for (const student of sectionStudents) {
-      // Random enrollment date within the last year (but at least 6 months ago)
+      // Random enrollment date within the last 2 years (but at least 1 year ago)
+      // This ensures students are enrolled before the class days we generate
       const enrollmentDate = new Date();
-      enrollmentDate.setDate(enrollmentDate.getDate() - (180 + Math.floor(Math.random() * 185)));
+      enrollmentDate.setDate(enrollmentDate.getDate() - (365 + Math.floor(Math.random() * 365)));
       
       await prisma.enrollment.create({
         data: {
@@ -161,9 +162,10 @@ async function generateDemoData() {
   
   // Enroll 500 students in the large section
   for (const student of largeStudents) {
-    // Random enrollment date within the last 2 years (but at least 1 year ago)
+    // Random enrollment date within the last 3 years (but at least 2 years ago)
+    // This ensures students are enrolled before the class days we generate
     const enrollmentDate = new Date();
-    enrollmentDate.setDate(enrollmentDate.getDate() - (365 + Math.floor(Math.random() * 365)));
+    enrollmentDate.setDate(enrollmentDate.getDate() - (730 + Math.floor(Math.random() * 365)));
     
     await prisma.enrollment.create({
       data: {
@@ -206,32 +208,39 @@ async function generateDemoData() {
         });
         
         // Only create attendance if student was enrolled on this date
-        if (enrollment && classDate >= enrollment.createdAt) {
-          const status = generateAttendanceStatus();
+        if (enrollment) {
+          // Compare dates at day level (ignore time components)
+          const classDateYmd = classDate.toISOString().split('T')[0];
+          const enrollmentDateYmd = enrollment.createdAt.toISOString().split('T')[0];
+          const wasEnrolled = classDateYmd >= enrollmentDateYmd;
           
-          if (status !== 'BLANK') {
-            await prisma.attendanceRecord.create({
-              data: {
-                classDayId: classDay.id,
-                studentId: student.id,
-                status
-              }
-            });
-          }
-          
-          // Add some manual changes (including to PRESENT)
-          if (Math.random() < 0.05) { // 5% chance of manual change
-            const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
-            const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
+          if (wasEnrolled) {
+            const status = generateAttendanceStatus();
             
-            await prisma.manualStatusChange.create({
-              data: {
-                classDayId: classDay.id,
-                studentId: student.id,
-                teacherId: teacher.id,
-                status: newStatus
-              }
-            });
+            if (status !== 'BLANK') {
+              await prisma.attendanceRecord.create({
+                data: {
+                  classDayId: classDay.id,
+                  studentId: student.id,
+                  status
+                }
+              });
+            }
+            
+            // Add some manual changes (including to PRESENT)
+            if (Math.random() < 0.05) { // 5% chance of manual change
+              const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
+              const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
+              
+              await prisma.manualStatusChange.create({
+                data: {
+                  classDayId: classDay.id,
+                  studentId: student.id,
+                  teacherId: teacher.id,
+                  status: newStatus
+                }
+              });
+            }
           }
         }
       }
@@ -267,32 +276,39 @@ async function generateDemoData() {
       });
       
       // Only create attendance if student was enrolled on this date
-      if (enrollment && classDate >= enrollment.createdAt) {
-        const status = generateAttendanceStatus();
+      if (enrollment) {
+        // Compare dates at day level (ignore time components)
+        const classDateYmd = classDate.toISOString().split('T')[0];
+        const enrollmentDateYmd = enrollment.createdAt.toISOString().split('T')[0];
+        const wasEnrolled = classDateYmd >= enrollmentDateYmd;
         
-        if (status !== 'BLANK') {
-          await prisma.attendanceRecord.create({
-            data: {
-              classDayId: classDay.id,
-              studentId: student.id,
-              status
-            }
-          });
-        }
-        
-        // Add some manual changes (including to PRESENT)
-        if (Math.random() < 0.03) { // 3% chance of manual change
-          const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
-          const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
+        if (wasEnrolled) {
+          const status = generateAttendanceStatus();
           
-          await prisma.manualStatusChange.create({
-            data: {
-              classDayId: classDay.id,
-              studentId: student.id,
-              teacherId: teacher.id,
-              status: newStatus
-            }
-          });
+          if (status !== 'BLANK') {
+            await prisma.attendanceRecord.create({
+              data: {
+                classDayId: classDay.id,
+                studentId: student.id,
+                status
+              }
+            });
+          }
+          
+          // Add some manual changes (including to PRESENT)
+          if (Math.random() < 0.03) { // 3% chance of manual change
+            const manualStatuses = ['PRESENT', 'ABSENT', 'EXCUSED'];
+            const newStatus = manualStatuses[Math.floor(Math.random() * manualStatuses.length)];
+            
+            await prisma.manualStatusChange.create({
+              data: {
+                classDayId: classDay.id,
+                studentId: student.id,
+                teacherId: teacher.id,
+                status: newStatus
+              }
+            });
+          }
         }
       }
     }
