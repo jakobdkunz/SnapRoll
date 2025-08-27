@@ -20,8 +20,7 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     });
   } catch (err) {
     console.error('GET /api/teachers/[id] error', err);
-    const e = err as { code?: string; message?: string };
-    return NextResponse.json({ error: 'Internal Server Error', code: e.code, message: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -55,8 +54,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     });
   } catch (err) {
     console.error('PATCH /api/teachers/[id] error', err);
-    const e = err as { code?: string; message?: string };
-    return NextResponse.json({ error: 'Internal Server Error', code: e.code, message: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 

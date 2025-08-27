@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { apiFetch } from '@snaproll/api-client';
 
 type Section = { id: string; title: string; gradient: string };
@@ -26,6 +26,24 @@ export default function DashboardPage() {
   const [wcError, setWcError] = useState<string | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollSectionId, setPollSectionId] = useState<string | null>(null);
+  const [slideOpen, setSlideOpen] = useState(false);
+  const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
+  const [slideRecentAssets, setSlideRecentAssets] = useState<Array<{
+    id: string;
+    title: string;
+    slides: Array<{ imageUrl: string; width?: number; height?: number }>;
+    createdAt: string;
+  }>>([]);
+  const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<string | null>(null);
+  const [slideSelectedSessionId, setSlideSelectedSessionId] = useState<string | null>(null);
+  const [slideTitle, setSlideTitle] = useState('');
+  const [slideShowOnDevices, setSlideShowOnDevices] = useState(true);
+  const [slideAllowDownload, setSlideAllowDownload] = useState(true);
+  const [slideRequireStay, setSlideRequireStay] = useState(false);
+  const [slidePreventJump, setSlidePreventJump] = useState(false);
+  const [slideUploadFile, setSlideUploadFile] = useState<File | null>(null);
+  const [slideWorking, setSlideWorking] = useState(false);
+  const [slideError, setSlideError] = useState<string | null>(null);
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -44,6 +62,27 @@ export default function DashboardPage() {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
   }, []);
+
+  useEffect(() => {
+    // Load recent assets when opening slideshow modal
+    async function loadRecentAssets() {
+      if (!teacherId || !slideOpen) return;
+      try {
+        const res = await apiFetch<{ 
+          recentAssets: Array<{
+            id: string;
+            title: string;
+            slides: Array<{ imageUrl: string; width?: number; height?: number }>;
+            createdAt: string;
+          }>;
+        }>(`/api/teachers/${teacherId}/recent-slideshows`);
+        setSlideRecentAssets(res.recentAssets);
+      } catch {
+        setSlideRecentAssets([]);
+      }
+    }
+    loadRecentAssets();
+  }, [teacherId, slideOpen]);
 
   async function startWordCloud() {
     if (!wcSectionId) return;
@@ -71,8 +110,8 @@ export default function DashboardPage() {
   async function load(currentTeacherId: string) {
     try {
       setLoading(true);
-      const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
-      setSections(data.sections);
+    const data = await apiFetch<{ sections: Section[] }>(`/api/sections?teacherId=${currentTeacherId}`);
+    setSections(data.sections);
     } finally {
       setLoading(false);
     }
@@ -127,7 +166,7 @@ export default function DashboardPage() {
     // First close (triggers modal exit animation), then clear after transition
     setCustomizeModal((prev) => ({ ...prev, open: false }));
     window.setTimeout(() => {
-      setCustomizeModal({ open: false, section: null });
+    setCustomizeModal({ open: false, section: null });
     }, 180);
   }
 
@@ -155,7 +194,7 @@ export default function DashboardPage() {
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
           <div className="text-slate-500">Create your first section to begin.</div>
-          <Button className="mt-4 inline-flex items-center gap-2" onClick={async () => {
+          <Button variant="primary" className="mt-4 inline-flex items-center gap-2 bg-white border-0 hover:bg-slate-100" onClick={async () => {
             const title = prompt('Section title?');
             if (!title) return;
             await apiFetch<{ section: Section }>(`/api/sections`, {
@@ -168,25 +207,25 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-            {sections.map((s) => {
-              const gradientClass = s.gradient;
-              
-              return (
+          {sections.map((s) => {
+            const gradientClass = s.gradient;
+            
+            return (
                 <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-black/10"></div>
-                    <div className="relative z-10 text-center">
-                      <div className="font-futuristic font-bold text-lg leading-tight px-2">
-                        {s.title}
-                      </div>
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative z-10 text-center">
+                    <div className="font-futuristic font-bold text-lg leading-tight px-2">
+                      {s.title}
                     </div>
-                    <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
-                    <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
-                    
-                    {/* Pencil icon that appears on hover */}
-                    <button
-                      onClick={() => setCustomizeModal({ open: true, section: s })}
-                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
+                  </div>
+                  <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
+                  <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
+                  
+                  {/* Pencil icon that appears on hover */}
+                  <button
+                    onClick={() => setCustomizeModal({ open: true, section: s })}
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/30 rounded-full p-1 text-white text-sm"
                       title="Edit Section"
                     >
                       <HiOutlineCog6Tooth className="h-5 w-5" />
@@ -273,7 +312,19 @@ export default function DashboardPage() {
                               >
                                 <HiOutlineChartBar className="h-5 w-5" /> Poll
                               </button>
-                            </div>
+                              <button
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenMenuFor(null);
+                                  setSlideSectionId(s.id);
+                                  setSlideOpen(true);
+                                }}
+                                role="menuitem"
+                              >
+                                <HiOutlinePlayCircle className="h-5 w-5" /> Present Slideshow
+                  </button>
+                </div>
                           </div>
                         )}
                       </div>
@@ -283,17 +334,17 @@ export default function DashboardPage() {
                         <span className="sm:hidden">Attendance</span>
                       </Button>
                     </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
           {/* Spacer so the floating button doesn't overlap the last row on mobile */}
           <div className="h-40" aria-hidden="true" />
         </>
       )}
       
-      <Button className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 border border-black" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
+      <Button variant="primary" className="fixed right-6 rounded-full px-5 py-3 shadow-soft z-50 inline-flex items-center gap-2 bg-white border-0 hover:bg-slate-100" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }} onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
@@ -374,6 +425,274 @@ export default function DashboardPage() {
 
       {/* Start Poll Modal */}
       <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
+
+      {/* Present Slideshow Modal */}
+      <Modal open={slideOpen && !!slideSectionId} onClose={() => setSlideOpen(false)}>
+        <div className="bg-white rounded-xl p-8 w-[95vw] max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <HiOutlinePlayCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">Present Slideshow</h2>
+                <p className="text-sm text-slate-600">Broadcast your slideshow to student devices in real-time</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSlideOpen(false)} 
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Recents Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-slate-900">Recents</h3>
+                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">72h retention</span>
+              </div>
+              
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {slideRecentAssets.length === 0 ? (
+                  <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
+                    No recent slideshows
+                  </div>
+                ) : (
+                  slideRecentAssets.map((asset) => (
+                    <div key={asset.id} className="group relative">
+                      <button 
+                        onClick={() => { 
+                          setSlideSelectedAssetId(asset.id); 
+                          setSlideSelectedSessionId(null); 
+                          setSlideUploadFile(null);
+                          setSlideTitle(asset.title);
+                        }} 
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                          slideSelectedAssetId === asset.id 
+                            ? 'border-blue-500 bg-blue-50 shadow-md' 
+                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {asset.slides[0] && (
+                            <img 
+                              src={asset.slides[0].imageUrl} 
+                              alt="Slide 1" 
+                              className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-900 truncate">{asset.title}</div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {new Date(asset.createdAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await apiFetch(`/api/teachers/${teacherId}/recent-slideshows?assetId=${asset.id}`, { method: 'DELETE' });
+                            setSlideRecentAssets(prev => prev.filter(a => a.id !== asset.id));
+                          } catch (e) {
+                            console.error('Failed to delete asset:', e);
+                          }
+                        }}
+                        className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete slideshow"
+                      >
+                        <HiOutlineTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Upload Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Upload New File</h3>
+              
+              {/* File Upload */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Select File (PDF only)</label>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
+                  <input 
+                    type="file" 
+                    accept=".pdf,application/pdf"
+                    onChange={(e) => { 
+                      const f = e.target.files?.[0] || null; 
+                      setSlideUploadFile(f); 
+                      setSlideSelectedAssetId(null); 
+                      setSlideSelectedSessionId(null);
+                      if (f) setSlideTitle(f.name.replace(/\.pdf$/i, '')); 
+                    }}
+                    className="hidden"
+                    id="file-upload"
+                  />
+                  <label htmlFor="file-upload" className="cursor-pointer">
+                    <div className="mx-auto w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
+                    </div>
+                    <div className="text-xs text-slate-500 mt-1">PDF files only</div>
+                  </label>
+                </div>
+                {slideUploadFile && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm font-medium text-green-800">{slideUploadFile.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Title Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Slideshow Title</label>
+                <TextInput 
+                  value={slideTitle} 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} 
+                  placeholder="Enter a title for your slideshow" 
+                  className="w-full"
+                />
+              </div>
+
+              {/* Settings */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-medium text-slate-700">Presentation Settings</h4>
+                
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideShowOnDevices} 
+                    onChange={(e) => setSlideShowOnDevices(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Show on Student Devices</div>
+                    <div className="text-sm text-slate-600">Students can view the slideshow on their devices</div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideAllowDownload} 
+                    onChange={(e) => setSlideAllowDownload(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Allow Students to Download</div>
+                    <div className="text-sm text-slate-600">Students can download the slideshow files</div>
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={slideRequireStay} 
+                    onChange={(e) => { 
+                      const v = e.target.checked; 
+                      setSlideRequireStay(v); 
+                      if (v) setSlidePreventJump(false); 
+                    }}
+                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                  />
+                  <div>
+                    <div className="font-medium text-slate-900">Require Students to Stay on Current Slide</div>
+                    <div className="text-sm text-slate-600">Students cannot navigate away from the current slide</div>
+                  </div>
+                </label>
+
+                {!slideRequireStay && (
+                  <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={slidePreventJump} 
+                      onChange={(e) => setSlidePreventJump(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                    <div>
+                      <div className="font-medium text-slate-900">Prevent Students from Jumping Ahead</div>
+                      <div className="text-sm text-slate-600">Students cannot navigate to future slides</div>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {slideError && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium text-red-800">{slideError}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mt-8 flex justify-end gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={() => setSlideOpen(false)}
+              className="px-6"
+            >
+              Cancel
+            </Button>
+            <Button 
+              disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideSelectedSessionId && !slideUploadFile)} 
+              onClick={async () => {
+                if (!slideSectionId) return;
+                setSlideWorking(true);
+                setSlideError(null);
+                try {
+                  const fd = new FormData();
+                  if (slideTitle.trim()) fd.append('title', slideTitle.trim());
+                  fd.append('showOnDevices', String(slideShowOnDevices));
+                  fd.append('allowDownload', String(slideAllowDownload));
+                  fd.append('requireStay', String(slideRequireStay));
+                  fd.append('preventJump', String(slidePreventJump));
+                  if (slideSelectedAssetId) {
+                    fd.append('assetId', slideSelectedAssetId);
+                  } else if (slideSelectedSessionId) {
+                    fd.append('sessionId', slideSelectedSessionId);
+                  } else if (slideUploadFile) {
+                    fd.append('file', slideUploadFile);
+                  }
+                  const data = await apiFetch<{ session: { id: string } }>(`/api/sections/${slideSectionId}/slideshow/start`, { method: 'POST', body: fd });
+                  setSlideOpen(false);
+                  setTimeout(() => router.push(`/slideshow/live/${data.session.id}`), 120);
+                } catch (e: unknown) {
+                  setSlideError(e instanceof Error ? e.message : 'Failed to start slideshow');
+                } finally {
+                  setSlideWorking(false);
+                }
+              }}
+              className="px-8"
+            >
+              {slideWorking ? 'Starting...' : 'Start Slideshow'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -448,7 +767,7 @@ function CustomizeModal({
             <div className="flex justify-end">
               <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
                 <HiOutlineTrash className="h-5 w-5" /> Delete Section
-              </Button>
+        </Button>
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-2 justify-end">

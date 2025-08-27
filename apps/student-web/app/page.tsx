@@ -15,10 +15,22 @@ export default function StudentWelcomePage() {
   useEffect(() => {
     setMounted(true);
     // Check if already logged in
-    const studentId = localStorage.getItem('snaproll.studentId');
-    if (studentId) {
-      router.push('/sections');
-    }
+    const timer = setTimeout(() => {
+      const studentId = localStorage.getItem('snaproll.studentId');
+      if (studentId) {
+        router.push('/sections');
+      } else {
+        // Retry once more after a longer delay
+        setTimeout(() => {
+          const retryStudentId = localStorage.getItem('snaproll.studentId');
+          if (retryStudentId) {
+            router.push('/sections');
+          }
+        }, 500);
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
   }, [router]);
 
   async function onContinue() {

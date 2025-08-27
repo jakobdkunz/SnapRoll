@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@snaproll/lib/db';
 
+// Ensure Prisma runs on Node.js runtime
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ sections });
   } catch (err) {
     console.error('GET /api/sections error', err);
-    const e = err as { code?: string; message?: string };
-    return NextResponse.json({ error: 'Internal Server Error', code: e.code, message: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -40,7 +40,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ section });
   } catch (err) {
     console.error('POST /api/sections error', err);
-    const e = err as { code?: string; message?: string };
-    return NextResponse.json({ error: 'Internal Server Error', code: e.code, message: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

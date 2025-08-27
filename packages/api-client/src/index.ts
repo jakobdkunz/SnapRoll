@@ -32,12 +32,14 @@ export async function apiFetch<T>(
   const isGet = !options.method || options.method.toUpperCase() === 'GET';
   const cacheBuster = isGet ? `${path.includes('?') ? '&' : '?'}t=${Date.now()}` : '';
   const url = `${base}${path}${cacheBuster}`;
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const init: RequestInit = {
     ...options,
     // Prevent browser/SW caching
     cache: 'no-store',
     headers: {
-      'Content-Type': 'application/json',
+      // Only set JSON content type when not sending multipart/form-data
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'Cache-Control': 'no-store, max-age=0, must-revalidate',
       Pragma: 'no-cache',
       ...(typeof window !== 'undefined' ? { 'X-TZ-Offset': String(new Date().getTimezoneOffset()) } : {}),
