@@ -66,7 +66,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
           </div>
           <div className="w-[120px]" />
         </div>
-        <Card className="p-6">
+        <div className="grid place-items-center">
+          <Card className="p-6 w-full max-w-3xl">
           <div className="space-y-3">
             {(session?.options ?? []).map((opt, i) => {
               const count = counts ? counts[i] : 0;
@@ -74,9 +75,9 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
                   {(showLocal ?? session?.showResults) ? (
-                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `${pct}%` }} />
+                    <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `${pct}%` }} />
                   ) : (
-                    <div className="absolute inset-y-0 left-0 bg-primary/80 transition-all duration-500" style={{ width: `0%` }} />
+                                          <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `0%` }} />
                   )}
                   <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
                     <div className="font-medium">{opt}</div>
@@ -98,7 +99,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
                 .finally(() => setToggling(false));
             }}>{(showLocal ?? session?.showResults) ? 'Hide Results' : 'Show Results'}</Button>
           </div>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );

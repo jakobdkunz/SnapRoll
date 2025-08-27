@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
-import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile } from 'react-icons/hi2';
+import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
 import { apiFetch } from '@snaproll/api-client';
 import { useParams, useRouter } from 'next/navigation';
@@ -20,7 +20,7 @@ export default function AttendancePage() {
   const router = useRouter();
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
-  const [animatingCount, setAnimatingCount] = useState(0);
+
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
   const prevCodeRef = useRef<string | null>(null);
@@ -29,7 +29,6 @@ export default function AttendancePage() {
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [sectionTitle, setSectionTitle] = useState<string>('');
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [topOffset, setTopOffset] = useState<number>(0);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -99,7 +98,7 @@ export default function AttendancePage() {
         const res = await apiFetch<{ section: { gradient: string; title: string } }>(`/api/sections/${params.id}`);
         if (res?.section?.gradient) setSectionGradient(res.section.gradient);
         if (res?.section?.title) setSectionTitle(res.section.title);
-      } catch (_err) {
+      } catch {
         // ignore, fallback stays
       }
     }
@@ -128,23 +127,10 @@ export default function AttendancePage() {
     };
   }, [params.id, start]);
 
-  // Precisely cancel the layout main padding so content sits snug under the navbar
-  useEffect(() => {
-    function updateOffset() {
-      const container = containerRef.current;
-      if (!container) return;
-      const main = container.closest('main');
-      if (!main) return;
-      const padTop = parseFloat(window.getComputedStyle(main).paddingTop || '0') || 0;
-      setTopOffset(padTop);
-    }
-    updateOffset();
-    window.addEventListener('resize', updateOffset);
-    return () => window.removeEventListener('resize', updateOffset);
-  }, []);
+
 
   return (
-    <div ref={containerRef} className="relative min-h-dvh grid px-4 pt-0 overflow-hidden" style={{ top: topOffset ? -topOffset : undefined, position: 'relative' }}>
+    <div ref={containerRef} className="relative bg-white" style={{ height: 'calc(100vh - 120px - 80px)' }}>
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.3 }} />
       <div className="pointer-events-none fixed inset-0 bg-white/35" />
@@ -156,8 +142,8 @@ export default function AttendancePage() {
           100% { transform: translate3d(0,0,0); }
         }
       `}</style>
-      <div className="relative z-10 grid w-full -mt-2 sm:-mt-3">
-        <div className="flex items-center justify-between mb-0">
+      <div className="relative z-10 flex flex-col h-full">
+        <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
@@ -166,71 +152,82 @@ export default function AttendancePage() {
           </div>
           <div className="w-[88px]" />
         </div>
-      <div className="grid place-items-center gap-4 w-full mt-0">
-      <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
-        <div className="text-sm uppercase tracking-wide text-slate-500">Attendance Code</div>
-        {!status ? (
-          <div className="mt-4 grid place-items-center gap-4">
-            <Skeleton className="h-12 w-48" />
-            <Skeleton className="h-10 w-40" />
-          </div>
-        ) : (
-          <>
-            <div className="mt-4 flex items-center justify-center">
-              <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
-                <div className="flex gap-3 sm:gap-4">
-                  {code.split('').map((ch, i) => (
-                    <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
-                      {ch}
+        
+        {/* Attendance Code Widget - Centered */}
+        <div className="flex-1 flex items-center justify-center">
+          <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
+            <div className="text-sm uppercase tracking-wide text-slate-500">
+              Attendance Code
+            </div>
+            {!status ? (
+              <div className="mt-4 grid place-items-center gap-4">
+                <Skeleton className="h-12 w-48" />
+                <Skeleton className="h-10 w-40" />
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 flex items-center justify-center">
+                  <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
+                    <div className="flex items-center">
+                      <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0 mr-6 sm:mr-8" />
+                      <div className="flex gap-3 sm:gap-4">
+                        {code.split('').map((ch, i) => (
+                          <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
+                            {ch}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="mt-6 text-slate-600 text-sm flex items-center justify-center gap-4">
-              <span className="inline-flex items-center gap-1"><HiOutlineGlobeAlt className="h-5 w-5" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
-              <span className="inline-flex items-center gap-1"><HiOutlineDevicePhoneMobile className="h-5 w-5" /> or use the SnapRoll app</span>
-            </div>
-          </>
-        )}
-      </Card>
+                <div className="mt-6 text-slate-600 text-base flex items-center justify-center gap-6">
+                  <span className="inline-flex items-center gap-2"><HiOutlineGlobeAlt className="h-6 w-6" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
+                  <span className="inline-flex items-center gap-2"><HiOutlineDevicePhoneMobile className="h-6 w-6" /> or use the SnapRoll app</span>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
 
-      <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
-        {status ? (
-          <>
-            <div className="text-center mb-4">
-              <div className="text-2xl font-bold text-primary">
-                {status.checkedIn}/{status.totalStudents}
-              </div>
-              <div className="text-sm text-slate-500">students checked in</div>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
-              <div 
-                className="bg-primary h-5 rounded-full transition-all duration-300"
-                style={{ width: `${status.progress}%` }}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="text-center mb-4">
-              <div className="mt-2 grid place-items-center gap-2">
-                <Skeleton className="h-6 w-24" />
-                <Skeleton className="h-4 w-40" />
-              </div>
-            </div>
-            <Skeleton className="w-full h-5 rounded-full" />
-          </>
-        )}
-      </Card>
-      {/* Bottom action: Generate new code */}
-      <div className="fixed bottom-5 left-0 right-0 flex justify-center px-4">
-        <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
-          <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
-        </Button>
+        {/* Progress Bar Widget - Bottom */}
+        <div className="mb-20 flex justify-center">
+          <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
+            {status ? (
+              <>
+                <div className="text-center mb-4">
+                  <div className="text-2xl font-bold text-blue-500">
+                    {status.checkedIn}/{status.totalStudents}
+                  </div>
+                  <div className="text-sm text-slate-500">students checked in</div>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
+                  <div 
+                    className="bg-blue-500 h-5 rounded-full transition-all duration-300"
+                    style={{ width: `${status.progress}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center mb-4">
+                  <div className="mt-2 grid place-items-center gap-2">
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                </div>
+                <Skeleton className="w-full h-5 rounded-full" />
+              </>
+            )}
+          </Card>
+        </div>
+
+        {/* Generate new code button - Fixed Bottom */}
+        <div className="fixed bottom-5 left-0 right-0 flex justify-center px-4">
+          <Button className="inline-flex items-center gap-2 shadow-soft" onClick={start} disabled={isStarting}>
+            <HiOutlineArrowPath className="h-5 w-5" /> {isStarting ? 'Generating…' : 'Generate New Code'}
+          </Button>
+        </div>
       </div>
-      </div>
-    </div>
     </div>
   );
 }

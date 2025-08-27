@@ -1,18 +1,25 @@
 "use client";
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
 export function AuthGuard() {
   const router = useRouter();
   const pathname = usePathname();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    const id = typeof window !== 'undefined' ? localStorage.getItem('snaproll.teacherId') : null;
+    setIsClient(true);
+    const id = localStorage.getItem('snaproll.teacherId');
     const isLogin = pathname === '/';
     if (!id && !isLogin) {
       router.replace('/');
     }
   }, [pathname, router]);
+
+  // Don't run auth logic until client-side hydration is complete
+  if (!isClient) {
+    return null;
+  }
 
   return null;
 }

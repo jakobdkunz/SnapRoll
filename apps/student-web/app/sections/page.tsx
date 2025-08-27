@@ -1,19 +1,22 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { Card, Skeleton, TextInput, Button } from '@snaproll/ui';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
+import { HiOutlineUserGroup } from 'react-icons/hi2';
 
 type Section = { id: string; title: string; gradient?: string };
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 type SectionsResponse = { sections: Section[]; checkedInSectionIds?: string[] };
+type RecentSlidesResponse = { recents: Array<{ id: string; title: string; url: string; allowDownload: boolean; lastSeenAt: string; thumbnail: string | null }> };
 
 type CheckinResponse = { ok: boolean; status: string; section?: { id: string; title: string } };
 
 export default function SectionsPage() {
   const pathname = usePathname();
+
   const [sections, setSections] = useState<Section[]>([]);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,9 @@ export default function SectionsPage() {
   const [mounted, setMounted] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
+  const [recentSlides, setRecentSlides] = useState<RecentSlidesResponse['recents']>([]);
+  const [isClient, setIsClient] = useState(false);
+
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   // Interactive state
@@ -42,11 +48,26 @@ export default function SectionsPage() {
     sectionId: string;
     hasAnswered?: boolean;
   };
+  type InteractiveSlideshow = {
+    kind: 'slideshow';
+    sessionId: string;
+    title: string;
+    filePath: string;
+    mimeType: string;
+    currentSlide: number;
+    totalSlides: number | null;
+    showOnDevices: boolean;
+    allowDownload: boolean;
+    requireStay: boolean;
+    preventJump: boolean;
+    sectionId: string;
+  };
 
   const [interactive, setInteractive] = useState<
     | null
     | InteractiveWordCloud
     | InteractivePoll
+    | InteractiveSlideshow
   >(null);
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
@@ -120,8 +141,22 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const id = localStorage.getItem('snaproll.studentId');
-    setStudentId(id);
+    setIsClient(true);
+    // Use a longer delay to ensure localStorage is available and retry if needed
+    const timer = setTimeout(() => {
+      const id = localStorage.getItem('snaproll.studentId');
+      if (id) {
+        setStudentId(id);
+      } else {
+        // Retry once more after a longer delay
+        setTimeout(() => {
+          const retryId = localStorage.getItem('snaproll.studentId');
+          setStudentId(retryId);
+        }, 500);
+      }
+    }, 200);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -147,6 +182,9 @@ export default function SectionsPage() {
       const data = await apiFetch<SectionsResponse>(`/api/students/${currentStudentId}/sections?_=${Date.now()}`);
       setSections(data.sections);
       setCheckedInIds(data.checkedInSectionIds || []);
+      // Load recent presentations for downloads
+      const rec = await apiFetch<RecentSlidesResponse>(`/api/students/${currentStudentId}/recent-slides`);
+      setRecentSlides(rec.recents.filter((r) => r.allowDownload));
     } catch (error) {
       console.error('Failed to load courses:', error);
     } finally {
@@ -242,8 +280,34 @@ export default function SectionsPage() {
     };
   }, [mounted, studentId]);
 
-  if (!mounted) return null;
-  if (!studentId) return <div>Please go back and enter your email.</div>;
+
+
+  // Always render the same skeleton on both server and client to avoid hydration mismatch
+  if (!mounted || !isClient || !studentId) return (
+    <div className="space-y-6">
+      <Card className="p-6 space-y-3">
+        <div className="text-center">
+          <div className="font-medium">Attendance</div>
+          <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
+        </div>
+        <div className="flex items-center justify-center gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="w-12 h-12 rounded-xl" />
+          ))}
+        </div>
+      </Card>
+
+      <div className="text-slate-600 text-sm">My courses</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="p-3 sm:p-4">
+            <Skeleton className="aspect-[3/2] w-full rounded-lg mb-3" />
+            <Skeleton className="h-5 w-40" />
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 
   if (loading && !initialized) {
     return (
@@ -335,15 +399,17 @@ export default function SectionsPage() {
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
         <div className="flex items-center justify-center gap-3">
+          <HiOutlineUserGroup className="w-10 h-10 text-black" />
           {digits.map((d, i) => (
             <input
               key={i}
               ref={inputRefs[i]}
-              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300"
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
               value={d}
+              placeholder={String(i + 1)}
               disabled={checking}
               onChange={(e) => handleChange(i, e)}
               onKeyDown={(e) => handleKeyDown(i, e)}
@@ -360,7 +426,7 @@ export default function SectionsPage() {
         
         <div className="flex items-center justify-center">
           <button
-            className="text-primary font-medium hover:underline"
+            className="text-blue-500 font-medium hover:underline"
             onClick={() => { if (studentId) window.location.href = '/my-attendance'; }}
           >
             My attendance →
@@ -443,7 +509,7 @@ export default function SectionsPage() {
             </div>
             {(interactive as InteractivePoll).hasAnswered ? (
               <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full flex items-center justify-center gap-2">
-                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L9 13.414l4.707-4.707z"/></svg>
                 Response submitted
               </div>
             ) : (
@@ -464,8 +530,67 @@ export default function SectionsPage() {
               </div>
             )}
           </div>
+        ) : interactive.kind === 'slideshow' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Activities</div>
+              <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
+            </div>
+            {(interactive as InteractiveSlideshow).showOnDevices ? (
+              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${(interactive as InteractiveSlideshow).sessionId}`; }}>View Slides Live →</Button>
+            ) : (
+              <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
+            )}
+          </div>
         ) : null}
       </Card>
+
+      {/* Recent presentations */}
+      {recentSlides.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium inline-flex items-center gap-2">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeWidth="1.5" d="M3 4.5h18M3 9.75h18M3 15h18M3 20.25h12"/></svg>
+                Recent presentations
+              </div>
+              <div className="text-slate-500 text-sm">Available to download for 72 hours after class.</div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-3">
+            {recentSlides.map((r) => (
+              <a key={r.id} href={r.url} target="_blank" rel="noreferrer" className="block">
+                <div className="flex items-start gap-3 p-3 rounded-lg border hover:bg-slate-50 transition-colors">
+                  {r.thumbnail ? (
+                    <img 
+                      src={r.thumbnail} 
+                      alt="Slide 1" 
+                      className="w-16 h-12 object-cover rounded-lg border border-slate-200 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-12 bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeWidth="1.5" d="M3 4.5h18M3 9.75h18M3 15h18M3 20.25h12"/>
+                      </svg>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-900 truncate">{r.title}</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {new Date(r.lastSeenAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <svg className="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Courses subheading */}
       <div className="text-slate-600 text-sm">My courses</div>
@@ -490,7 +615,7 @@ export default function SectionsPage() {
                   {/* Checked-in badge */}
                   {isCheckedIn && (
                     <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-lg ring-1 ring-black/40 inline-flex items-center gap-1">
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 111.414-1.414l3.051 3.051 6.657-6.657a1 1 0 011.293-.122z" clipRule="evenodd"/></svg>
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L9 13.414l4.707-4.707z"/></svg>
                       Checked in
                     </div>
                   )}

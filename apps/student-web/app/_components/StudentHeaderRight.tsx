@@ -1,5 +1,4 @@
 "use client";
-import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@snaproll/api-client';
@@ -17,9 +16,11 @@ export function StudentHeaderRight() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setIsClient(true);
     const id = localStorage.getItem('snaproll.studentId');
     setStudentId(id);
     const cachedName = localStorage.getItem('snaproll.studentName');
@@ -88,6 +89,15 @@ export function StudentHeaderRight() {
     setName(''); setFirstName(''); setLastName(''); setEmail('');
     setOpen(false); setProfileOpen(false);
     router.push('/');
+  }
+
+  // Don't render anything until client-side hydration is complete
+  if (!isClient) {
+    return (
+      <div className="opacity-0 pointer-events-none select-none">
+        <button className="text-sm">Profile</button>
+      </div>
+    );
   }
 
   if (!studentId) {

@@ -12,16 +12,18 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+      </head>
       <body>
-        <div className="min-h-dvh">
-          <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+        <div className="min-h-dvh bg-slate-50">
+          <header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
               <WordmarkLink />
               <TeacherHeaderRight />
             </div>
           </header>
           <AuthGuard />
-          <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-0 pb-6 sm:pb-8">{children}</main>
+          <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 pb-6 sm:pb-8">{children}</main>
         </div>
       </body>
     </html>

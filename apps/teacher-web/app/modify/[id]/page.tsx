@@ -85,7 +85,7 @@ export default function ModifyPage() {
       workers.push((async function loop() {
         while (queue.length) {
           const next = queue.shift() as T;
-          try { await worker(next); } catch (_err) { /* continue */ }
+          try { await worker(next); } catch { /* continue */ }
         }
       })());
     }
@@ -198,21 +198,7 @@ export default function ModifyPage() {
     }
   }
 
-  async function removeStudent(studentId: string) {
-    try {
-      const snapshot = [...students];
-      await apiFetch(`/api/sections/${params.id}/students/${studentId}`, { method: 'DELETE' });
-      setLastAction({ type: 'remove_one', snapshot, label: 'Student removed.' });
-      setToastMessage('Student removed.');
-      setToastVisible(true);
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
-      load();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to remove student';
-      alert(errorMessage);
-    }
-  }
+
 
   function guessNameParts(fullName: string): { firstName: string; lastName: string } {
     const name = fullName.trim().replace(/\s+/g, ' ');
@@ -325,7 +311,7 @@ export default function ModifyPage() {
       setMappingStep('review');
       setMappingOpen(true);
       return;
-    } catch (_ignored) {
+    } catch {
       alert('Failed to import CSV.');
     } finally {
       setImporting(false);
@@ -368,7 +354,7 @@ export default function ModifyPage() {
         });
         added += 1;
         addedEmails.push(emailVal);
-      } catch (_ignored) {
+      } catch {
         // continue
       }
     }
@@ -480,7 +466,7 @@ export default function ModifyPage() {
                         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                         toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                         await load();
-                      } catch (_err) {
+                      } catch {
                         alert('Failed to remove student');
                       } finally {
                         setDeletingIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
@@ -707,7 +693,7 @@ export default function ModifyPage() {
                   if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                   toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                   setConfirmClearOpen(false);
-                } catch (_e) {
+                } catch {
                   alert('Failed to remove all students');
                 } finally {
                   setConfirmWorking(false);
@@ -747,7 +733,7 @@ export default function ModifyPage() {
                   ]);
                   await load();
                   setToastVisible(false);
-                } catch (_err) {
+                } catch {
                   alert('Failed to undo.');
                 } finally {
                   setUndoWorking(false);

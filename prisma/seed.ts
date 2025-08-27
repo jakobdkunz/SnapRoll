@@ -3,6 +3,13 @@ import { PrismaClient, AttendanceStatus, Role } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
+  // Delete in order of dependencies (child tables first)
+  await prisma.wordCloudAnswer.deleteMany();
+  await prisma.wordCloudSession.deleteMany();
+  await prisma.pollAnswer.deleteMany();
+  await prisma.pollSession.deleteMany();
+  await prisma.slideshowSession.deleteMany();
+  await prisma.slideshowAsset.deleteMany();
   await prisma.manualStatusChange.deleteMany();
   await prisma.attendanceRecord.deleteMany();
   await prisma.classDay.deleteMany();

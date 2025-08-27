@@ -1,5 +1,4 @@
 "use client";
-import Link from 'next/link';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,9 +17,11 @@ export function TeacherHeaderRight() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setIsClient(true);
     // Initialize from localStorage immediately for fast UI fill
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
@@ -113,6 +114,15 @@ export function TeacherHeaderRight() {
     setName(''); setFirstName(''); setLastName(''); setEmail('');
     setOpen(false); setProfileOpen(false);
     router.push('/');
+  }
+
+  // Don't render anything until client-side hydration is complete
+  if (!isClient) {
+    return (
+      <div className="opacity-0 pointer-events-none select-none">
+        <button className="text-sm">Profile</button>
+      </div>
+    );
   }
 
   if (!teacherId) {
