@@ -124,9 +124,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const enrollmentDate = s.enrolledAt;
         const isPastDate = classDayDate < now;
         
-        // Compare dates at day level (ignore time)
-        const classDayYmd = toYmd(classDayDate);
-        const enrollmentYmd = toYmd(enrollmentDate);
+        // Compare dates at day level (ignore time and timezone)
+        const classDayYmd = classDayDate.toISOString().split('T')[0];
+        const enrollmentYmd = enrollmentDate.toISOString().split('T')[0];
         const wasEnrolled = classDayYmd >= enrollmentYmd;
         
         if (isPastDate && wasEnrolled) {
