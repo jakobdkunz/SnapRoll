@@ -103,7 +103,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string } | null }> = {};
     for (const ymd of pageDates) {
       // Find classDay for this section on this date (if none, status is BLANK)
-      const cdForDate = classDays.find((cd) => cd.sectionId === s.id && toYmd(cd.date) === ymd);
+      const cdForDate = classDays.find((cd) => cd.sectionId === s.id && cd.date.toISOString().split('T')[0] === ymd);
       if (!cdForDate) {
         byDate[ymd] = { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
         continue;
