@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Card, TextInput } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 

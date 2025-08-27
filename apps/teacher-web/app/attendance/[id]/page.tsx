@@ -5,7 +5,6 @@ import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDev
 import React from 'react';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { useParams, useRouter } from 'next/navigation';
 
 type ClassDay = { id: string; attendanceCode: string };

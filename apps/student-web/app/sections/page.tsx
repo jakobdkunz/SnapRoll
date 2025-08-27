@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Button } from '@snaproll/ui';
-import { convex } from '@snaproll/convex-client';
 import { api } from '../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
 

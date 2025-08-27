@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 type Word = { word: string; count: number };
 type Session = { id: string; prompt: string; showPromptToStudents: boolean; allowMultipleAnswers: boolean };

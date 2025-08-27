@@ -5,7 +5,6 @@ import { Button, Card, TextInput } from '@snaproll/ui';
 import { isValidEmail } from '@snaproll/lib';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 export default function TeacherWelcomePage() {
   const router = useRouter();

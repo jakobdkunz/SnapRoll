@@ -5,7 +5,6 @@ import { Button, Modal, TextInput } from '@snaproll/ui';
 import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 export default function StartWordCloudPage({ params }: { params: { sectionId: string } }) {
   const router = useRouter();
