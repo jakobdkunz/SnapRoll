@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@snaproll/api-client": "^0.1.0",
+    "@snaproll/convex-client": "^0.1.0",
     "@snaproll/config": "^0.1.0",
     "@snaproll/lib": "^0.1.0",
     "@snaproll/ui": "^0.1.0",

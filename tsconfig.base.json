@@ -18,7 +18,7 @@
     "paths": {
       "@snaproll/ui": ["packages/ui/src"],
       "@snaproll/lib": ["packages/lib/src"],
-      "@snaproll/api-client": ["packages/api-client/src"],
+      "@snaproll/convex-client": ["packages/convex-client/src"],
       "@snaproll/config": ["packages/config/src"]
     }
   }

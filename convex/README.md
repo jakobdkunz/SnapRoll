@@ -1,6 +1,6 @@
 # Convex Backend for SnapRoll
 
-This directory contains the Convex backend for SnapRoll, replacing the previous Prisma + Next.js API setup.
+This directory contains the Convex backend for SnapRoll, providing real-time database and API functionality.
 
 ## Structure
 
@@ -9,6 +9,12 @@ This directory contains the Convex backend for SnapRoll, replacing the previous 
   - `users.ts` - User management
   - `sections.ts` - Section management  
   - `attendance.ts` - Attendance tracking
+  - `enrollments.ts` - Student enrollment
+  - `history.ts` - Historical data queries
+  - `polls.ts` - Poll functionality
+  - `wordcloud.ts` - Word cloud sessions
+  - `slideshow.ts` - Slideshow management
+  - `seed.ts` - Demo data seeding
   - `demo.ts` - Simple test function
 
 ## Development
@@ -44,19 +50,19 @@ const users = useQuery(api.users.list);
 const createUser = useMutation(api.users.create);
 ```
 
-## Migration from Prisma
+## Features
 
-This Convex setup mirrors your existing Prisma schema with these key differences:
-
-1. **Real-time subscriptions** instead of polling
+1. **Real-time subscriptions** for live updates
 2. **Automatic caching** for better performance
 3. **Type-safe queries** with automatic joins
 4. **Built-in optimistic updates**
+5. **Complete CRUD operations** for all entities
+6. **Interactive features** (polls, word clouds, slideshows)
 
-## Next Steps
+## Current Status
 
-1. ✅ Schema setup
-2. ✅ Basic CRUD functions
-3. 🔄 Migrate frontend to use Convex client
-4. 🔄 Implement real-time features
-5. 🔄 Remove old API routes
+✅ Schema setup  
+✅ All CRUD functions  
+✅ Real-time features  
+✅ Frontend integration  
+✅ Demo data seeding
