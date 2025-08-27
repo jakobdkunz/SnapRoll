@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
-import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingMode = 'mouse' | 'pen' | 'eraser';
@@ -30,13 +32,18 @@ type Slide = { id: string; index: number; imageUrl: string; width?: number | nul
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [details, setDetails] = useState<SessionDetails | null>(null);
-  const [slides, setSlides] = useState<Slide[]>([]);
   const [working, setWorking] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState('');
+
+  // Convex hooks
+  const details = useQuery(api.slideshow.getActiveSession, { sessionId });
+  const slides = useQuery(api.slideshow.getSlides, { sessionId });
+  const drawings = useQuery(api.slideshow.getDrawings, { sessionId });
+  const heartbeat = useMutation(api.slideshow.heartbeat);
+  const closeSession = useMutation(api.slideshow.closeSession);
+  const gotoSlideMutation = useMutation(api.slideshow.gotoSlide);
+  const saveDrawing = useMutation(api.slideshow.saveDrawing);
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -49,7 +56,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [drawingColor, setDrawingColor] = useState<DrawingColor>('red');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
-  const [drawings, setDrawings] = useState<SlideDrawings>({});
+  const [localDrawings, setLocalDrawings] = useState<SlideDrawings>({});
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
