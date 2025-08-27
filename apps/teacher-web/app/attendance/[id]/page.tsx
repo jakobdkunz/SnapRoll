@@ -3,7 +3,9 @@ import { useCallback, useEffect, useState, useRef } from 'react';
 import { Card, Button, Skeleton } from '@snaproll/ui';
 import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { useParams, useRouter } from 'next/navigation';
 
 type ClassDay = { id: string; attendanceCode: string };
@@ -21,6 +23,11 @@ export default function AttendancePage() {
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
 
+  // Convex hooks
+  const startAttendance = useMutation(api.attendance.startAttendance);
+  const getAttendanceStatus = useQuery(api.attendance.getAttendanceStatus, params.id ? { sectionId: params.id } : "skip");
+  const section = useQuery(api.sections.get, params.id ? { id: params.id } : "skip");
+
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
   const prevCodeRef = useRef<string | null>(null);
@@ -32,36 +39,36 @@ export default function AttendancePage() {
 
   const loadStatus = useCallback(async () => {
     try {
-      const data = await apiFetch<AttendanceStatus>(`/api/sections/${params.id}/attendance-status`);
-      setStatus(data);
-      if (data.attendanceCode && data.attendanceCode !== prevCodeRef.current) {
-        prevCodeRef.current = data.attendanceCode;
-        setCode(data.attendanceCode);
+      // Use Convex query data instead of API call
+      if (getAttendanceStatus) {
+        setStatus(getAttendanceStatus);
+        if (getAttendanceStatus.attendanceCode && getAttendanceStatus.attendanceCode !== prevCodeRef.current) {
+          prevCodeRef.current = getAttendanceStatus.attendanceCode;
+          setCode(getAttendanceStatus.attendanceCode);
+        }
       }
     } catch (error) {
       console.error('Failed to load attendance status:', error);
     }
-  }, [params.id]);
+  }, [getAttendanceStatus]);
 
   const start = useCallback(async () => {
     if (isStartingRef.current) return;
     isStartingRef.current = true;
     setIsStarting(true);
     try {
-      const data = await apiFetch<{ classDay: ClassDay }>(
-        `/api/sections/${params.id}/start-attendance`,
-        { method: 'POST' }
-      );
-      prevCodeRef.current = data.classDay.attendanceCode;
-      setCode(data.classDay.attendanceCode);
-      await loadStatus();
+      const classDayId = await startAttendance(params.id);
+      if (classDayId) {
+        // The attendance status will be updated via the Convex query
+        await loadStatus();
+      }
     } catch (e) {
       console.error('Failed to start attendance:', e);
     } finally {
       isStartingRef.current = false;
       setIsStarting(false);
     }
-  }, [params.id, loadStatus]);
+  }, [params.id, loadStatus, startAttendance]);
 
   useEffect(() => {
     void loadStatus();
@@ -93,17 +100,11 @@ export default function AttendancePage() {
 
   // Load section gradient and title for background/header
   useEffect(() => {
-    async function loadSection() {
-      try {
-        const res = await apiFetch<{ section: { gradient: string; title: string } }>(`/api/sections/${params.id}`);
-        if (res?.section?.gradient) setSectionGradient(res.section.gradient);
-        if (res?.section?.title) setSectionTitle(res.section.title);
-      } catch {
-        // ignore, fallback stays
-      }
+    if (section) {
+      if (section.gradient) setSectionGradient(section.gradient);
+      if (section.title) setSectionTitle(section.title);
     }
-    loadSection();
-  }, [params.id]);
+  }, [section]);
 
   // At local midnight, automatically start a new attendance day and reset progress
   useEffect(() => {
