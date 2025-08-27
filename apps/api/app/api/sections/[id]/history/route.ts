@@ -105,7 +105,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
           const classDayDate = classDay.date;
           const enrollmentDate = enrollment.createdAt;
           const isPastDate = classDayDate < now;
-          const wasEnrolled = classDayDate >= enrollmentDate;
+          
+          // Compare dates at day level (ignore time)
+          const classDayYmd = classDayDate.toISOString().split('T')[0];
+          const enrollmentYmd = enrollmentDate.toISOString().split('T')[0];
+          const wasEnrolled = classDayYmd >= enrollmentYmd;
           
           if (isPastDate && wasEnrolled) {
             return 'ABSENT'; // Past date, was enrolled, no record = ABSENT
