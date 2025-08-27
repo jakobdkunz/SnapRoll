@@ -3,7 +3,24 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function debugEnrollment() {
-  console.log('🔍 Debugging enrollment timestamps...');
+  console.log('🔍 Debugging database state...');
+  
+  // Check if we have any data
+  const userCount = await prisma.user.count();
+  const sectionCount = await prisma.section.count();
+  const classDayCount = await prisma.classDay.count();
+  const enrollmentCount = await prisma.enrollment.count();
+  
+  console.log(`Database state:`);
+  console.log(`  Users: ${userCount}`);
+  console.log(`  Sections: ${sectionCount}`);
+  console.log(`  Class Days: ${classDayCount}`);
+  console.log(`  Enrollments: ${enrollmentCount}`);
+  
+  if (classDayCount === 0) {
+    console.log('❌ No class days found! This is why history shows 0 days.');
+    return;
+  }
   
   // Get a sample student and their enrollments
   const student = await prisma.user.findFirst({
@@ -22,7 +39,7 @@ async function debugEnrollment() {
     return;
   }
   
-  console.log(`Student: ${student.firstName} ${student.lastName} (${student.email})`);
+  console.log(`\nStudent: ${student.firstName} ${student.lastName} (${student.email})`);
   
   for (const enrollment of student.enrollments) {
     console.log(`\nSection: ${enrollment.section.title}`);
@@ -34,6 +51,13 @@ async function debugEnrollment() {
       orderBy: { date: 'desc' },
       take: 20
     });
+    
+    console.log(`Class days in this section: ${classDays.length}`);
+    
+    if (classDays.length === 0) {
+      console.log('  No class days in this section!');
+      continue;
+    }
     
     console.log('Recent class days:');
     let foundNoAttendance = false;
