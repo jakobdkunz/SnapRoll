@@ -2,7 +2,9 @@
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery, useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 
 type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };
@@ -10,44 +12,35 @@ type TeacherProfile = { teacher: { id: string; email: string; firstName: string;
 export function TeacherHeaderRight() {
   const router = useRouter();
   const [teacherId, setTeacherId] = useState<string | null>(null);
-  const [name, setName] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Convex hooks
+  const teacher = useQuery(api.users.get, teacherId ? { id: teacherId } : "skip");
+  const updateUser = useMutation(api.users.update);
 
   useEffect(() => {
     setIsClient(true);
     // Initialize from localStorage immediately for fast UI fill
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
-    const cachedName = localStorage.getItem('snaproll.teacherName');
-    const cachedEmail = localStorage.getItem('snaproll.teacherEmail');
-    if (cachedName) setName(cachedName);
-    if (cachedEmail) setEmail(cachedEmail);
   }, []);
 
+  // Update form fields when teacher data loads
   useEffect(() => {
-    async function load(idVal: string) {
-      try {
-        const data = await apiFetch<TeacherProfile>(`/api/teachers/${idVal}`);
-        const full = `${data.teacher.firstName} ${data.teacher.lastName}`;
-        setName(full);
-        setFirstName(data.teacher.firstName);
-        setLastName(data.teacher.lastName);
-        setEmail(data.teacher.email);
-        localStorage.setItem('snaproll.teacherName', full);
-        localStorage.setItem('snaproll.teacherEmail', data.teacher.email);
-      } catch {
-        // ignore
-      }
+    if (teacher) {
+      setFirstName(teacher.firstName);
+      setLastName(teacher.lastName);
+      const full = `${teacher.firstName} ${teacher.lastName}`;
+      localStorage.setItem('snaproll.teacherName', full);
+      localStorage.setItem('snaproll.teacherEmail', teacher.email);
     }
-    if (teacherId) load(teacherId);
-  }, [teacherId]);
+  }, [teacher]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -66,10 +59,8 @@ export function TeacherHeaderRight() {
       const id = localStorage.getItem('snaproll.teacherId');
       setTeacherId(id);
       if (!id) {
-        setName('');
         setFirstName('');
         setLastName('');
-        setEmail('');
         setOpen(false);
         setProfileOpen(false);
       }
@@ -93,11 +84,12 @@ export function TeacherHeaderRight() {
     if (!id || !firstName.trim() || !lastName.trim()) return;
     setSaving(true);
     try {
-      const updated = await apiFetch<TeacherProfile>(`/api/teachers/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim() })
+      await updateUser({ 
+        id, 
+        firstName: firstName.trim(), 
+        lastName: lastName.trim() 
       });
-      const full = `${updated.teacher.firstName} ${updated.teacher.lastName}`;
+      const full = `${firstName.trim()} ${lastName.trim()}`;
       setName(full);
       localStorage.setItem('snaproll.teacherName', full);
       setProfileOpen(false);
@@ -111,7 +103,7 @@ export function TeacherHeaderRight() {
     localStorage.removeItem('snaproll.teacherName');
     localStorage.removeItem('snaproll.teacherEmail');
     setTeacherId(null);
-    setName(''); setFirstName(''); setLastName(''); setEmail('');
+    setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
     router.push('/');
   }
@@ -137,7 +129,7 @@ export function TeacherHeaderRight() {
     <div className="relative" ref={dropdownRef}>
       <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
-        {name || 'Profile'}
+                    {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
@@ -161,7 +153,7 @@ export function TeacherHeaderRight() {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
-            <TextInput value={email} disabled />
+            <TextInput value={teacher?.email || ''} disabled />
             <div className="text-xs text-slate-500">To change your email, please contact support.</div>
           </div>
           <div className="flex gap-2 justify-end">
