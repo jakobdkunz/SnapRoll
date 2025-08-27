@@ -160,3 +160,28 @@ export const saveDrawing = mutation({
     return "drawing_saved";
   },
 });
+
+export const getActiveSession = query({
+  args: { sessionId: v.id("slideshowSessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.sessionId);
+  },
+});
+
+export const getDrawings = query({
+  args: { sessionId: v.id("slideshowSessions") },
+  handler: async (ctx, args) => {
+    // This would return drawing data - you might want to create a separate table for this
+    // For now, we'll just return empty array
+    return [];
+  },
+});
+
+export const closeSession = mutation({
+  args: { sessionId: v.id("slideshowSessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      closedAt: Date.now(),
+    });
+  },
+});

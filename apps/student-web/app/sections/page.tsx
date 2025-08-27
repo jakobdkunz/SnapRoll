@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Button } from '@snaproll/ui';
-import { convexApi } from '@snaproll/convex-client';
+import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { convex } from '@snaproll/convex-client';
 
@@ -30,16 +30,16 @@ export default function SectionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Convex hooks
-  const checkInMutation = useMutation(convexApi.attendance.checkIn);
+  const checkInMutation = useMutation(api.attendance.checkIn);
   
   // Get student data
-  const student = useQuery(convexApi.users.get, studentId ? { id: studentId } : "skip");
+  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
   
   // Get student's enrolled sections
-  const enrollments = useQuery(convexApi.enrollments.getByStudent, studentId ? { studentId } : "skip");
+  const enrollments = useQuery(api.enrollments.getByStudent, studentId ? { studentId } : "skip");
   
   // Get sections data
-  const sectionsData = useQuery(convexApi.sections.list);
+  const sectionsData = useQuery(api.sections.list);
   
   // Combine enrollments with sections data
   const sections = useMemo(() => {
@@ -66,7 +66,7 @@ export default function SectionsPage() {
       setChecking(true);
       
       // Use Convex mutation
-      const recordId = await checkInMutation(code, studentId);
+      const recordId = await checkInMutation({ attendanceCode: code, studentId });
       
       if (recordId) {
         setConfirmMsg(`Checked in successfully!`);

@@ -16,7 +16,7 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
   const [allowMultiple, setAllowMultiple] = useState(false);
 
   // Convex mutations
-  const startWordCloud = useMutation(api.wordcloud.startSession);
+  const startWordCloud = useMutation(api.wordcloud.startWordCloud);
 
   async function start() {
     try {
