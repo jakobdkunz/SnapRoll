@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Modal, TextInput } from '@snaproll/ui';
 import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useMutation } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 
 export default function StartWordCloudPage({ params }: { params: { sectionId: string } }) {
   const router = useRouter();
@@ -13,11 +15,16 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
   const [showPrompt, setShowPrompt] = useState(true);
   const [allowMultiple, setAllowMultiple] = useState(false);
 
+  // Convex mutations
+  const startWordCloud = useMutation(api.wordcloud.startSession);
+
   async function start() {
     try {
-      const { session } = await apiFetch<{ session: { id: string } }>(`/api/sections/${sectionId}/wordcloud/start`, {
-        method: 'POST',
-        body: JSON.stringify({ prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple }),
+      const session = await startWordCloud({ 
+        sectionId, 
+        prompt, 
+        showPromptToStudents: showPrompt, 
+        allowMultipleAnswers: allowMultiple 
       });
       setOpen(false);
       // delay to allow modal animation to dismiss before navigating
