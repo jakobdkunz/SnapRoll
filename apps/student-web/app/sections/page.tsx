@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { Card, Badge, Button } from '@snaproll/ui';
+import { Card, Badge, Button, TextInput, Skeleton } from '@snaproll/ui';
+import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
@@ -32,6 +33,8 @@ export default function SectionsPage() {
 
   // Convex hooks
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
+  const submitWordcloud = useMutation(api.functions.wordcloud.submitAnswer);
+  const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
   // Resolve student by email first to obtain a valid Convex Id
   const studentByEmail = useQuery(
@@ -136,7 +139,10 @@ export default function SectionsPage() {
   const lastSeenRef = useRef<number>(Date.now());
 
   // Get interactive activity from Convex
-  const interactive = useQuery(api.functions.students.getActiveInteractive, studentId ? { studentId: studentId as any } : "skip");
+  const interactive = useQuery(
+    api.functions.students.getActiveInteractive,
+    effectiveUserId ? { studentId: effectiveUserId } : "skip"
+  );
 
   // Reset local single-submit state when a new session starts
   useEffect(() => {
@@ -192,11 +198,11 @@ export default function SectionsPage() {
 
 
 
-  // Auto-submit when 4 digits are entered
+  // Autosubmit when all 4 digits are present
   useEffect(() => {
-    if (digits.every(d => d !== '') && digits.join('').length === 4) {
-      onCheckin();
-    }
+    const allFilled = digits.every((d) => /\d/.test(d) && d.length === 1);
+    if (allFilled) void onCheckin();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [digits]);
 
   if (!mounted) return null;
@@ -233,87 +239,200 @@ export default function SectionsPage() {
     }
   };
 
-  return (
-    <div className="min-h-dvh px-4 py-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="text-center">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 mb-2">
-            Welcome{studentName ? `, ${studentName}` : ''}!
-          </h1>
-          <p className="text-slate-600">Enter your attendance code to check in</p>
-        </div>
-
-        <Card className="p-6 max-w-sm mx-auto">
-          <div className="space-y-4">
-            <div className="text-center">
-              <h2 className="text-lg font-semibold text-slate-800 mb-2">Attendance Code</h2>
-              <p className="text-sm text-slate-600 mb-4">Enter the 4-digit code from your instructor</p>
-            </div>
-
-            <div className="flex gap-2 justify-center">
-              {digits.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={inputRefs[index]}
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleDigitChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={handlePaste}
-                  className="w-12 h-12 text-center text-lg font-semibold border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                  disabled={checking}
-                />
-              ))}
-            </div>
-
-            {checkinError && (
-              <div className="text-center text-red-600 text-sm">{checkinError}</div>
-            )}
-
-            {confirmMsg && (
-              <div className="text-center text-green-600 text-sm">{confirmMsg}</div>
-            )}
-
-            <Button
-              onClick={onCheckin}
-              disabled={digits.join('').length !== 4 || checking}
-              className="w-full"
-            >
-              {checking ? 'Checking in...' : 'Check In'}
-            </Button>
+  // Skeleton when missing effective user
+  if (!effectiveUserId) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-6 space-y-3">
+          <div className="text-center">
+            <div className="font-medium">Attendance</div>
+            <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="w-12 h-12 rounded-xl" />
+            ))}
           </div>
         </Card>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-slate-800 text-center">Your Sections</h2>
-          
-          {!enrollments || !sectionsData ? (
-            <div className="text-center text-slate-600">Loading sections...</div>
-          ) : error ? (
-            <div className="text-center text-red-600">{error}</div>
-          ) : sections.length === 0 ? (
-            <div className="text-center text-slate-600">No sections found. Please ask your instructor to add you to a section.</div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {sections.map((section) => (
-                <Card key={section.id} className={`p-4 ${section.gradient} text-white`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold">{section.title}</h3>
-                      {checkedInIds.includes(section.id) && (
-                        <Badge tone="green" className="mt-1">Checked In</Badge>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
+        <div className="text-slate-600 text-sm">My courses</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-3 sm:p-4">
+              <Skeleton className="aspect-[3/2] w-full rounded-lg mb-3" />
+              <Skeleton className="h-5 w-40" />
+            </Card>
+          ))}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="text-xl font-semibold">Welcome, {studentName ?? localStorage.getItem('snaproll.studentName')}!</div>
+      </div>
+
+      <Card className="p-6 space-y-3">
+        <div className="text-center">
+          <div className="font-medium">Attendance</div>
+          <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
+        </div>
+        <div className="flex items-center justify-center gap-3">
+          <HiOutlineUserGroup className="w-10 h-10 text-black" />
+          {digits.map((d, i) => (
+            <input
+              key={i}
+              ref={inputRefs[i]}
+              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300"
+              inputMode="numeric"
+              pattern="\\d*"
+              maxLength={1}
+              value={d}
+              placeholder={String(i + 1)}
+              disabled={checking}
+              onChange={(e) => handleDigitChange(i, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(i, e)}
+              onPaste={i === 0 ? handlePaste : undefined}
+            />
+          ))}
+        </div>
+        {confirmMsg && (
+          <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
+        )}
+        {checkinError && (
+          <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
+        )}
+        <div className="flex items-center justify-center">
+          <button className="text-blue-500 font-medium hover:underline" onClick={() => { window.location.href = '/my-attendance'; }}>My attendance →</button>
+        </div>
+      </Card>
+
+      <Card className="p-6">
+        {!interactive ? (
+          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
+            <div className="font-medium mb-1">Activities</div>
+            <div className="text-sm">Your instructors have not started any live activites yet...</div>
+            <div className="mt-3 flex items-center justify-center gap-2 text-slate-400">
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.2s_ease-in-out_infinite]" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.4s_ease-in-out_infinite]" />
+            </div>
+          </div>
+        ) : interactive.kind === 'wordcloud' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Word Cloud</div>
+              {interactive.showPromptToStudents && (
+                <div className="text-slate-500 text-sm">{interactive.prompt}</div>
+              )}
+            </div>
+            <div className="flex gap-2 items-center">
+              <TextInput
+                value={answer}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
+                placeholder="Your word or phrase"
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
+              />
+              <Button
+                onClick={async () => {
+                  if (!effectiveUserId || !answer.trim()) return;
+                  try {
+                    await submitWordcloud({ sessionId: (interactive.sessionId as any), studentId: effectiveUserId, text: answer.trim() });
+                    setAnswer('');
+                    setSubmitMsg('Answer submitted.');
+                  } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : 'Failed to submit.';
+                    setSubmitMsg(/already|Multiple/i.test(msg) ? 'You already submitted' : 'Submission failed. Try again.');
+                  }
+                }}
+              >Submit</Button>
+            </div>
+            {submitMsg && (
+              <div className={`mt-2 text-sm rounded-lg border p-2 ${/^Answer submitted/i.test(submitMsg) ? 'text-green-700 bg-green-50 border-green-200' : 'text-amber-800 bg-amber-50 border-amber-200'}`}>
+                {submitMsg.replace('submitted.', 'submitted!')}
+              </div>
+            )}
+          </div>
+        ) : interactive.kind === 'poll' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Poll</div>
+              <div className="text-slate-500 text-sm">{(interactive as any).prompt}</div>
+            </div>
+            <div className="space-y-2">
+              {(interactive as any).options.map((opt: string, i: number) => (
+                <Button key={i} className="w-full justify-start"
+                  onClick={async () => {
+                    if (!effectiveUserId) return;
+                    try {
+                      await submitPoll({ sessionId: (interactive as any).sessionId, studentId: effectiveUserId, optionIdx: i });
+                      setSubmitMsg('Response submitted');
+                    } catch {}
+                  }}
+                >{opt}</Button>
+              ))}
+            </div>
+            {submitMsg && (
+              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full">{submitMsg}</div>
+            )}
+          </div>
+        ) : interactive.kind === 'slideshow' ? (
+          <div className="space-y-3">
+            <div className="text-center">
+              <div className="font-medium">Activities</div>
+              <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
+            </div>
+            {(interactive as any).showOnDevices ? (
+              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${(interactive as any).sessionId}`; }}>View Slides Live →</Button>
+            ) : (
+              <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
+            )}
+          </div>
+        ) : null}
+      </Card>
+
+      <div className="text-slate-600 text-sm">My courses</div>
+      {!enrollments || !sectionsData ? (
+        <div className="text-center text-slate-600">Loading sections...</div>
+      ) : error ? (
+        <div className="text-center text-red-600">{error}</div>
+      ) : sections.length === 0 ? (
+        <Card className="p-8 text-center">
+          <div className="text-lg font-medium">No courses yet</div>
+          <div className="text-slate-500 mt-2">
+            Your instructor hasn&apos;t added you to any courses yet.
+            Please ask your instructor to add your email address to their course roster.
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {sections.map((s) => {
+            const gradientClass = s.gradient || 'gradient-1';
+            const isCheckedIn = checkedInIds.includes(s.id);
+            return (
+              <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
+                <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 text-white relative overflow-hidden grid place-items-center`}>
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  {isCheckedIn && (
+                    <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-lg ring-1 ring-black/40 inline-flex items-center gap-1">
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L9 13.414l4.707-4.707z"/></svg>
+                      Checked in
+                    </div>
+                  )}
+                  <div className="relative z-10 text-center">
+                    <div className="font-futuristic font-bold text-lg leading-tight px-2">{s.title}</div>
+                  </div>
+                  <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
+                  <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
+                </div>
+                <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
