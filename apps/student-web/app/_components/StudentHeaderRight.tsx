@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
@@ -10,42 +12,32 @@ type StudentProfile = { student: { id: string; email: string; firstName: string;
 export function StudentHeaderRight() {
   const router = useRouter();
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [name, setName] = useState<string>('');
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Convex hooks
+  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
 
   useEffect(() => {
     setIsClient(true);
     const id = localStorage.getItem('snaproll.studentId');
     setStudentId(id);
-    const cachedName = localStorage.getItem('snaproll.studentName');
-    const cachedEmail = localStorage.getItem('snaproll.studentEmail');
-    if (cachedName) setName(cachedName);
-    if (cachedEmail) setEmail(cachedEmail);
   }, []);
 
+  // Update form fields when student data loads
   useEffect(() => {
-    async function load(idVal: string) {
-      try {
-        const data = await apiFetch<StudentProfile>(`/api/students/${idVal}`);
-        const full = `${data.student.firstName} ${data.student.lastName}`;
-        setName(full);
-        setFirstName(data.student.firstName);
-        setLastName(data.student.lastName);
-        setEmail(data.student.email);
-        localStorage.setItem('snaproll.studentName', full);
-        localStorage.setItem('snaproll.studentEmail', data.student.email);
-      } catch {
-        // ignore
-      }
+    if (student) {
+      setFirstName(student.firstName);
+      setLastName(student.lastName);
+      const full = `${student.firstName} ${student.lastName}`;
+      localStorage.setItem('snaproll.studentName', full);
+      localStorage.setItem('snaproll.studentEmail', student.email);
     }
-    if (studentId) load(studentId);
-  }, [studentId]);
+  }, [student]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -64,7 +56,7 @@ export function StudentHeaderRight() {
       const id = localStorage.getItem('snaproll.studentId');
       setStudentId(id);
       if (!id) {
-        setName(''); setFirstName(''); setLastName(''); setEmail(''); setOpen(false); setProfileOpen(false);
+        setFirstName(''); setLastName(''); setOpen(false); setProfileOpen(false);
       }
     }
     if (open) {
@@ -86,7 +78,7 @@ export function StudentHeaderRight() {
     localStorage.removeItem('snaproll.studentName');
     localStorage.removeItem('snaproll.studentEmail');
     setStudentId(null);
-    setName(''); setFirstName(''); setLastName(''); setEmail('');
+    setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
     router.push('/');
   }
@@ -112,7 +104,7 @@ export function StudentHeaderRight() {
     <div className="relative" ref={dropdownRef}>
       <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
-        {name || 'Profile'}
+                    {student ? `${student.firstName} ${student.lastName}` : 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
@@ -137,7 +129,7 @@ export function StudentHeaderRight() {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
-            <TextInput value={email} disabled />
+            <TextInput value={student?.email || ''} disabled />
           </div>
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Close</Button>
