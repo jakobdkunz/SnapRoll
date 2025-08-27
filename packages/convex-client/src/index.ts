@@ -34,6 +34,9 @@ export const convexApi = {
     getByTeacher: (teacherId: string) => api.sections.getByTeacher({ teacherId: teacherId as any }),
     create: (data: { title: string; gradient?: string; teacherId: string }) => 
       api.sections.create(data),
+    update: (id: string, data: { title?: string; gradient?: string }) => 
+      api.sections.update({ id: id as any, ...data }),
+    delete: (id: string) => api.sections.deleteSection({ id: id as any }),
     list: () => api.sections.list(),
   },
   
