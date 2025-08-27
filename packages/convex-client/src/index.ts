@@ -9,6 +9,16 @@ export { api };
 
 // Helper functions to make the API easier to use
 export const convexApi = {
+  // Auth functions
+  auth: {
+    authenticateTeacher: (email: string, firstName?: string, lastName?: string) => 
+      api.auth.authenticateTeacher({ email, firstName, lastName }),
+    authenticateStudent: (email: string) => 
+      api.auth.authenticateStudent({ email }),
+    getUser: (id: string) => api.auth.getUser({ id: id as any }),
+    getUserByEmail: (email: string) => api.auth.getUserByEmail({ email }),
+  },
+
   // User functions
   users: {
     get: (id: string) => api.users.get({ id: id as any }),

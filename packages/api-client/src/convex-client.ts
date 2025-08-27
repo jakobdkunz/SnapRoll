@@ -29,6 +29,23 @@ export type HistoryResponse = {
 
 // Convex-based API client
 export class ConvexApiClient {
+  // Auth functions
+  static async authenticateTeacher(email: string, firstName?: string, lastName?: string): Promise<any> {
+    return await convex.mutation(convexApi.auth.authenticateTeacher(email, firstName, lastName));
+  }
+
+  static async authenticateStudent(email: string): Promise<any> {
+    return await convex.mutation(convexApi.auth.authenticateStudent(email));
+  }
+
+  static async getUser(userId: string): Promise<any> {
+    return await convex.query(convexApi.auth.getUser(userId));
+  }
+
+  static async getUserByEmail(email: string): Promise<any> {
+    return await convex.query(convexApi.auth.getUserByEmail(email));
+  }
+
   // Attendance functions
   static async checkIn(code: string, studentId: string): Promise<CheckinResponse> {
     try {
@@ -121,4 +138,13 @@ export const useStartAttendance = () => {
 
 export const useUpdateManualStatus = () => {
   return useMutation(convexApi.attendance.updateManualStatus);
+};
+
+// Auth mutations
+export const useAuthenticateTeacher = () => {
+  return useMutation(convexApi.auth.authenticateTeacher);
+};
+
+export const useAuthenticateStudent = () => {
+  return useMutation(convexApi.auth.authenticateStudent);
 };
