@@ -38,6 +38,7 @@
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "@vercel/blob": "^0.22.0",
+    "convex": "^1.26.1",
     "papaparse": "5.4.1",
     "pdfjs-dist": "^3.11.174",
     "react-icons": "4.12.0",
