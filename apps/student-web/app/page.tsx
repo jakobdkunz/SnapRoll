@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { isValidEmail } from '@snaproll/lib';
 
 export default function StudentWelcomePage() {

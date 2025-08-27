@@ -1,11 +1,24 @@
 import { ConvexReactClient, ConvexProvider } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 
-// Create a client
-export const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
-// Export the API for type safety
+// Export the API and Provider
 export { api, ConvexProvider };
+
+// Factory to create a Convex client. Do not instantiate at import-time.
+export function createConvexClient(url: string): ConvexReactClient {
+  return new ConvexReactClient(url);
+}
+
+// Helper to read the Convex URL from env with a clear error if missing.
+export function getConvexUrl(): string {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_CONVEX_URL is not set. Configure it in your environment (e.g., Vercel Project Settings)."
+    );
+  }
+  return url;
+}
 
 // Helper functions to make the API easier to use
 export const convexApi = {

@@ -6,7 +6,6 @@ import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };

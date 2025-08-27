@@ -2,7 +2,6 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
-import { convex } from '@snaproll/convex-client';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
 import { isValidEmail } from '@snaproll/lib';

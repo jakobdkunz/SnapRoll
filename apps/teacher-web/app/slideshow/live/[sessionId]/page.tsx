@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingMode = 'mouse' | 'pen' | 'eraser';

@@ -5,7 +5,6 @@ import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 type Section = { id: string; title: string; gradient: string };
 

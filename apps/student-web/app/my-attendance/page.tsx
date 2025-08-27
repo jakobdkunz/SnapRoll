@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 type HistoryResponse = {
   sections: { id: string; title: string }[];

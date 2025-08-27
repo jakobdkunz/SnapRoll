@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 

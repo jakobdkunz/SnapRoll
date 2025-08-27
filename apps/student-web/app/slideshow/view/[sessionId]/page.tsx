@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';

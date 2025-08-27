@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 
 type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };

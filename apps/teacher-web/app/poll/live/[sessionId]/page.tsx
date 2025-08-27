@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Card, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { convex } from '@snaproll/convex-client';
 
 type PollSession = { id: string; prompt: string; options: string[]; showResults: boolean };
 
