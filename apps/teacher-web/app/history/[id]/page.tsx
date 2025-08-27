@@ -4,7 +4,9 @@ import { createPortal } from 'react-dom';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
-import { apiFetch, getApiBaseUrl } from '@snaproll/api-client';
+import { convexApi, api } from '@snaproll/convex-client';
+import { useQuery } from 'convex/react';
+import { convex } from '@snaproll/convex-client';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };
@@ -27,15 +29,12 @@ type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
 export default function HistoryPage() {
   const params = useParams<{ id: string }>();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [days, setDays] = useState<Day[]>([]);
-  const [studentRecords, setStudentRecords] = useState<StudentRecord[]>([]);
   const [teacherId, setTeacherId] = useState<string | null>(null);
-  // removed unused `loading` state
-  const [totalDays, setTotalDays] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [limit, setLimit] = useState<number>(12);
-  const [isFetching, setIsFetching] = useState<boolean>(false);
+
+  // Convex hooks
+  const history = useQuery(api.history.getSectionHistory, params.id ? { sectionId: params.id, offset, limit } : "skip");
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
@@ -135,130 +134,28 @@ export default function HistoryPage() {
     else measure();
   }, [isMobile]);
 
-  const loadHistory = useCallback(async (currentOffset: number, currentLimit: number) => {
-    const reqId = ++requestIdRef.current;
-    setIsFetching(true);
-    try {
-      const data = await apiFetch<{ 
-        students: Student[]; 
-        days: Day[]; 
-        records: StudentRecord[];
-        totalDays: number;
-        offset: number;
-        limit: number;
-      }>(`/api/sections/${params.id}/history?offset=${currentOffset}&limit=${currentLimit}`);
-      if (reqId !== requestIdRef.current) return; // ignore stale
-
-      // Default to the most recent page: offset 0 (API returns days desc),
-      // then reverse for display so newest ends up on the right.
-      if (!initializedRightmostRef.current) {
-        const desiredOffset = 0;
-        const current = data.offset ?? currentOffset;
-        initializedRightmostRef.current = true;
-        if (desiredOffset !== current) {
-          await loadHistory(desiredOffset, data.limit || currentLimit);
-          return; // don't commit intermediate (oldest) page
-        }
-      }
-
-      setStudents(data.students);
-      setDays(data.days);
-      setStudentRecords(data.records);
-      setTotalDays(data.totalDays || 0);
-      setOffset(data.offset ?? currentOffset);
-      setLimit(data.limit ?? currentLimit);
-    } catch (error) {
-      console.error('Failed to load history:', error);
-    } finally {
-      if (reqId === requestIdRef.current) setIsFetching(false);
-    }
-  }, [params.id]);
+  // Extract data from Convex query
+  const students = history?.students || [];
+  const days = history?.days || [];
+  const studentRecords = history?.records || [];
+  const totalDays = history?.totalDays || 0;
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
     setTeacherId(id);
   }, [params.id]);
 
-  // Compute initial columns based on actual measured widths before first fetch
-  useEffect(() => {
-    if (initialized) return;
-    const measure = () => {
-      const el = containerRef.current;
-      const containerWidth = el?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const CARD_INNER_PADDING = 32; // matches Card p-4
-      const studentWidth = studentWidthEffective;
-      const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
-      const initialLimit = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
-      if (initialLimit !== limit) setLimit(initialLimit);
-      setInitialized(true);
-      loadHistory(offset, initialLimit);
-    };
-    if (typeof window !== 'undefined') {
-      requestAnimationFrame(measure);
-    } else {
-      measure();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, params.id, studentWidthEffective, PER_COL]);
-
-  // Refresh on focus/visibility to avoid stale columns/statuses
-  useEffect(() => {
-    function onFocus() {
-      loadHistory(offset, limit);
-    }
-    function onVisibility() {
-      if (document.visibilityState === 'visible') loadHistory(offset, limit);
-    }
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [params.id, offset, limit, loadHistory]);
-
-  // Schedule reload at next local midnight to refresh data
-  useEffect(() => {
-    function msUntilNextMidnight() {
-      const now = new Date();
-      const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      return next.getTime() - now.getTime();
-    }
-    let timeout: number | undefined;
-    function schedule() {
-      const ms = msUntilNextMidnight();
-      timeout = window.setTimeout(async () => {
-        await loadHistory(offset, limit);
-        schedule();
-      }, ms + 100);
-    }
-    schedule();
-    return () => {
-      if (timeout) window.clearTimeout(timeout);
-    };
-  }, [params.id, offset, limit, loadHistory]);
+  // Set loading state based on Convex query
+  const isFetching = !history;
 
   const startExport = useCallback(async () => {
     try {
       setExportError(null);
       setExportOpen(true);
       setExporting(true);
-      // Call API app directly for CSV
-      const base = getApiBaseUrl();
-      const apiUrl = `${base}/api/sections/${params.id}/export?t=${Date.now()}`;
-      const res = await fetch(apiUrl, { method: 'GET', cache: 'no-store' });
-      if (!res.ok) throw new Error(`Export failed (${res.status})`);
-      const blob = await res.blob();
-      const downloadUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = 'attendance.csv';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
-      setExporting(false);
-      setExportOpen(false);
+      // TODO: Implement CSV export with Convex data
+      // For now, just show an error
+      throw new Error('Export functionality not yet implemented with Convex');
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Unknown error';
       setExportError(message);
@@ -268,44 +165,12 @@ export default function HistoryPage() {
 
   // (duplicate removed)
 
-  // Recalculate how many columns fit based on container width
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => {
-      const containerWidth = el.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 1024);
-      const CARD_INNER_PADDING = 32;
-      const studentWidth = studentWidthEffective;
-      const available = Math.max(0, containerWidth - studentWidth - CARD_INNER_PADDING);
-      const cols = Math.max(3, Math.min(60, Math.floor(available / PER_COL)));
-      if (cols !== limit) {
-        setLimit(cols);
-        // Keep newest page by default after resize
-        const nextOffset = 0;
-        setOffset(nextOffset);
-        loadHistory(nextOffset, cols);
-      }
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [limit, loadHistory, totalDays, studentWidthEffective, PER_COL]);
-
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     if (!teacherId) return;
     
     try {
-      await apiFetch(`/api/sections/${params.id}/history/manual-status`, {
-        method: 'POST',
-        body: JSON.stringify({
-          classDayId,
-          studentId,
-          status: newStatus,
-          teacherId
-        })
-      });
-      
-      // Reload history to get updated data
-      await loadHistory(offset, limit);
+      // TODO: Implement manual status update with Convex
+      console.log('Manual status update not yet implemented with Convex');
     } catch (error) {
       console.error('Failed to update status:', error);
     }
@@ -453,11 +318,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); loadHistory(next, limit); }} disabled={offset + days.length >= totalDays}>
+          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); }} disabled={offset + days.length >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); loadHistory(next, limit); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
@@ -479,7 +344,7 @@ export default function HistoryPage() {
           </tr>
         </thead>
         <tbody>
-          {students.map((student, i) => (
+          {students.map((student: Student, i: number) => (
             <tr key={student.id} className="odd:bg-slate-50">
               <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
