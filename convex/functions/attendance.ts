@@ -159,3 +159,108 @@ export const getAttendanceRecords = query({
       .collect();
   },
 });
+
+export const updateManualStatus = mutation({
+  args: {
+    classDayId: v.id("classDays"),
+    studentId: v.id("users"),
+    status: v.union(
+      v.literal("PRESENT"),
+      v.literal("ABSENT"),
+      v.literal("EXCUSED"),
+      v.literal("NOT_JOINED"),
+      v.literal("BLANK")
+    ),
+    teacherId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Check if status is BLANK - only allow if original status was BLANK
+    if (args.status === "BLANK") {
+      const originalRecord = await ctx.db
+        .query("attendanceRecords")
+        .withIndex("by_classDay_student", (q) => 
+          q.eq("classDayId", args.classDayId).eq("studentId", args.studentId)
+        )
+        .first();
+      
+      if (originalRecord && originalRecord.status !== "BLANK") {
+        throw new Error("Cannot change to BLANK unless original status was BLANK");
+      }
+    }
+
+    // Check if manual change already exists
+    const existingManualChange = await ctx.db
+      .query("manualStatusChanges")
+      .withIndex("by_classDay_student", (q) => 
+        q.eq("classDayId", args.classDayId).eq("studentId", args.studentId)
+      )
+      .first();
+    
+    if (existingManualChange) {
+      // Update existing manual change
+      await ctx.db.patch(existingManualChange._id, {
+        status: args.status,
+        teacherId: args.teacherId,
+        createdAt: Date.now(),
+      });
+      return existingManualChange._id;
+    } else {
+      // Create new manual change
+      return await ctx.db.insert("manualStatusChanges", {
+        classDayId: args.classDayId,
+        studentId: args.studentId,
+        status: args.status,
+        teacherId: args.teacherId,
+        createdAt: Date.now(),
+      });
+    }
+  },
+});
+
+export const getManualStatusChanges = query({
+  args: { classDayId: v.id("classDays") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("manualStatusChanges")
+      .withIndex("by_classDay", (q) => q.eq("classDayId", args.classDayId))
+      .collect();
+  },
+});
+
+export const startAttendance = mutation({
+  args: {
+    sectionId: v.id("sections"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setDate(endOfDay.getDate() + 1);
+    
+    // Check if attendance already exists for today
+    const existingClassDay = await ctx.db
+      .query("classDays")
+      .withIndex("by_section_date", (q) => 
+        q.eq("sectionId", args.sectionId)
+         .gte("date", startOfDay.getTime())
+         .lt("date", endOfDay.getTime())
+      )
+      .first();
+    
+    if (existingClassDay) {
+      return existingClassDay;
+    }
+    
+    // Generate a random 4-digit code
+    const attendanceCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const expiresAt = now + 24 * 60 * 60 * 1000; // 24 hours from now
+    
+    return await ctx.db.insert("classDays", {
+      sectionId: args.sectionId,
+      date: startOfDay.getTime(),
+      attendanceCode,
+      attendanceCodeExpiresAt: expiresAt,
+    });
+  },
+});
