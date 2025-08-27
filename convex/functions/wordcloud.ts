@@ -126,3 +126,29 @@ export const heartbeat = mutation({
     });
   },
 });
+
+export const getActiveSession = query({
+  args: { sessionId: v.id("wordCloudSessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.sessionId);
+  },
+});
+
+export const getAnswers = query({
+  args: { sessionId: v.id("wordCloudSessions") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("wordCloudAnswers")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+  },
+});
+
+export const closeSession = mutation({
+  args: { sessionId: v.id("wordCloudSessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, {
+      closedAt: Date.now(),
+    });
+  },
+});

@@ -22,6 +22,7 @@ import type * as functions_polls from "../functions/polls.js";
 import type * as functions_sections from "../functions/sections.js";
 import type * as functions_seed from "../functions/seed.js";
 import type * as functions_slideshow from "../functions/slideshow.js";
+import type * as functions_students from "../functions/students.js";
 import type * as functions_users from "../functions/users.js";
 import type * as functions_wordcloud from "../functions/wordcloud.js";
 
@@ -43,6 +44,7 @@ declare const fullApi: ApiFromModules<{
   "functions/sections": typeof functions_sections;
   "functions/seed": typeof functions_seed;
   "functions/slideshow": typeof functions_slideshow;
+  "functions/students": typeof functions_students;
   "functions/users": typeof functions_users;
   "functions/wordcloud": typeof functions_wordcloud;
 }>;

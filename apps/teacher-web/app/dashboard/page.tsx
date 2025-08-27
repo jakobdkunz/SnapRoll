@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
-import { convexApi } from '@snaproll/convex-client';
+import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { convex } from '@snaproll/convex-client';
 
@@ -40,16 +40,16 @@ export default function DashboardPage() {
   const [slideError, setSlideError] = useState<string | null>(null);
 
   // Convex mutations
-  const createSection = useMutation(convexApi.sections.create);
-  const updateSection = useMutation(convexApi.sections.update);
-  const deleteSection = useMutation(convexApi.sections.delete);
-  const startWordCloud = useMutation(convexApi.wordcloud.startWordCloud);
-  const startPoll = useMutation(convexApi.polls.startPoll);
-  const startSlideshow = useMutation(convexApi.slideshow.startSlideshow);
-  const getAssetsByTeacher = useQuery(convexApi.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
+  const createSection = useMutation(api.sections.create);
+  const updateSection = useMutation(api.sections.update);
+  const deleteSection = useMutation(api.sections.deleteSection);
+  const startWordCloud = useMutation(api.wordcloud.startWordCloud);
+  const startPoll = useMutation(api.polls.startPoll);
+  const startSlideshow = useMutation(api.slideshow.startSlideshow);
+  const getAssetsByTeacher = useQuery(api.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
 
   // Get sections for the teacher
-  const sections = useQuery(convexApi.sections.getByTeacher, teacherId ? { teacherId } : "skip") || [];
+  const sections = useQuery(api.sections.getByTeacher, teacherId ? { teacherId } : "skip") || [];
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -78,7 +78,7 @@ export default function DashboardPage() {
     try {
       setWcWorking(true);
       setWcError(null);
-      const sessionId = await startWordCloud(wcSectionId, wcPrompt, wcShowPrompt, wcAllowMultiple);
+      const sessionId = await startWordCloud({ sectionId: wcSectionId, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
       setWcOpen(false);
       setTimeout(() => router.push(`/wordcloud/live/${sessionId}`), 120);
     } catch (e: unknown) {
