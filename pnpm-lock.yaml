@@ -234,6 +234,16 @@ importers:
         specifier: ^5.5.4
         version: 5.9.2
 
+  packages/convex-client:
+    dependencies:
+      convex:
+        specifier: ^1.26.1
+        version: 1.26.1(react@18.3.1)
+    devDependencies:
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.2
+
   packages/lib:
     dependencies:
       zod:
