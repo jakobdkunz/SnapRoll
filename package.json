@@ -13,11 +13,8 @@
     "start": "turbo run start",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts",
-    "demo:generate": "tsx scripts/generate-demo-data.ts",
-    "build:api": "turbo run build --filter=@snaproll/api",
+    "convex:dev": "npx convex dev",
+    "convex:deploy": "npx convex deploy",
     "build:teacher-web": "turbo run build --filter=@snaproll/teacher-web",
     "build:student-web": "turbo run build --filter=@snaproll/student-web"
   },
@@ -30,13 +27,10 @@
     "eslint-config-prettier": "^10.1.8",
     "postcss": "^8.4.41",
     "prettier": "^3.3.3",
-    "prisma": "^5.22.0",
-    "tsx": "^4.19.1",
     "turbo": "^2.0.6",
     "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
     "@vercel/blob": "^0.22.0",
     "convex": "^1.26.1",
     "papaparse": "5.4.1",

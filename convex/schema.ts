@@ -91,6 +91,7 @@ export default defineSchema({
   })
     .index("by_session", ["sessionId"])
     .index("by_student", ["studentId"])
+    .index("by_session_student", ["sessionId", "studentId"])
     .index("by_session_student_text", ["sessionId", "studentId", "text"]),
 
   pollSessions: defineTable({

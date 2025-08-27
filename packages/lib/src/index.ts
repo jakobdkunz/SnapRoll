@@ -14,4 +14,9 @@ export function formatDateMDY(date: Date): string {
   return `${mm}/${dd}/${yyyy}`;
 }
 
+export function formatDateFromTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  return formatDateMDY(date);
+}
+
 export { isValidEmail } from './email';
