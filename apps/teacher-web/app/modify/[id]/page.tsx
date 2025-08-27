@@ -349,9 +349,15 @@ export default function ModifyPage() {
         if (!last) { missingLastCount += 1; continue; }
       }
       try {
-        await apiFetch(`/api/sections/${params.id}/students`, {
-          method: 'POST',
-          body: JSON.stringify({ email: emailVal, firstName: first || 'Student', lastName: last || '' }),
+        const userId = await createUser({ 
+          email: emailVal, 
+          firstName: first || 'Student', 
+          lastName: last || '',
+          role: 'STUDENT'
+        });
+        await createEnrollment({ 
+          sectionId: params.id, 
+          studentId: userId
         });
         added += 1;
         addedEmails.push(emailVal);
