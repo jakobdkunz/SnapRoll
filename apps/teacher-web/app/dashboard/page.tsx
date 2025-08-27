@@ -6,7 +6,7 @@ import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOu
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 
-type Section = { id: string; title: string; gradient: string };
+type Section = { id?: string; _id?: string; title: string; gradient: string };
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -108,8 +108,8 @@ export default function DashboardPage() {
 
   async function saveCustomization(title: string, gradient: string) {
     if (!customizeModal.section || !title.trim()) return;
-    
-    await updateSection({ id: (customizeModal.section as any).id as any, title: title.trim(), gradient });
+    const sid = (customizeModal.section as any)._id || (customizeModal.section as any).id;
+    await updateSection({ id: sid as any, title: title.trim(), gradient });
     handleCloseCustomize();
   }
 
@@ -699,7 +699,8 @@ function CustomizeModal({
               <Button className="!bg-rose-600" disabled={deleting} onClick={async () => {
                 try {
                   setDeleting(true);
-                  await onDelete(section.id);
+                  const sid = (section as any)._id || (section as any).id;
+                  await onDelete(sid);
                 } finally {
                   setDeleting(false);
                 }
