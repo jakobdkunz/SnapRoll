@@ -147,6 +147,13 @@ export default function HistoryPage() {
   // Set loading state based on Convex query
   const isFetching = !history;
 
+  // Initialize once data is available so the table renders instead of the skeleton
+  useEffect(() => {
+    if (history && !initialized) {
+      setInitialized(true);
+    }
+  }, [history, initialized]);
+
   const startExport = useCallback(async () => {
     try {
       setExportError(null);

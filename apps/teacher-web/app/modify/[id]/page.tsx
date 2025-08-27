@@ -54,6 +54,7 @@ export default function ModifyPage() {
     if (section) {
       setSectionTitle(section.title);
       setSectionGradient(section.gradient || 'gradient-1');
+      setSectionLoaded(true);
     }
   }, [section]);
   const [importing, setImporting] = useState(false);
