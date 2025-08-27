@@ -145,9 +145,9 @@ async function generateDemoData() {
     const sectionStudents = students.slice(sectionIndex * 23, (sectionIndex + 1) * 23);
     
     for (const student of sectionStudents) {
-      // Random enrollment date within the last 6 months (but at least 2 months ago)
+      // Random enrollment date within the last year (but at least 6 months ago)
       const enrollmentDate = new Date();
-      enrollmentDate.setDate(enrollmentDate.getDate() - (60 + Math.floor(Math.random() * 120)));
+      enrollmentDate.setDate(enrollmentDate.getDate() - (180 + Math.floor(Math.random() * 185)));
       
       await prisma.enrollment.create({
         data: {
@@ -161,9 +161,9 @@ async function generateDemoData() {
   
   // Enroll 500 students in the large section
   for (const student of largeStudents) {
-    // Random enrollment date within the last year (but at least 6 months ago)
+    // Random enrollment date within the last 2 years (but at least 1 year ago)
     const enrollmentDate = new Date();
-    enrollmentDate.setDate(enrollmentDate.getDate() - (180 + Math.floor(Math.random() * 185)));
+    enrollmentDate.setDate(enrollmentDate.getDate() - (365 + Math.floor(Math.random() * 365)));
     
     await prisma.enrollment.create({
       data: {
