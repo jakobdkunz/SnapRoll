@@ -13,7 +13,7 @@ importers:
         version: 0.22.3
       convex:
         specifier: ^1.26.1
-        version: 1.26.1(react@18.3.1)
+        version: 1.26.1(react@18.2.0)
       papaparse:
         specifier: 5.4.1
         version: 5.4.1
@@ -22,7 +22,7 @@ importers:
         version: 3.11.174
       react-icons:
         specifier: 4.12.0
-        version: 4.12.0(react@18.3.1)
+        version: 4.12.0(react@18.2.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -74,16 +74,16 @@ importers:
         version: link:../../packages/ui
       next:
         specifier: 13.5.6
-        version: 13.5.6(react-dom@18.3.1)(react@18.3.1)
+        version: 13.5.6(react-dom@18.2.0)(react@18.2.0)
       pdfjs-dist:
         specifier: ^3.11.174
         version: 3.11.174
       react:
-        specifier: 18.3.1
-        version: 18.3.1
+        specifier: 18.2.0
+        version: 18.2.0
       react-dom:
-        specifier: 18.3.1
-        version: 18.3.1(react@18.3.1)
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -126,16 +126,16 @@ importers:
         version: 3.10.1
       next:
         specifier: 13.5.6
-        version: 13.5.6(react-dom@18.3.1)(react@18.3.1)
+        version: 13.5.6(react-dom@18.2.0)(react@18.2.0)
       pdfjs-dist:
         specifier: ^3.11.174
         version: 3.11.174
       react:
-        specifier: 18.3.1
-        version: 18.3.1
+        specifier: 18.2.0
+        version: 18.2.0
       react-dom:
-        specifier: 18.3.1
-        version: 18.3.1(react@18.3.1)
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -179,7 +179,7 @@ importers:
     dependencies:
       convex:
         specifier: ^1.26.1
-        version: 1.26.1(react@18.3.1)
+        version: 1.26.1(react@18.2.0)
     devDependencies:
       typescript:
         specifier: ^5.5.4
@@ -198,11 +198,11 @@ importers:
   packages/ui:
     dependencies:
       react:
-        specifier: ^18.3.1
-        version: 18.3.1
+        specifier: 18.2.0
+        version: 18.2.0
       react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
       tailwindcss:
         specifier: ^3.4.9
         version: 3.4.17
@@ -1484,7 +1484,7 @@ packages:
     dev: false
     optional: true
 
-  /convex@1.26.1(react@18.3.1):
+  /convex@1.26.1(react@18.2.0):
     resolution: {integrity: sha512-LFDy+r13Ehqz4Zsr8zwVKrakl35kdQsAkGXdAIIjcPHP6DFd9b7Wjqomfd/Zc9+xMuqbVEh0KGyjzabiRF306g==}
     engines: {node: '>=18.0.0', npm: '>=7.0.0'}
     hasBin: true
@@ -1503,7 +1503,7 @@ packages:
       esbuild: 0.25.4
       jwt-decode: 4.0.0
       prettier: 3.6.2
-      react: 18.3.1
+      react: 18.2.0
     dev: false
 
   /core-util-is@1.0.3:
@@ -2984,7 +2984,7 @@ packages:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
     dev: true
 
-  /next@13.5.6(react-dom@18.3.1)(react@18.3.1):
+  /next@13.5.6(react-dom@18.2.0)(react@18.2.0):
     resolution: {integrity: sha512-Y2wTcTbO4WwEsVb4A8VSnOsG1I9ok+h74q0ZdxkwM3EODqrs4pasq7O0iUxbcS9VtWMicG7f3+HAj0r1+NtKSw==}
     engines: {node: '>=16.14.0'}
     hasBin: true
@@ -3004,9 +3004,9 @@ packages:
       busboy: 1.6.0
       caniuse-lite: 1.0.30001737
       postcss: 8.4.31
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      styled-jsx: 5.1.1(react@18.3.1)
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+      styled-jsx: 5.1.1(react@18.2.0)
       watchpack: 2.4.0
     optionalDependencies:
       '@next/swc-darwin-arm64': 13.5.6
@@ -3367,30 +3367,30 @@ packages:
   /queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
-  /react-dom@18.3.1(react@18.3.1):
-    resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
+  /react-dom@18.2.0(react@18.2.0):
+    resolution: {integrity: sha512-6IMTriUmvsjHUjNtEDudZfuDQUoWXVxKHhlEGSk81n4YFS+r/Kl99wXiwlVXtPBtJenozv2P+hxDsw9eA7Xo6g==}
     peerDependencies:
-      react: ^18.3.1
+      react: ^18.2.0
     dependencies:
       loose-envify: 1.4.0
-      react: 18.3.1
+      react: 18.2.0
       scheduler: 0.23.2
     dev: false
 
-  /react-icons@4.12.0(react@18.3.1):
+  /react-icons@4.12.0(react@18.2.0):
     resolution: {integrity: sha512-IBaDuHiShdZqmfc/TwHu6+d6k2ltNCf3AszxNmjJc1KUfXdEeRJOKyNvLmAHaarhzGmTSVygNdyu8/opXv2gaw==}
     peerDependencies:
       react: '*'
     dependencies:
-      react: 18.3.1
+      react: 18.2.0
     dev: false
 
   /react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
     dev: true
 
-  /react@18.3.1:
-    resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
+  /react@18.2.0:
+    resolution: {integrity: sha512-/3IjMdb2L9QbBdWiW5e3P2/npwMBaU9mHCSCUzNln0ZCYbcfTsGbTJrU/kGemdH2IWmB2ioZ+zkxtmq6g09fGQ==}
     engines: {node: '>=0.10.0'}
     dependencies:
       loose-envify: 1.4.0
@@ -3817,7 +3817,7 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /styled-jsx@5.1.1(react@18.3.1):
+  /styled-jsx@5.1.1(react@18.2.0):
     resolution: {integrity: sha512-pW7uC1l4mBZ8ugbiZrcIsiIvVx1UmTfw7UkC3Um2tmfUq9Bhk8IiyEIPl6F8agHgjzku6j0xQEZbfA5uSgSaCw==}
     engines: {node: '>= 12.0.0'}
     peerDependencies:
@@ -3831,7 +3831,7 @@ packages:
         optional: true
     dependencies:
       client-only: 0.0.1
-      react: 18.3.1
+      react: 18.2.0
     dev: false
 
   /sucrase@3.35.0:
