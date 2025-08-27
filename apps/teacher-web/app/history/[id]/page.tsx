@@ -34,7 +34,7 @@ export default function HistoryPage() {
   const [limit, setLimit] = useState<number>(12);
 
   // Convex hooks
-  const history = useQuery(api.history.getSectionHistory, params.id ? { sectionId: params.id, offset, limit } : "skip");
+  const history = useQuery(api.functions.history.getSectionHistory, params.id ? { sectionId: params.id as any, offset, limit } : "skip");
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);

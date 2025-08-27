@@ -22,9 +22,9 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   const [error, setError] = useState<string | null>(null);
 
   // Convex hooks
-  const details = useQuery(api.slideshow.getActiveSession, { sessionId });
-  const slides = useQuery(api.slideshow.getSlides, { sessionId });
-  const drawings = useQuery(api.slideshow.getDrawings, { sessionId });
+  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionId as any });
+  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionId as any });
+  const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionId as any });
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -96,7 +96,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   }, [frameSize]);
 
   // Extract drawings from Convex data
-  const slideDrawings = drawings || {};
+  const slideDrawings: Record<number, DrawingStroke[]> = (drawings as any) || {};
 
   // Redraw all strokes when drawings change or showDrawings changes or frame size changes
   useEffect(() => {
@@ -138,9 +138,9 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   if (loading) return <div className="min-h-dvh grid place-items-center p-6 text-slate-600">Loading…</div>;
   if (error || !details) return <div className="min-h-dvh grid place-items-center p-6 text-rose-700">{error || 'Not found'}</div>;
 
-  const total = slides.length;
-  const current = Math.min(Math.max(1, details.currentSlide || 1), Math.max(1, total || 1));
-  const slide = slides[current - 1];
+  const total = (slides as any).length;
+  const current = Math.min(Math.max(1, (details as any).currentSlide || 1), Math.max(1, total || 1));
+  const slide = (slides as any)[current - 1];
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
@@ -149,7 +149,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
           <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
           Back
         </Button>
-        <div className="text-lg font-semibold truncate">{details.title}</div>
+        <div className="text-lg font-semibold truncate">{(details as any).title}</div>
         
         {/* Drawing toggle */}
         <div className="flex items-center gap-2 ml-4">

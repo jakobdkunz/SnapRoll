@@ -40,16 +40,16 @@ export default function DashboardPage() {
   const [slideError, setSlideError] = useState<string | null>(null);
 
   // Convex mutations
-  const createSection = useMutation(api.sections.create);
-  const updateSection = useMutation(api.sections.update);
-  const deleteSection = useMutation(api.sections.deleteSection);
-  const startWordCloud = useMutation(api.wordcloud.startWordCloud);
-  const startPoll = useMutation(api.polls.startPoll);
-  const startSlideshow = useMutation(api.slideshow.startSlideshow);
-  const getAssetsByTeacher = useQuery(api.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
+  const createSection = useMutation(api.functions.sections.create);
+  const updateSection = useMutation(api.functions.sections.update);
+  const deleteSection = useMutation(api.functions.sections.deleteSection);
+  const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
+  const startPoll = useMutation(api.functions.polls.startPoll);
+  const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
+  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId: teacherId as any } : "skip");
 
   // Get sections for the teacher
-  const sections = useQuery(api.sections.getByTeacher, teacherId ? { teacherId } : "skip") || [];
+  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId: teacherId as any } : "skip") || []) as any[];
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -78,9 +78,9 @@ export default function DashboardPage() {
     try {
       setWcWorking(true);
       setWcError(null);
-      const sessionId = await startWordCloud({ sectionId: wcSectionId, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
+      const sessionId = await startWordCloud({ sectionId: wcSectionId as any, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
       setWcOpen(false);
-      setTimeout(() => router.push(`/wordcloud/live/${sessionId}`), 120);
+      setTimeout(() => router.push(`/wordcloud/live/${(sessionId as any)._id || sessionId}`), 120);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to start word cloud. Please try again.';
       setWcError(message);
@@ -110,7 +110,7 @@ export default function DashboardPage() {
   async function saveCustomization(title: string, gradient: string) {
     if (!customizeModal.section || !title.trim()) return;
     
-    await updateSection(customizeModal.section.id, { title: title.trim(), gradient });
+    await updateSection({ id: (customizeModal.section as any).id as any, title: title.trim(), gradient });
     handleCloseCustomize();
   }
 
@@ -136,17 +136,17 @@ export default function DashboardPage() {
           <Button variant="primary" className="mt-4 inline-flex items-center gap-2 bg-white border-0 hover:bg-slate-100" onClick={async () => {
             const title = prompt('Section title?');
             if (!title || !teacherId) return;
-            await createSection({ title, teacherId });
+            await createSection({ title, teacherId: teacherId as any });
           }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-          {sections.map((s) => {
+          {sections.map((s: any) => {
             const gradientClass = s.gradient;
             
             return (
-                <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
+                <Card key={s._id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
@@ -169,31 +169,31 @@ export default function DashboardPage() {
                   <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
                   <div className="mt-auto space-y-2">
                     <div className="flex gap-2">
-                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/modify/${s.id}`)}>
+                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/modify/${s._id}`)}>
                         <HiOutlineUserGroup className="h-5 w-5" /> Roster
                       </Button>
-                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/history/${s.id}`)}>
+                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/history/${s._id}`)}>
                         <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
                       </Button>
                     </div>
                     <div className="flex gap-2 items-stretch flex-wrap">
                       {/* Activities dropdown (controlled) */}
-                      <div className="relative flex-1" data-interact-menu={openMenuFor === s.id ? 'open' : undefined}>
+                      <div className="relative flex-1" data-interact-menu={openMenuFor === s._id ? 'open' : undefined}>
                         <Button
                           variant="ghost"
                           className="inline-flex items-center gap-2 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenMenuFor((prev) => (prev === s.id ? null : s.id));
+                            setOpenMenuFor((prev) => (prev === s._id ? null : s._id));
                           }}
                           aria-haspopup="menu"
-                          aria-expanded={openMenuFor === s.id}
-                          data-activities-trigger={s.id}
+                          aria-expanded={openMenuFor === s._id}
+                          data-activities-trigger={s._id}
                         >
                           <HiOutlineSparkles className="h-5 w-5" /> Activities
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
                         </Button>
-                        {openMenuFor === s.id && (
+                        {openMenuFor === s._id && (
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuFor(null)} aria-hidden>
                             {/* anchored menu */}
                             <div
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                               aria-label="Activities"
                               ref={(el) => {
                                 if (!el) return;
-                                const btn = document.querySelector(`[data-activities-trigger="${s.id}"]`) as HTMLElement | null;
+                                const btn = document.querySelector(`[data-activities-trigger="${s._id}"]`) as HTMLElement | null;
                                 const rect = btn?.getBoundingClientRect();
                                 const vw = window.innerWidth;
                                 const vh = window.innerHeight;
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
-                                  setWcSectionId(s.id);
+                                  setWcSectionId(s._id);
                                   setWcOpen(true);
                                 }}
                                 role="menuitem"
@@ -240,7 +240,7 @@ export default function DashboardPage() {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
                                   // open poll modal for this section
-                                  setPollSectionId(s.id);
+                                  setPollSectionId(s._id);
                                   setPollOpen(true);
                                 }}
                                 role="menuitem"
@@ -252,7 +252,7 @@ export default function DashboardPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
-                                  setSlideSectionId(s.id);
+                                  setSlideSectionId(s._id);
                                   setSlideOpen(true);
                                 }}
                                 role="menuitem"
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                       {/* Attendance button with responsive label */}
-                      <Button className="flex-1 truncate" onClick={() => router.push(`/attendance/${s.id}`)}>
+                      <Button className="flex-1 truncate" onClick={() => router.push(`/attendance/${s._id}`)}>
                         <span className="hidden sm:inline">Take Attendance</span>
                         <span className="sm:hidden">Attendance</span>
                       </Button>
@@ -294,7 +294,7 @@ export default function DashboardPage() {
               onSave={saveCustomization}
               onCancel={handleCloseCustomize}
               onDelete={async (id: string) => {
-                await deleteSection(id);
+                await deleteSection({ id: id as any });
                 handleCloseCustomize();
               }}
             />
@@ -315,7 +315,7 @@ export default function DashboardPage() {
               <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim(), teacherId }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim(), teacherId: teacherId as any }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
             </div>
           </div>
@@ -395,17 +395,17 @@ export default function DashboardPage() {
                     No recent slideshows
                   </div>
                 ) : (
-                  getAssetsByTeacher.map((asset) => (
-                    <div key={asset.id} className="group relative">
+                  getAssetsByTeacher.map((asset: any) => (
+                    <div key={asset._id} className="group relative">
                       <button 
                         onClick={() => { 
-                          setSlideSelectedAssetId(asset.id); 
+                          setSlideSelectedAssetId(asset._id); 
                           setSlideSelectedSessionId(null); 
                           setSlideUploadFile(null);
                           setSlideTitle(asset.title);
                         }} 
                         className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                          slideSelectedAssetId === asset.id 
+                          slideSelectedAssetId === asset._id 
                             ? 'border-blue-500 bg-blue-50 shadow-md' 
                             : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                         }`}
@@ -428,7 +428,7 @@ export default function DashboardPage() {
                         onClick={async () => {
                           try {
                             // Note: Asset deletion would need to be implemented in Convex
-                            console.log('Delete asset:', asset.id);
+                            console.log('Delete asset:', asset._id);
                           } catch (e) {
                             console.error('Failed to delete asset:', e);
                           }
@@ -594,14 +594,14 @@ export default function DashboardPage() {
                 setSlideError(null);
                 try {
                   if (slideSelectedAssetId) {
-                    const sessionId = await startSlideshow(slideSectionId, slideSelectedAssetId, {
+                    const sessionId = await startSlideshow({ sectionId: slideSectionId as any, assetId: slideSelectedAssetId as any, 
                       showOnDevices: slideShowOnDevices,
                       allowDownload: slideAllowDownload,
                       requireStay: slideRequireStay,
                       preventJump: slidePreventJump,
-                    });
+                    } as any);
                     setSlideOpen(false);
-                    setTimeout(() => router.push(`/slideshow/live/${sessionId}`), 120);
+                    setTimeout(() => router.push(`/slideshow/live/${(sessionId as any)._id || sessionId}`), 120);
                   } else {
                     setSlideError('Please select an asset to present');
                   }
@@ -718,6 +718,7 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [working, setWorking] = useState(false);
+  const startPollMutation = useMutation(api.functions.polls.startPoll);
   function setOptionAt(i: number, val: string) {
     setOptions((prev) => prev.map((v, idx) => (idx === i ? val : v)));
   }
@@ -767,9 +768,9 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
               try {
                 setWorking(true);
                 const opts = options.map((o) => o.trim()).filter(Boolean);
-                const sessionId = await startPoll(sectionId, prompt.trim(), opts);
+                const sessionId = await startPollMutation({ sectionId: sectionId as any, prompt: prompt.trim(), options: opts });
                 onClose();
-                setTimeout(() => router.push(`/poll/live/${sessionId}`), 120);
+                setTimeout(() => router.push(`/poll/live/${(sessionId as any)._id || sessionId}`), 120);
               } finally {
                 setWorking(false);
               }

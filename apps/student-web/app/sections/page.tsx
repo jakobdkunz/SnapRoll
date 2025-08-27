@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { Card, Badge, Button } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
-import { useQuery, useMutation } from 'convex/react';
 import { convex } from '@snaproll/convex-client';
+import { api } from '../../../../convex/_generated/api';
+import { useQuery, useMutation } from 'convex/react';
 
 type CheckinResponse = {
   ok: boolean;
@@ -30,22 +30,22 @@ export default function SectionsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Convex hooks
-  const checkInMutation = useMutation(api.attendance.checkIn);
+  const checkInMutation = useMutation(api.functions.attendance.checkIn);
   
   // Get student data
-  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
   
   // Get student's enrolled sections
-  const enrollments = useQuery(api.enrollments.getByStudent, studentId ? { studentId } : "skip");
+  const enrollments = useQuery(api.functions.enrollments.getByStudent, studentId ? { studentId: studentId as any } : "skip");
   
   // Get sections data
-  const sectionsData = useQuery(api.sections.list);
+  const sectionsData = useQuery(api.functions.sections.list);
   
   // Combine enrollments with sections data
   const sections = useMemo(() => {
     if (!enrollments || !sectionsData) return [];
-    return enrollments.map(enrollment => {
-      const section = sectionsData.find(s => s._id === enrollment.sectionId);
+    return enrollments.map((enrollment: any) => {
+      const section = sectionsData.find((s: any) => s._id === (enrollment as any).sectionId);
       return section ? {
         id: section._id,
         title: section.title,
@@ -66,7 +66,7 @@ export default function SectionsPage() {
       setChecking(true);
       
       // Use Convex mutation
-      const recordId = await checkInMutation({ attendanceCode: code, studentId });
+      const recordId = await checkInMutation({ attendanceCode: code, studentId: studentId as any });
       
       if (recordId) {
         setConfirmMsg(`Checked in successfully!`);
@@ -126,7 +126,7 @@ export default function SectionsPage() {
   const lastSeenRef = useRef<number>(Date.now());
 
   // Get interactive activity from Convex
-  const interactive = useQuery(api.students.getActiveInteractive, studentId ? { studentId } : "skip");
+  const interactive = useQuery(api.functions.students.getActiveInteractive, studentId ? { studentId: studentId as any } : "skip");
 
   // Reset local single-submit state when a new session starts
   useEffect(() => {

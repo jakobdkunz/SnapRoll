@@ -32,16 +32,16 @@ export const getSectionHistory = query({
     );
     
     // Get attendance records for the paginated class days
-    const attendanceRecords = await ctx.db
+    const attendanceRecords = classDayIds.length > 0 ? await ctx.db
       .query("attendanceRecords")
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect();
+      .collect() : [];
     
     // Get manual status changes for the paginated class days
-    const manualChanges = await ctx.db
+    const manualChanges = classDayIds.length > 0 ? await ctx.db
       .query("manualStatusChanges")
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect();
+      .collect() : [];
     
     // Create lookup maps
     const attendanceMap = new Map();
@@ -125,11 +125,11 @@ export const getStudentHistory = query({
     );
     
     // Get all class days across these sections
-    const allClassDays = await ctx.db
+    const allClassDays = sectionIds.length > 0 ? await ctx.db
       .query("classDays")
       .filter((q) => q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id))))
       .order("desc")
-      .collect();
+      .collect() : [];
     
     // Apply pagination
     const totalDays = allClassDays.length;
@@ -137,18 +137,18 @@ export const getStudentHistory = query({
     const classDayIds = page.map(cd => cd._id);
     
     // Get attendance records for this student
-    const attendanceRecords = await ctx.db
+    const attendanceRecords = classDayIds.length > 0 ? await ctx.db
       .query("attendanceRecords")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect();
+      .collect() : [];
     
     // Get manual status changes for this student
-    const manualChanges = await ctx.db
+    const manualChanges = classDayIds.length > 0 ? await ctx.db
       .query("manualStatusChanges")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect();
+      .collect() : [];
     
     // Create lookup maps
     const attendanceMap = new Map();

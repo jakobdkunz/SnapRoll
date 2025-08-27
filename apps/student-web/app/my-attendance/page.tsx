@@ -44,8 +44,8 @@ export default function MyAttendancePage() {
   const [initialized, setInitialized] = useState(false);
 
   // Convex hooks
-  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
-  const history = useQuery(api.history.getStudentHistory, studentId ? { studentId, offset, limit } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
+  const history = useQuery(api.functions.history.getStudentHistory, studentId ? { studentId: studentId as any, offset, limit } : "skip");
 
   // Column width calculations
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
@@ -86,7 +86,7 @@ export default function MyAttendancePage() {
   // Update data when Convex query returns
   useEffect(() => {
     if (history) {
-      setData(history);
+      setData(history as any);
       setLoading(false);
       setError(null);
     }

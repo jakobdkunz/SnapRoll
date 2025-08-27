@@ -20,7 +20,7 @@ export function StudentHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const student = useQuery(api.users.get, studentId ? { id: studentId } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
 
   useEffect(() => {
     setIsClient(true);

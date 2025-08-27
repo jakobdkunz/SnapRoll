@@ -41,9 +41,10 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     if (args.role) {
+      const role = args.role;
       return await ctx.db
         .query("users")
-        .withIndex("by_role", (q) => q.eq("role", args.role!))
+        .withIndex("by_role", (q) => q.eq("role", role))
         .collect();
     }
     return await ctx.db.query("users").collect();
