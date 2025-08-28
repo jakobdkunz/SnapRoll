@@ -1,25 +1,30 @@
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
 
 export function AuthGuard() {
   const router = useRouter();
   const pathname = usePathname();
-  const [isClient, setIsClient] = useState(false);
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
 
   useEffect(() => {
-    setIsClient(true);
-    const id = localStorage.getItem('snaproll.teacherId');
+    if (!isLoaded) return;
     const isLogin = pathname === '/';
-    if (!id && !isLogin) {
+    if (!isSignedIn && !isLogin) {
       router.replace('/');
+      return;
     }
-  }, [pathname, router]);
-
-  // Don't run auth logic until client-side hydration is complete
-  if (!isClient) {
-    return null;
-  }
+    if (isSignedIn && user) {
+      try {
+        const email = user.primaryEmailAddress?.emailAddress;
+        const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        if (email) localStorage.setItem('snaproll.teacherEmail', email);
+        if (fullName) localStorage.setItem('snaproll.teacherName', fullName);
+      } catch {}
+    }
+  }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;
 }
