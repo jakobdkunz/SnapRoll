@@ -2,6 +2,7 @@
 import { Card } from '@snaproll/ui';
 import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@snaproll/convex-client';
 
@@ -9,6 +10,18 @@ export default function StudentWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const { isLoaded, isSignedIn } = useAuth();
+
+  // Normalize Clerk's hosted redirect pattern to our path-based /sign-up
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const redirectUrl = params.get('redirect_url');
+    if (!redirectUrl) return;
+    try {
+      const url = new URL(redirectUrl, window.location.origin);
+      if (url.pathname === '/sign-up') router.replace('/sign-up');
+    } catch {}
+  }, [router]);
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-8 text-center">
