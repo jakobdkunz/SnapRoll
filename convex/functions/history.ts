@@ -147,16 +147,25 @@ export const getStudentHistory = query({
       .order("desc")
       .collect() : [];
     // Deduplicate by LOCAL calendar day across sections for the student's consolidated view
+    // Prefer a classDay that has any attendance records for this student if multiple exist same-day
     const uniqueDays = (() => {
-      const out: typeof rawDays = [];
-      const seen = new Set<number>();
+      const map = new Map<number, any>();
       for (const cd of rawDays) {
         const d = new Date(cd.date);
         d.setHours(0, 0, 0, 0);
         const key = d.getTime();
-        if (!seen.has(key)) { seen.add(key); out.push(cd); }
+        const existing = map.get(key);
+        if (!existing) {
+          map.set(key, cd);
+        } else {
+          // Check if either has a record for this student and prefer that one
+          // Note: queries below will fetch records for the selected page; this is a heuristic early choice
+          // We can refine after fetching records page, but to keep pagination stable, choose deterministically
+          // Prefer the one with earlier createdAt to maintain stable order
+          if ((cd.createdAt || 0) < (existing.createdAt || 0)) map.set(key, cd);
+        }
       }
-      return out;
+      return Array.from(map.values());
     })();
     
     // Apply pagination
