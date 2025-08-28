@@ -11,14 +11,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
   if (!clientRef.current) clientRef.current = createConvexClient(url);
   if (!publishableKey) {
-    // Build-safe fallback: still provide Convex context without Clerk
-    return (
-      <>{/* no Clerk */}
-        <ConvexProviderWithClerk client={clientRef.current as any} useAuth={() => ({ isSignedIn: false } as any)}>
-          {children}
-        </ConvexProviderWithClerk>
-      </>
-    );
+    const { ConvexProvider } = require('convex/react');
+    return <ConvexProvider client={clientRef.current as any}>{children}</ConvexProvider> as any;
   }
   return (
     <ClerkProvider publishableKey={publishableKey}>
