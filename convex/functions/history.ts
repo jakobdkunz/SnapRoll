@@ -161,8 +161,8 @@ export const getStudentHistory = query({
           // Check if either has a record for this student and prefer that one
           // Note: queries below will fetch records for the selected page; this is a heuristic early choice
           // We can refine after fetching records page, but to keep pagination stable, choose deterministically
-          // Prefer the one with earlier createdAt to maintain stable order
-          if ((cd.createdAt || 0) < (existing.createdAt || 0)) map.set(key, cd);
+          // Prefer the one with earlier Convex creation time to maintain stable order
+          if ((cd._creationTime || 0) < (existing._creationTime || 0)) map.set(key, cd);
         }
       }
       return Array.from(map.values());
