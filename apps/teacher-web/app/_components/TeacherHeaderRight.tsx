@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 
 type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };
@@ -20,15 +21,27 @@ export function TeacherHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as any } : "skip");
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const teacher = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
   const updateUser = useMutation(api.functions.users.update);
 
   useEffect(() => {
     setIsClient(true);
-    // Initialize from localStorage immediately for fast UI fill
-    const id = localStorage.getItem('snaproll.teacherId');
-    setTeacherId(id);
   }, []);
+
+  // When Convex resolves the current user, cache identifiers
+  useEffect(() => {
+    if (currentUser) {
+      const newId = (currentUser._id as unknown as string) || null;
+      setTeacherId(newId);
+      try {
+        localStorage.setItem('snaproll.teacherId', newId || '');
+        const full = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+        if (full) localStorage.setItem('snaproll.teacherName', full);
+        if ((currentUser as any).email) localStorage.setItem('snaproll.teacherEmail', (currentUser as any).email);
+      } catch {}
+    }
+  }, [currentUser]);
 
   // Update form fields when teacher data loads
   useEffect(() => {
@@ -92,7 +105,9 @@ export function TeacherHeaderRight() {
     }
   }
 
+  const { signOut } = useClerk();
   function logout() {
+    try { signOut().catch(() => {}); } catch {}
     localStorage.removeItem('snaproll.teacherId');
     localStorage.removeItem('snaproll.teacherName');
     localStorage.removeItem('snaproll.teacherEmail');
