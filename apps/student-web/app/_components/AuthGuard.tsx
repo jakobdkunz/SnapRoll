@@ -11,8 +11,8 @@ export function AuthGuard() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    const isLogin = pathname === '/';
-    if (!isSignedIn && !isLogin) {
+    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
+    if (!isSignedIn && !isPublic) {
       const t = setTimeout(() => {
         if (!isSignedIn) router.replace('/');
       }, 50);
@@ -24,7 +24,9 @@ export function AuthGuard() {
         const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
         if (email) localStorage.setItem('snaproll.studentEmail', email);
         if (fullName) localStorage.setItem('snaproll.studentName', fullName);
-      } catch {}
+      } catch {
+        // no-op
+      }
     }
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
