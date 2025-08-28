@@ -9,7 +9,7 @@ import { api } from '@snaproll/convex-client';
 export default function StudentWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
 
   // Redirect guests to dedicated sign-in page
   useEffect(() => {
@@ -28,7 +28,11 @@ export default function StudentWelcomePage() {
           <div className="text-slate-600">Signing you in…</div>
           {isLoaded && isSignedIn ? (
             Promise.resolve().then(async () => {
-              try { await upsertUser({ role: "STUDENT" }); } catch {}
+              try {
+                const token = await getToken({ template: 'convex' });
+                if (!token) return;
+                await upsertUser({ role: "STUDENT" });
+              } catch {}
               router.replace('/sections');
             }) as any
           ) : null}
