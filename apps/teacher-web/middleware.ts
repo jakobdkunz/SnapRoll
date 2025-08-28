@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-up(.*)"]); 
+const isPublicRoute = createRouteMatcher(["/", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
 
 export default function middleware(req: any) {
   if (!process.env.CLERK_SECRET_KEY || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
@@ -9,7 +9,11 @@ export default function middleware(req: any) {
   }
   const handler = clerkMiddleware((auth, reqInner) => {
     if (isPublicRoute(reqInner)) return;
-    auth().protect();
+    const { userId } = auth();
+    if (!userId) {
+      const url = new URL('/', reqInner.url);
+      return NextResponse.redirect(url);
+    }
   });
   return handler(req as any);
 }
