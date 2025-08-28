@@ -4,7 +4,7 @@ import { Card } from '@snaproll/ui';
 import { SignUp, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 
-export default function StudentSignUpPage() {
+export default function StudentSignUpCatchAll() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
 
@@ -18,8 +18,7 @@ export default function StudentSignUpPage() {
         <div className="text-2xl font-bold mb-6">Create your account</div>
         <div className="rounded-xl overflow-hidden border">
           <SignUp 
-            routing="path" 
-            path="/sign-up" 
+            routing="hash" 
             signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL || '/'} 
             afterSignUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
             fallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
