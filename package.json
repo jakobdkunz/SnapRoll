@@ -31,6 +31,7 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.31.6",
     "@vercel/blob": "^0.22.0",
     "convex": "^1.26.1",
     "papaparse": "5.4.1",
