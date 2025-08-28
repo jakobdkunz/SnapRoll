@@ -309,7 +309,22 @@ export default function SectionsPage() {
         </div>
       </Card>
 
-      <Card className="p-6">
+      <Card className={`relative overflow-hidden ${interactive ? '' : 'p-6'}`}>
+        {interactive && (
+          <>
+            <div className={`pointer-events-none absolute inset-0 ${sections.find(s=>s.id===interactive.sectionId)?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
+            <div className="pointer-events-none absolute inset-0 bg-white/35" />
+            <div className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
+            <style jsx>{`
+              @keyframes gradient_drift {
+                0% { transform: translate3d(0,0,0); }
+                50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+                100% { transform: translate3d(0,0,0); }
+              }
+            `}</style>
+          </>
+        )}
+        <div className={interactive ? 'relative z-10 p-6' : ''}>
         {!interactive ? (
           <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
             <div className="font-medium mb-1">Activities</div>
@@ -322,14 +337,6 @@ export default function SectionsPage() {
           </div>
         ) : interactive.kind === 'wordcloud' ? (
           <div className="space-y-3">
-            {/* Section gradient header when activity is live */}
-            <div className={`rounded-xl overflow-hidden relative h-20 ${sections.find(s=>s.id===interactive.sectionId)?.gradient || 'gradient-1'}`}>
-              <div className="absolute inset-0 bg-white/40" />
-              <div className="absolute inset-0 -m-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.28), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.28), transparent)' }} />
-              <div className="relative z-10 h-full flex items-center justify-center text-slate-800 text-sm font-medium truncate px-3">
-                {sections.find(s=>s.id===interactive.sectionId)?.title}
-              </div>
-            </div>
             <div className="text-center">
               <div className="font-medium">Word Cloud</div>
               {interactive.showPromptToStudents && (
@@ -365,13 +372,6 @@ export default function SectionsPage() {
           </div>
         ) : interactive.kind === 'poll' ? (
           <div className="space-y-3">
-            <div className={`rounded-xl overflow-hidden relative h-20 ${sections.find(s=>s.id===interactive.sectionId)?.gradient || 'gradient-1'}`}>
-              <div className="absolute inset-0 bg-white/40" />
-              <div className="absolute inset-0 -m-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.28), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.28), transparent)' }} />
-              <div className="relative z-10 h-full flex items-center justify-center text-slate-800 text-sm font-medium truncate px-3">
-                {sections.find(s=>s.id===interactive.sectionId)?.title}
-              </div>
-            </div>
             <div className="text-center">
               <div className="font-medium">Poll</div>
               <div className="text-slate-500 text-sm">{(interactive as any).prompt}</div>
@@ -395,13 +395,6 @@ export default function SectionsPage() {
           </div>
         ) : interactive.kind === 'slideshow' ? (
           <div className="space-y-3">
-            <div className={`rounded-xl overflow-hidden relative h-20 ${sections.find(s=>s.id===interactive.sectionId)?.gradient || 'gradient-1'}`}>
-              <div className="absolute inset-0 bg-white/40" />
-              <div className="absolute inset-0 -m-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.28), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.28), transparent)' }} />
-              <div className="relative z-10 h-full flex items-center justify-center text-slate-800 text-sm font-medium truncate px-3">
-                {sections.find(s=>s.id===interactive.sectionId)?.title}
-              </div>
-            </div>
             <div className="text-center">
               <div className="font-medium">Activities</div>
               <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
@@ -413,6 +406,7 @@ export default function SectionsPage() {
             )}
           </div>
         ) : null}
+        </div>
       </Card>
 
       <div className="text-slate-600 text-sm">My courses</div>
