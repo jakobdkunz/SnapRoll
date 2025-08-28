@@ -8,6 +8,10 @@ export const getSectionHistory = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all class days for this section, ordered by date desc
     const rawDays = await ctx.db
       .query("classDays")
@@ -42,6 +46,7 @@ export const getSectionHistory = query({
       .collect();
     
     const studentIds = enrollments.map(e => e.studentId);
+    const enrollmentCreatedAtByStudent = new Map(enrollments.map(e => [e.studentId, e._creationTime]));
     const students = await Promise.all(
       studentIds.map(id => ctx.db.get(id))
     );
@@ -79,7 +84,17 @@ export const getSectionHistory = query({
         
         const originalStatus = attendanceRecord?.status || "BLANK";
         const isManual = !!manualChange;
-        const effectiveStatus = manualChange ? manualChange.status : originalStatus;
+        let effectiveStatus = manualChange ? manualChange.status : originalStatus;
+
+        // Fallback: mark BLANK as ABSENT after end-of-day if enrolled by that day
+        if (!attendanceRecord && !manualChange) {
+          const endOfDay = (classDay.date as number) + DAY_MS;
+          const enrolledCreatedAt = enrollmentCreatedAtByStudent.get(student._id) ?? Number.POSITIVE_INFINITY;
+          const wasEnrolledByDay = enrolledCreatedAt <= endOfDay;
+          if (now >= endOfDay && wasEnrolledByDay) {
+            effectiveStatus = "ABSENT";
+          }
+        }
         
         return {
           classDayId: classDay._id,
@@ -199,6 +214,8 @@ export const getStudentHistory = query({
     });
     
     // Build records by section
+    const enrollmentCreatedAtBySection = new Map(enrollments.map(e => [e.sectionId, e._creationTime]));
+
     const records = sections.map(section => {
       if (!section) return null;
       
@@ -213,7 +230,15 @@ export const getStudentHistory = query({
         
         const originalStatus = attendanceRecord?.status || "BLANK";
         const isManual = !!manualChange;
-        const effectiveStatus = manualChange ? manualChange.status : originalStatus;
+        let effectiveStatus = manualChange ? manualChange.status : originalStatus;
+        if (!attendanceRecord && !manualChange) {
+          const endOfDay = (classDay.date as number) + DAY_MS;
+          const enrolledCreatedAt = enrollmentCreatedAtBySection.get(section._id) ?? Number.POSITIVE_INFINITY;
+          const wasEnrolledByDay = enrolledCreatedAt <= endOfDay;
+          if (now >= endOfDay && wasEnrolledByDay) {
+            effectiveStatus = "ABSENT";
+          }
+        }
         
         byDate[dateKey] = {
           status: effectiveStatus,
