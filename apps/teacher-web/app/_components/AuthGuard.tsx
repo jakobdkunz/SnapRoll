@@ -11,8 +11,8 @@ export function AuthGuard() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    const isLogin = pathname === '/';
-    if (!isSignedIn && !isLogin) {
+    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
+    if (!isSignedIn && !isPublic) {
       // Debounce redirect to avoid loops during initial hydration
       const t = setTimeout(() => {
         if (!isSignedIn) router.replace('/');
