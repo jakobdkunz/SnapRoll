@@ -10,7 +10,6 @@ type Section = { id?: string; _id?: string; title: string; gradient: string };
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [teacherId, setTeacherId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: Section | null }>({ open: false, section: null });
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -45,10 +44,14 @@ export default function DashboardPage() {
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
   const startPoll = useMutation(api.functions.polls.startPoll);
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
-  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId: teacherId as any } : "skip");
 
-  // Get sections for the teacher
-  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId: teacherId as any } : "skip") || []) as any[];
+  // Current user via Clerk/Convex
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const teacherId = (currentUser?._id as any) || null;
+
+  // Data queries
+  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
+  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") || []) as any[];
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -62,11 +65,7 @@ export default function DashboardPage() {
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
   ];
 
-  useEffect(() => {
-    setMounted(true);
-    const id = localStorage.getItem('snaproll.teacherId');
-    setTeacherId(id);
-  }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   async function handleStartWordCloud() {
     if (!wcSectionId) return;
@@ -122,7 +121,7 @@ export default function DashboardPage() {
   }
 
   if (!mounted) return null;
-  if (!teacherId) return <div>Please go back and enter your information.</div>;
+  if (!teacherId) return <div className="text-center text-slate-600">Loading your dashboard…</div>;
 
   const hasSections = sections.length > 0;
 
@@ -135,7 +134,7 @@ export default function DashboardPage() {
           <Button variant="primary" className="mt-4 inline-flex items-center gap-2 bg-white border-0 hover:bg-slate-100" onClick={async () => {
             const title = prompt('Section title?');
             if (!title || !teacherId) return;
-            await createSection({ title, teacherId: teacherId as any });
+            await createSection({ title, teacherId });
           }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
@@ -314,7 +313,7 @@ export default function DashboardPage() {
               <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim(), teacherId: teacherId as any }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim(), teacherId }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
             </div>
           </div>
