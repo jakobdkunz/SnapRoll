@@ -13,7 +13,7 @@ export const startPoll = mutation({
       sectionId: args.sectionId,
       prompt: args.prompt,
       optionsJson: JSON.stringify(args.options),
-      showResults: args.showResults ?? false,
+      showResults: args.showResults ?? true,
       createdAt: Date.now(),
     });
   },
