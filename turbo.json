@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "build/**"],
-      "env": ["NEXTAUTH_SECRET"]
+      "env": ["NEXTAUTH_SECRET", "CLERK_SECRET_KEY", "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "NEXT_PUBLIC_CONVEX_URL"]
     },
     "dev": {
       "cache": false,
