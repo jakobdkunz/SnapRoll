@@ -1,6 +1,12 @@
 const nextConfig = {
   transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
   experimental: { typedRoutes: true },
+  env: {
+    NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL: '/',
+    NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: '/',
+    NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: '/sign-up',
+    NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: '/sign-up',
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
