@@ -46,7 +46,7 @@ export const getSectionHistory = query({
       .collect();
     
     const studentIds = enrollments.map(e => e.studentId);
-    const enrollmentCreatedAtByStudent = new Map(enrollments.map(e => [e.studentId, e._creationTime]));
+    const enrollmentByStudent = new Map(enrollments.map(e => [e.studentId, e]));
     const students = await Promise.all(
       studentIds.map(id => ctx.db.get(id))
     );
@@ -89,11 +89,9 @@ export const getSectionHistory = query({
         // Fallback: mark BLANK as ABSENT after end-of-day if enrolled by that day
         if (!attendanceRecord && !manualChange) {
           const endOfDay = (classDay.date as number) + DAY_MS;
-          const enrolledCreatedAt = enrollmentCreatedAtByStudent.get(student._id) ?? Number.POSITIVE_INFINITY;
-          const wasEnrolledByDay = enrolledCreatedAt <= endOfDay;
-          if (now >= endOfDay && wasEnrolledByDay) {
-            effectiveStatus = "ABSENT";
-          }
+          const enroll = enrollmentByStudent.get(student._id);
+          const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
+          if (now >= endOfDay && wasEnrolledByDay) effectiveStatus = "ABSENT";
         }
         
         return {
@@ -214,7 +212,8 @@ export const getStudentHistory = query({
     });
     
     // Build records by section
-    const enrollmentCreatedAtBySection = new Map(enrollments.map(e => [e.sectionId, e._creationTime]));
+    // Track enrollment windows per section
+    const enrollmentBySection = new Map(enrollments.map(e => [e.sectionId, e]));
 
     const records = sections.map(section => {
       if (!section) return null;
@@ -233,11 +232,9 @@ export const getStudentHistory = query({
         let effectiveStatus = manualChange ? manualChange.status : originalStatus;
         if (!attendanceRecord && !manualChange) {
           const endOfDay = (classDay.date as number) + DAY_MS;
-          const enrolledCreatedAt = enrollmentCreatedAtBySection.get(section._id) ?? Number.POSITIVE_INFINITY;
-          const wasEnrolledByDay = enrolledCreatedAt <= endOfDay;
-          if (now >= endOfDay && wasEnrolledByDay) {
-            effectiveStatus = "ABSENT";
-          }
+          const enroll = enrollmentBySection.get(section._id);
+          const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
+          if (now >= endOfDay && wasEnrolledByDay) effectiveStatus = "ABSENT";
         }
         
         byDate[dateKey] = {

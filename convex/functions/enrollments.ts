@@ -16,6 +16,10 @@ export const create = mutation({
       .first();
     
     if (existing) {
+      // If previously removed, resurrect by clearing removedAt
+      if ((existing as any).removedAt) {
+        await ctx.db.patch(existing._id, { removedAt: undefined });
+      }
       return existing._id; // Already enrolled
     }
     
@@ -61,7 +65,8 @@ export const remove = mutation({
       .first();
     
     if (enrollment) {
-      await ctx.db.delete(enrollment._id);
+      // Soft-remove to keep history; mark removedAt
+      await ctx.db.patch(enrollment._id, { removedAt: Date.now() });
     }
   },
 });

@@ -23,6 +23,7 @@ export default defineSchema({
     sectionId: v.id("sections"),
     studentId: v.id("users"),
     createdAt: v.number(), // Unix timestamp
+    removedAt: v.optional(v.number()), // when unenrolled; kept for history
   })
     .index("by_section", ["sectionId"])
     .index("by_student", ["studentId"])
