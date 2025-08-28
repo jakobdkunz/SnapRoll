@@ -114,10 +114,10 @@ export const upsertCurrentUser = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null as unknown as Id<'users'>;
 
     const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Missing email on identity");
+    if (!email) return null as unknown as Id<'users'>;
 
     const existing = await ctx.db
       .query("users")
