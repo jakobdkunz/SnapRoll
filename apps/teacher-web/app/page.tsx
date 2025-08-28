@@ -1,6 +1,6 @@
 "use client";
 import { Card } from '@snaproll/ui';
-import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/nextjs';
+import { SignedIn, SignedOut, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useMutation } from 'convex/react';
@@ -22,8 +22,8 @@ export default function TeacherWelcomePage() {
         <div className="text-2xl font-bold mb-6">SnapRoll</div>
         <SignedOut>
           <div className="mb-4 text-slate-600">Sign in to continue</div>
-          <div className="rounded-xl overflow-hidden border">
-            <SignIn signUpUrl="/sign-up" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+          <div className="rounded-xl overflow-hidden border p-6">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2" onClick={() => router.push('/sign-in')}>Sign In</button>
           </div>
         </SignedOut>
         <SignedIn>
