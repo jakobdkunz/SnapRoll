@@ -1,6 +1,6 @@
 const nextConfig = {
   transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
-  experimental: { typedRoutes: true },
+  experimental: { typedRoutes: true, serverMinification: false },
   // Mitigate occasional jest-worker crashes on Vercel
   // See: https://github.com/vercel/next.js/issues/48089
   swcMinify: true,
