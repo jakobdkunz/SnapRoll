@@ -18,6 +18,21 @@ export default function StudentWelcomePage() {
     if (!isSignedIn) router.replace('/sign-in');
   }, [isLoaded, isSignedIn, router]);
 
+  // One-time upsert after Clerk token is available
+  useEffect(() => {
+    if (didUpsertRef.current) return;
+    if (!isLoaded || !isSignedIn) return;
+    (async () => {
+      try {
+        const token = await getToken({ template: 'convex' });
+        if (!token) return;
+        didUpsertRef.current = true;
+        await upsertUser({ role: "STUDENT" });
+      } catch {}
+      router.replace('/sections');
+    })();
+  }, [isLoaded, isSignedIn, getToken, upsertUser, router]);
+
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-8 text-center">
@@ -27,22 +42,6 @@ export default function StudentWelcomePage() {
         </SignedOut>
         <SignedIn>
           <div className="text-slate-600">Signing you in…</div>
-          {(() => {
-            useEffect(() => {
-              if (didUpsertRef.current) return;
-              if (!isLoaded || !isSignedIn) return;
-              (async () => {
-                try {
-                  const token = await getToken({ template: 'convex' });
-                  if (!token) return;
-                  didUpsertRef.current = true;
-                  await upsertUser({ role: "STUDENT" });
-                } catch {}
-                router.replace('/sections');
-              })();
-            }, [isLoaded, isSignedIn, getToken, upsertUser, router]);
-            return null;
-          })()}
         </SignedIn>
       </Card>
     </div>
