@@ -1,6 +1,10 @@
 const nextConfig = {
   transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
   experimental: { typedRoutes: true },
+  env: {
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/sign-in',
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: '/sign-up',
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
