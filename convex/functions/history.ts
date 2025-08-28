@@ -9,11 +9,23 @@ export const getSectionHistory = query({
   },
   handler: async (ctx, args) => {
     // Get all class days for this section, ordered by date desc
-    const allClassDays = await ctx.db
+    const rawDays = await ctx.db
       .query("classDays")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
       .order("desc")
       .collect();
+
+    // Deduplicate by date (same calendar day) to avoid duplicate columns
+    const unique: typeof rawDays = [];
+    const seen = new Set<string>();
+    for (const cd of rawDays) {
+      const key = new Date(cd.date).toISOString().slice(0, 10);
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(cd);
+      }
+    }
+    const allClassDays = unique;
     
     // Apply pagination
     const totalDays = allClassDays.length;
@@ -125,15 +137,25 @@ export const getStudentHistory = query({
     );
     
     // Get all class days across these sections
-    const allClassDays = sectionIds.length > 0 ? await ctx.db
+    const rawDays = sectionIds.length > 0 ? await ctx.db
       .query("classDays")
       .filter((q) => q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id))))
       .order("desc")
       .collect() : [];
+    // Deduplicate by calendar date across sections for the student's consolidated view
+    const uniqueDays = (() => {
+      const out: typeof rawDays = [];
+      const seen = new Set<string>();
+      for (const cd of rawDays) {
+        const key = new Date(cd.date).toISOString().slice(0, 10);
+        if (!seen.has(key)) { seen.add(key); out.push(cd); }
+      }
+      return out;
+    })();
     
     // Apply pagination
-    const totalDays = allClassDays.length;
-    const page = allClassDays.slice(args.offset, args.offset + args.limit);
+    const totalDays = uniqueDays.length;
+    const page = uniqueDays.slice(args.offset, args.offset + args.limit);
     const classDayIds = page.map(cd => cd._id);
     
     // Get attendance records for this student

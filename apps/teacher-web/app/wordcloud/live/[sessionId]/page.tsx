@@ -16,8 +16,17 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
   const closeSession = useMutation(api.functions.wordcloud.closeSession);
 
-  // Extract words from Convex data
-  const words = (answers as any) || [];
+  // Extract words from Convex data and aggregate counts
+  const words = (() => {
+    const arr = (answers as any[]) || [];
+    const map = new Map<string, number>();
+    for (const a of arr) {
+      const t = String(a?.text || '').trim();
+      if (!t) continue;
+      map.set(t, (map.get(t) || 0) + 1);
+    }
+    return Array.from(map.entries()).map(([word, count]) => ({ word, count }));
+  })();
 
   // Heartbeat to keep session active
   useEffect(() => {
