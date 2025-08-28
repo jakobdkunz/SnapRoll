@@ -294,7 +294,20 @@ export default function SectionsPage() {
           <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
         )}
         <div className="flex items-center justify-center">
-          <button className="text-blue-500 font-medium hover:underline" onClick={() => { window.location.href = '/my-attendance'; }}>My attendance →</button>
+          <button
+            className="text-blue-500 font-medium hover:underline"
+            onClick={() => {
+              try {
+                const { useRouter } = require('next/navigation');
+                const r = useRouter();
+                r.push('/my-attendance');
+              } catch {
+                window.location.href = '/my-attendance';
+              }
+            }}
+          >
+            My attendance →
+          </button>
         </div>
       </Card>
 
