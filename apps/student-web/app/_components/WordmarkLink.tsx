@@ -1,11 +1,12 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 
 export function WordmarkLink() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   function onClick() {
-    const id = typeof window !== 'undefined' ? localStorage.getItem('snaproll.studentId') : null;
-    if (id) router.push('/sections');
+    if (isSignedIn) router.push('/sections');
     else router.push('/');
   }
   return (

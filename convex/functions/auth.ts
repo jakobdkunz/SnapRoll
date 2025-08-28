@@ -91,6 +91,23 @@ export const getUserByEmail = query({
   },
 });
 
+export const getCurrentUser = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    const email = (identity.email ?? identity.tokenIdentifier ?? "")
+      .toString()
+      .trim()
+      .toLowerCase();
+    if (!email) return null;
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+  },
+});
+
 export const upsertCurrentUser = mutation({
   args: {
     role: v.union(v.literal("TEACHER"), v.literal("STUDENT")),

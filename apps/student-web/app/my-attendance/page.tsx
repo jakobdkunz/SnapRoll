@@ -43,8 +43,9 @@ export default function MyAttendancePage() {
   const [initialized, setInitialized] = useState(false);
 
   // Convex hooks
-  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
-  const history = useQuery(api.functions.history.getStudentHistory, studentId ? { studentId: studentId as any, offset, limit } : "skip");
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
+  const history = useQuery(api.functions.history.getStudentHistory, currentUser?._id ? { studentId: currentUser._id as any, offset, limit } : "skip");
 
   // Column width calculations
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
@@ -61,25 +62,6 @@ export default function MyAttendancePage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Use a longer delay to ensure localStorage is available and retry if needed
-    const timer = setTimeout(() => {
-      const id = localStorage.getItem('snaproll.studentId');
-      if (id) {
-        setStudentId(id);
-        const n = localStorage.getItem('snaproll.studentName');
-        if (n) setStudentName(n);
-      } else {
-        // Retry once more after a longer delay
-        setTimeout(() => {
-          const retryId = localStorage.getItem('snaproll.studentId');
-          setStudentId(retryId);
-          const retryName = localStorage.getItem('snaproll.studentName');
-          if (retryName) setStudentName(retryName);
-        }, 500);
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
   }, []);
 
   // Update data when Convex query returns
@@ -93,10 +75,11 @@ export default function MyAttendancePage() {
 
   // Update student name when student data loads
   useEffect(() => {
-    if (student) {
-      setStudentName(`${student.firstName} ${student.lastName}`);
+    if (currentUser) {
+      setStudentName(`${currentUser.firstName} ${currentUser.lastName}`);
+      setStudentId((currentUser._id as unknown as string) || null);
     }
-  }, [student]);
+  }, [currentUser]);
 
   // Set loading state based on Convex query
   useEffect(() => {
