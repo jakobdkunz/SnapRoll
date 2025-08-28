@@ -146,12 +146,14 @@ export const getStudentHistory = query({
       .filter((q) => q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id))))
       .order("desc")
       .collect() : [];
-    // Deduplicate by calendar date across sections for the student's consolidated view
+    // Deduplicate by LOCAL calendar day across sections for the student's consolidated view
     const uniqueDays = (() => {
       const out: typeof rawDays = [];
-      const seen = new Set<string>();
+      const seen = new Set<number>();
       for (const cd of rawDays) {
-        const key = new Date(cd.date).toISOString().slice(0, 10);
+        const d = new Date(cd.date);
+        d.setHours(0, 0, 0, 0);
+        const key = d.getTime();
         if (!seen.has(key)) { seen.add(key); out.push(cd); }
       }
       return out;
@@ -228,6 +230,7 @@ export const getStudentHistory = query({
         title: s!.title,
       })),
       days: page.map(cd => ({
+        // Keep ISO YYYY-MM-DD for the UI keys; dedupe was done using local-day above
         date: new Date(cd.date).toISOString().split('T')[0],
       })),
       records,
