@@ -333,6 +333,15 @@ export default function HistoryPage() {
           </Button>
         </div>
       </div>
+      {/* Blank-state when no history exists, only after data has initialized */}
+      {initialized && totalDays === 0 ? (
+        <div className="py-12 grid place-items-center">
+          <div className="text-center max-w-md">
+            <div className="text-lg font-semibold mb-1">No attendance history yet</div>
+            <div className="text-slate-600">Start taking attendance to see it appear here.</div>
+          </div>
+        </div>
+      ) : (
       <div ref={containerRef} className="relative overflow-hidden">
       <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
@@ -379,6 +388,7 @@ export default function HistoryPage() {
         </div>
       )}
       </div>
+      )}
       <TooltipOverlay />
       {/* Export modal */}
       <Modal open={exportOpen} onClose={() => (exporting ? null : setExportOpen(false))}>
