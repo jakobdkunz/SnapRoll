@@ -6,7 +6,9 @@ const issuerEnv = process.env.CLERK_JWT_ISSUER_DOMAIN || "";
 const issuerDomains = issuerEnv
   .split(",")
   .map((s) => s.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  // de-dupe
+  .filter((v, i, a) => a.indexOf(v) === i);
 
 export default {
   providers: issuerDomains.map((domain) => ({
