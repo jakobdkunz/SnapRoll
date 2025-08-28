@@ -15,7 +15,6 @@ export default function StudentSignUpCatchAll() {
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-8 text-center">
-        <div className="text-2xl font-bold mb-6">Create your account</div>
         <div className="rounded-xl overflow-hidden border">
           <SignUp 
             routing="hash" 
@@ -24,7 +23,6 @@ export default function StudentSignUpCatchAll() {
             fallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
             appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} 
           />
-          <div className="text-xs text-slate-500 mt-3">Student accounts only. If you're an instructor, use the instructor site.</div>
         </div>
       </Card>
     </div>

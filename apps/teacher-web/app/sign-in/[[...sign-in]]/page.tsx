@@ -15,7 +15,6 @@ export default function TeacherSignInCatchAll() {
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-8 text-center">
-        <div className="text-2xl font-bold mb-6">Sign in</div>
         <div className="rounded-xl overflow-hidden border">
           <SignIn 
             routing="hash" 
