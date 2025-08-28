@@ -33,7 +33,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.31.6",
     "@vercel/blob": "^0.22.0",
-    "convex": "^1.26.1",
+    "convex": "^1.31.0",
     "papaparse": "5.4.1",
     "pdfjs-dist": "^3.11.174",
     "react-icons": "4.12.0",
