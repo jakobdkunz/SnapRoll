@@ -15,8 +15,8 @@
     "typecheck": "turbo run typecheck",
     "convex:dev": "npx convex dev",
     "convex:deploy": "npx convex deploy",
-    "build:teacher-web": "turbo run build --filter=@snaproll/teacher-web",
-    "build:student-web": "turbo run build --filter=@snaproll/student-web"
+    "build:teacher-web": "turbo run typecheck --filter=@snaproll/teacher-web && turbo run build --filter=@snaproll/teacher-web",
+    "build:student-web": "turbo run typecheck --filter=@snaproll/student-web && turbo run build --filter=@snaproll/student-web"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",
