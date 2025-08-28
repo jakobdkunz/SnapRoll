@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 
 export const authenticateTeacher = mutation({
   args: {
@@ -87,5 +88,40 @@ export const getUserByEmail = query({
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
+  },
+});
+
+export const upsertCurrentUser = mutation({
+  args: {
+    role: v.union(v.literal("TEACHER"), v.literal("STUDENT")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
+    if (!email) throw new Error("Missing email on identity");
+
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existing) {
+      if (existing.role !== args.role) {
+        await ctx.db.patch(existing._id as Id<"users">, { role: args.role });
+      }
+      return existing._id;
+    }
+
+    const name = (identity.name || "").trim();
+    const [firstName, ...rest] = name ? name.split(" ") : [identity.givenName || "", identity.familyName || ""];
+    const created = await ctx.db.insert("users", {
+      email,
+      firstName: firstName || identity.givenName || "",
+      lastName: rest.join(" ") || identity.familyName || "",
+      role: args.role,
+    });
+    return created;
   },
 });
