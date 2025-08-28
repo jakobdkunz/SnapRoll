@@ -112,8 +112,15 @@ export default function MyAttendancePage() {
   const grid = useMemo(() => {
     if (!data) return null;
     const { sections, days, records } = data;
+    // Extra client-side guard: ensure unique calendar dates in header
+    const seen = new Set<string>();
+    const uniqueDays = days.filter((d) => {
+      if (seen.has(d.date)) return false;
+      seen.add(d.date);
+      return true;
+    });
     const recBySection = new Map(records.map((r) => [r.sectionId, r.byDate]));
-    return { sections, days, recBySection };
+    return { sections, days: uniqueDays, recBySection };
   }, [data]);
 
   // Always render the same skeleton on both server and client to avoid hydration mismatch
