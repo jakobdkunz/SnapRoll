@@ -7,9 +7,9 @@ export default function middleware(req: any) {
   if (!process.env.CLERK_SECRET_KEY || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return NextResponse.next();
   }
-  const handler = clerkMiddleware((auth, reqInner) => {
+  const handler = clerkMiddleware(async (auth, reqInner) => {
     if (isPublicRoute(reqInner)) return;
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       const url = new URL('/', reqInner.url);
       return NextResponse.redirect(url);
