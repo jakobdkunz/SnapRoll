@@ -1,6 +1,6 @@
 "use client";
 import { Card } from '@snaproll/ui';
-import { SignedIn, SignedOut, SignIn } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignIn, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useMutation } from 'convex/react';
@@ -9,6 +9,7 @@ import { api } from '@snaproll/convex-client';
 export default function TeacherWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
     // When signed in, upsert the user as TEACHER then go to dashboard
@@ -27,10 +28,12 @@ export default function TeacherWelcomePage() {
         </SignedOut>
         <SignedIn>
           <div className="text-slate-600">Signing you in…</div>
-          {Promise.resolve().then(async () => {
-            try { await upsertUser({ role: "TEACHER" }); } catch {}
-            router.replace('/dashboard');
-          }) as any}
+          {isLoaded && isSignedIn ? (
+            Promise.resolve().then(async () => {
+              try { await upsertUser({ role: "TEACHER" }); } catch {}
+              router.replace('/dashboard');
+            }) as any
+          ) : null}
         </SignedIn>
       </Card>
     </div>
