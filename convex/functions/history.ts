@@ -10,8 +10,6 @@ export const getSectionHistory = query({
   handler: async (ctx, args) => {
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all class days for this section, ordered by date desc
     const rawDays = await ctx.db
       .query("classDays")
@@ -142,6 +140,8 @@ export const getStudentHistory = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all sections the student is enrolled in
     const enrollments = await ctx.db
       .query("enrollments")
