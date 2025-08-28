@@ -4,6 +4,29 @@ import { ClerkProvider, useAuth } from '@clerk/nextjs';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { createConvexClient, getConvexUrl } from '@snaproll/convex-client';
 
+function AuthDebug() {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  React.useEffect(() => {
+    if (process.env.NEXT_PUBLIC_AUTH_DEBUG !== 'true') return;
+    if (!isLoaded || !isSignedIn) return;
+    (async () => {
+      try {
+        const token = await getToken({ template: 'convex' });
+        if (!token) {
+          console.log('[auth-debug] No Convex token from Clerk.');
+          return;
+        }
+        const payloadPart = token.split('.')[1] || '';
+        const payload = (payloadPart ? JSON.parse(atob(payloadPart)) : {}) as { aud?: string; iss?: string };
+        console.log('[auth-debug] Convex JWT aud:', payload.aud, 'iss:', payload.iss);
+      } catch (e) {
+        console.log('[auth-debug] Error fetching Convex token', e);
+      }
+    })();
+  }, [isLoaded, isSignedIn, getToken]);
+  return null;
+}
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
   const url = getConvexUrl();
@@ -16,6 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       {clientRef.current ? (
         <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
+          <AuthDebug />
           {children}
         </ConvexProviderWithClerk>
       ) : (
