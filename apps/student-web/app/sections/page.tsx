@@ -39,7 +39,9 @@ export default function SectionsPage() {
   const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
   const { isLoaded, isSignedIn, getToken } = require('@clerk/nextjs').useAuth?.() ?? { isLoaded: true, isSignedIn: true };
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const didUpsertRef = useRef(false);
   useEffect(() => {
+    if (didUpsertRef.current) return;
     if (!isLoaded || !isSignedIn) return;
     if (currentUser === undefined) return;
     if (!currentUser) {
@@ -47,6 +49,7 @@ export default function SectionsPage() {
         try {
           const token = await getToken?.({ template: 'convex' });
           if (!token) return;
+          didUpsertRef.current = true;
           await upsertUser({ role: 'STUDENT' });
         } catch {}
       })();
