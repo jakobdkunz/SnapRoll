@@ -5,15 +5,22 @@ import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { createConvexClient, getConvexUrl } from '@snaproll/convex-client';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const url = getConvexUrl();
-  if (!url) return <>{children}</>;
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
-  if (!clientRef.current) clientRef.current = createConvexClient(url);
+  const url = getConvexUrl();
+  if (url && !clientRef.current) clientRef.current = createConvexClient(url);
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
-      <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
-        {children}
-      </ConvexProviderWithClerk>
+    <ClerkProvider 
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+      signInUrl="/"
+      signUpUrl="/sign-up"
+    >
+      {clientRef.current ? (
+        <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
+          {children}
+        </ConvexProviderWithClerk>
+      ) : (
+        <>{children}</>
+      )}
     </ClerkProvider>
   );
 }
