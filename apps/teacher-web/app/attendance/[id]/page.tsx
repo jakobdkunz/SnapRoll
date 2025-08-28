@@ -144,7 +144,7 @@ export default function AttendancePage() {
       `}</style>
       <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" className="inline-flex items-center gap-2" onClick={() => router.back()}>
+          <Button variant="ghost" className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
           <div className="mx-auto text-center">
@@ -181,7 +181,10 @@ export default function AttendancePage() {
                   </div>
                 </div>
                 <div className="mt-6 text-slate-600 text-base flex items-center justify-center gap-6">
-                  <span className="inline-flex items-center gap-2"><HiOutlineGlobeAlt className="h-6 w-6" /> Enter at <span className="font-medium">SnapRoll.org</span></span>
+                  <span className="inline-flex items-center gap-2">
+                    <HiOutlineGlobeAlt className="h-6 w-6" />
+                    <span>Enter at&nbsp;<span className="font-medium">SnapRoll.org</span></span>
+                  </span>
                   <span className="inline-flex items-center gap-2"><HiOutlineDevicePhoneMobile className="h-6 w-6" /> or use the SnapRoll app</span>
                 </div>
               </>
