@@ -10,7 +10,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
   if (!clientRef.current) clientRef.current = createConvexClient(url);
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
+    <ClerkProvider 
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
+      signInUrl="/"
+      signUpUrl="/sign-up"
+    >
       <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
         {children}
       </ConvexProviderWithClerk>
