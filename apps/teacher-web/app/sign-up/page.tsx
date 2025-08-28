@@ -12,13 +12,15 @@ export default function TeacherSignUpPage() {
   }, [isLoaded, isSignedIn, router]);
 
   return (
-    <div className="w-full px-4 sm:px-8 flex justify-center">
-      <SignUp 
-        routing="hash"
-        signInUrl="/"
-        fallbackRedirectUrl="/"
-        appearance={{ elements: { rootBox: 'mx-auto w-full', card: 'mx-auto w-full max-w-sm sm:max-w-md', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
-      />
+    <div className="w-full px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-sm sm:max-w-md">
+        <SignUp 
+          routing="hash"
+          signInUrl="/"
+          fallbackRedirectUrl="/"
+          appearance={{ elements: { rootBox: 'w-full', card: 'w-full', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
+        />
+      </div>
     </div>
   );
 }
