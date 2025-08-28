@@ -13,8 +13,11 @@ export function AuthGuard() {
     if (!isLoaded) return;
     const isLogin = pathname === '/';
     if (!isSignedIn && !isLogin) {
-      router.replace('/');
-      return;
+      // Debounce redirect to avoid loops during initial hydration
+      const t = setTimeout(() => {
+        if (!isSignedIn) router.replace('/');
+      }, 50);
+      return () => clearTimeout(t);
     }
     if (isSignedIn && user) {
       try {
