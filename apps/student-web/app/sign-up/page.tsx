@@ -17,7 +17,7 @@ export default function StudentSignUpPage() {
       <Card className="p-8 text-center">
         <div className="text-2xl font-bold mb-6">Create your account</div>
         <div className="rounded-xl overflow-hidden border">
-          <SignUp afterSignUpUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+          <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" afterSignUpUrl="/" fallbackRedirectUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
           <div className="text-xs text-slate-500 mt-3">Student accounts only. If you're an instructor, use the instructor site.</div>
         </div>
       </Card>
