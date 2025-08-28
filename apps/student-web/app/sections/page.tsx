@@ -37,6 +37,15 @@ export default function SectionsPage() {
   
   // Get current user from Convex based on Clerk identity
   const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const { isLoaded, isSignedIn } = require('@clerk/nextjs').useAuth?.() ?? { isLoaded: true, isSignedIn: true };
+  const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    if (currentUser === undefined) return;
+    if (!currentUser) {
+      upsertUser({ role: 'STUDENT' }).catch(() => {});
+    }
+  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
   const effectiveUserId = (currentUser?._id as Id<'users'> | undefined);
 
   // Get student's enrolled sections
