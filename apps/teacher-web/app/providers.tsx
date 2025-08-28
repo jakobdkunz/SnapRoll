@@ -7,15 +7,10 @@ import { createConvexClient, getConvexUrl } from '@snaproll/convex-client';
 export function Providers({ children }: { children: React.ReactNode }) {
   const url = getConvexUrl();
   if (!url) return <>{children}</>;
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
   if (!clientRef.current) clientRef.current = createConvexClient(url);
-  if (!publishableKey) {
-    const { ConvexProvider } = require('convex/react');
-    return <ConvexProvider client={clientRef.current as any}>{children}</ConvexProvider> as any;
-  }
   return (
-    <ClerkProvider publishableKey={publishableKey}>
+    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
       <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
         {children}
       </ConvexProviderWithClerk>
