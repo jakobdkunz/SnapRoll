@@ -14,13 +14,13 @@ export default function TeacherSignUpPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <Card className="p-8 text-center">
+      <Card className="p-4 sm:p-8 text-center">
         <div className="rounded-xl overflow-hidden border">
           <SignUp 
             routing="hash"
             signInUrl="/"
             fallbackRedirectUrl="/"
-            appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} 
+            appearance={{ elements: { rootBox: 'w-full max-w-full', card: 'w-full max-w-full shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
           />
         </div>
       </Card>
