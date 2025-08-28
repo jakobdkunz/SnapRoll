@@ -18,7 +18,7 @@ export default function StudentSignUpCatchAll() {
         signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL || '/'} 
         afterSignUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
         fallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
-        appearance={{ elements: { rootBox: 'w-full max-w-full', card: 'w-full max-w-full shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
+        appearance={{ elements: { rootBox: 'mx-auto w-full', card: 'mx-auto max-w-full shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
       />
     </div>
   );
