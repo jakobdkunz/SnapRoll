@@ -15,11 +15,14 @@ export const getSectionHistory = query({
       .order("desc")
       .collect();
 
-    // Deduplicate by date (same calendar day) to avoid duplicate columns
+    // Deduplicate by LOCAL calendar day to avoid duplicate columns
+    // Use local midnight key to align with how classDays.date is stored (startOfDay local time)
     const unique: typeof rawDays = [];
-    const seen = new Set<string>();
+    const seen = new Set<number>();
     for (const cd of rawDays) {
-      const key = new Date(cd.date).toISOString().slice(0, 10);
+      const d = new Date(cd.date);
+      d.setHours(0, 0, 0, 0);
+      const key = d.getTime();
       if (!seen.has(key)) {
         seen.add(key);
         unique.push(cd);
@@ -107,6 +110,7 @@ export const getSectionHistory = query({
       })),
       days: page.map(cd => ({
         id: cd._id,
+        // Keep ISO for client parsing, but duplicates are avoided by local-day key above
         date: new Date(cd.date).toISOString().split('T')[0],
         attendanceCode: cd.attendanceCode,
       })),
