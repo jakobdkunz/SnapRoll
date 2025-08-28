@@ -26,7 +26,6 @@ export default function SectionsPage() {
   const [mounted, setMounted] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
-  const [studentEmail, setStudentEmail] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -36,14 +35,9 @@ export default function SectionsPage() {
   const submitWordcloud = useMutation(api.functions.wordcloud.submitAnswer);
   const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
-  // Resolve student by email first to obtain a valid Convex Id
-  const studentByEmail = useQuery(
-    api.functions.auth.getUserByEmail,
-    studentEmail ? { email: studentEmail } : "skip"
-  );
-  
-  // Use the resolved Convex Id for all subsequent queries/mutations
-  const effectiveUserId = (studentByEmail?._id as Id<'users'> | undefined);
+  // Get current user from Convex based on Clerk identity
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const effectiveUserId = (currentUser?._id as Id<'users'> | undefined);
 
   // Get student's enrolled sections
   const enrollments = useQuery(
@@ -158,43 +152,19 @@ export default function SectionsPage() {
   useEffect(() => {
     setMounted(true);
     setIsClient(true);
-    // Use a longer delay to ensure localStorage is available and retry if needed
-    const timer = setTimeout(() => {
-      const id = localStorage.getItem('snaproll.studentId');
-      const email = localStorage.getItem('snaproll.studentEmail');
-      if (id) setStudentId(id);
-      if (email) setStudentEmail(email);
-      if (!id && !email) {
-        // Retry once more after a longer delay
-        setTimeout(() => {
-          const retryId = localStorage.getItem('snaproll.studentId');
-          const retryEmail = localStorage.getItem('snaproll.studentEmail');
-          if (retryId) setStudentId(retryId);
-          if (retryEmail) setStudentEmail(retryEmail);
-        }, 500);
-      }
-    }, 200);
-    
-    return () => clearTimeout(timer);
   }, []);
 
   // Set student name from Convex data
   useEffect(() => {
-    if (studentByEmail) {
-      setStudentName(`${studentByEmail.firstName} ${studentByEmail.lastName}`);
+    if (currentUser) {
+      setStudentName(`${currentUser.firstName} ${currentUser.lastName}`);
+      const newId = (currentUser._id as unknown as string) || null;
+      setStudentId(newId);
     }
-  }, [studentByEmail]);
+  }, [currentUser]);
 
   // If we resolved a user by email, cache the fresh ID
-  useEffect(() => {
-    if (studentByEmail && studentByEmail._id && studentByEmail._id !== studentId) {
-      const newId = studentByEmail._id as unknown as string;
-      setStudentId(newId);
-      try {
-        localStorage.setItem('snaproll.studentId', newId);
-      } catch {}
-    }
-  }, [studentByEmail, studentId]);
+  // No longer writing to localStorage; identity is sourced from Clerk/Convex
 
 
 

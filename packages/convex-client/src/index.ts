@@ -28,6 +28,8 @@ export const convexApi = {
     authenticateStudent: api.functions.auth.authenticateStudent,
     getUser: api.functions.auth.getUser,
     getUserByEmail: api.functions.auth.getUserByEmail,
+    // Note: getCurrentUser is available at runtime; types may require regeneration
+    getCurrentUser: (api as any).functions.auth.getCurrentUser,
   },
 
   // User functions

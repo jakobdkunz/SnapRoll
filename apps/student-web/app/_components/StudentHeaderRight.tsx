@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
+import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
@@ -19,24 +20,21 @@ export function StudentHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
 
   useEffect(() => {
     setIsClient(true);
-    const id = localStorage.getItem('snaproll.studentId');
-    setStudentId(id);
   }, []);
 
   // Update form fields when student data loads
   useEffect(() => {
-    if (student) {
-      setFirstName(student.firstName);
-      setLastName(student.lastName);
-      const full = `${student.firstName} ${student.lastName}`;
-      localStorage.setItem('snaproll.studentName', full);
-      localStorage.setItem('snaproll.studentEmail', student.email);
+    if (currentUser) {
+      setFirstName(currentUser.firstName);
+      setLastName(currentUser.lastName);
+      setStudentId((currentUser._id as unknown as string) || null);
     }
-  }, [student]);
+  }, [currentUser]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -47,17 +45,8 @@ export function StudentHeaderRight() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') { setOpen(false); setProfileOpen(false); }
     }
-    function handleFocus() {
-      const id = localStorage.getItem('snaproll.studentId');
-      setStudentId(id);
-    }
-    function handleStorage() {
-      const id = localStorage.getItem('snaproll.studentId');
-      setStudentId(id);
-      if (!id) {
-        setFirstName(''); setLastName(''); setOpen(false); setProfileOpen(false);
-      }
-    }
+    function handleFocus() {}
+    function handleStorage() {}
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
@@ -72,13 +61,12 @@ export function StudentHeaderRight() {
     };
   }, [open]);
 
+  const { signOut } = useClerk();
   function logout() {
-    localStorage.removeItem('snaproll.studentId');
-    localStorage.removeItem('snaproll.studentName');
-    localStorage.removeItem('snaproll.studentEmail');
     setStudentId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
+    try { signOut().catch(() => {}); } catch {}
     router.push('/');
   }
 
