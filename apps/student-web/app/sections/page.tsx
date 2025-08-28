@@ -6,6 +6,7 @@ import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
+import { useAuth } from '@clerk/nextjs';
 
 type CheckinResponse = {
   ok: boolean;
@@ -37,7 +38,7 @@ export default function SectionsPage() {
   
   // Get current user from Convex based on Clerk identity
   const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const { isLoaded, isSignedIn, getToken } = require('@clerk/nextjs').useAuth?.() ?? { isLoaded: true, isSignedIn: true };
+  const { isLoaded, isSignedIn, getToken } = useAuth();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);
   useEffect(() => {
