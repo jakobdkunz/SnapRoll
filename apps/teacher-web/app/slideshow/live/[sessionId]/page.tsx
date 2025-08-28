@@ -39,6 +39,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   // Convex hooks
   const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: params.sessionId as any });
+  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any } : "skip");
   const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any }) as any[];
   const [slides, setSlides] = useState<any[]>([]);
   const drawings = (useQuery(api.functions.slideshow.getDrawings, { sessionId: params.sessionId as any }) as any) || {};
@@ -732,7 +733,21 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
-      {content}
+      {/* Keep white base to maximize canvas, but add subtle background layers behind content */}
+      <div className={`pointer-events-none fixed inset-0 ${section?.gradient || 'gradient-1'}`} style={{ opacity: 0.2 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/50" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-20 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.24), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.24), transparent)' }} />
+      <style jsx>{`
+        @keyframes gradient_drift {
+          0% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+          100% { transform: translate3d(0,0,0); }
+        }
+      `}</style>
+      {/* Render content above background; header remains compact to preserve stage space */}
+      <div className="relative z-10">
+        {content}
+      </div>
     </div>
   );
 }

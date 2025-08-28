@@ -22,6 +22,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
 
   // Convex hooks
   const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionId as any });
+  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any } : "skip");
   const slides = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionId as any });
   const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionId as any });
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -143,12 +144,26 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-white z-50">
-      <div ref={navRef} className="px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
+      {/* Subtle gradient like instructor pages, but keep white base for canvas clarity */}
+      <div className={`pointer-events-none fixed inset-0 ${section?.gradient || 'gradient-1'}`} style={{ opacity: 0.2 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/60" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-20 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.24), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.24), transparent)' }} />
+      <style jsx>{`
+        @keyframes gradient_drift {
+          0% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+          100% { transform: translate3d(0,0,0); }
+        }
+      `}</style>
+      <div ref={navRef} className="relative z-10 px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
         <Button variant="ghost" onClick={() => router.push('/sections')}>
           <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
           Back
         </Button>
         <div className="text-lg font-semibold truncate">{(details as any).title}</div>
+        {section?.title && (
+          <div className="ml-auto text-sm text-slate-700 truncate">{section.title}</div>
+        )}
         
         {/* Drawing toggle */}
         <div className="flex items-center gap-2 ml-4">

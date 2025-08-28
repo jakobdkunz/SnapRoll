@@ -16,6 +16,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   // sessionId here is the poll session; getActivePoll expects sectionId. We'll derive header from results.
   const session = null as any;
   const results = useQuery(api.functions.polls.getResults, { sessionId: params.sessionId as any });
+  const sectionId = (results as any)?.session?.sectionId;
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as any } : "skip");
   const toggleResults = useMutation(api.functions.polls.toggleResults);
   const closePoll = useMutation(api.functions.polls.closePoll);
   const heartbeat = useMutation(api.functions.polls.heartbeat);
@@ -36,17 +38,33 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   }, [sessionId, heartbeat]);
 
   return (
-    <div className="min-h-dvh px-4 py-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="relative min-h-dvh px-4 py-6">
+      {/* Background like Attendance */}
+      <div className={`pointer-events-none fixed inset-0 ${section?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/35" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
+      <style jsx>{`
+        @keyframes gradient_drift {
+          0% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+          100% { transform: translate3d(0,0,0); }
+        }
+      `}</style>
+      <div className="relative z-10 max-w-4xl mx-auto space-y-6">
         <div className="mb-2 flex items-center justify-between gap-3">
           <button
-            className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
             onClick={async () => { try { await closePoll({ sessionId: params.sessionId as any }); } catch {/* ignore */} history.back(); }}
           >
             ← Back
           </button>
-          <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
-            {(results as any)?.session?.prompt ?? 'Loading…'}
+          <div className="flex-1 text-center">
+            {section?.title && (
+              <div className="text-sm text-slate-700 truncate mb-1">{section.title}</div>
+            )}
+            <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800">
+              {(results as any)?.session?.prompt ?? 'Loading…'}
+            </div>
           </div>
           <div className="w-[120px]" />
         </div>
