@@ -17,7 +17,12 @@ export default function TeacherSignUpPage() {
       <Card className="p-8 text-center">
         <div className="text-2xl font-bold mb-6">Create your account</div>
         <div className="rounded-xl overflow-hidden border">
-          <SignUp afterSignUpUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+          <SignUp 
+            routing="hash"
+            signInUrl="/"
+            fallbackRedirectUrl="/"
+            appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} 
+          />
         </div>
       </Card>
     </div>
