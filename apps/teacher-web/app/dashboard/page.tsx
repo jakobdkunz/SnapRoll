@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
@@ -48,6 +49,8 @@ export default function DashboardPage() {
   // Current user via Clerk/Convex
   const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
   const teacherId = (currentUser?._id as any) || null;
+  const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const { isLoaded, isSignedIn } = useAuth();
 
   // Data queries
   const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
@@ -66,6 +69,15 @@ export default function DashboardPage() {
   ];
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Fallback: if signed in but no Convex user yet, upsert as TEACHER
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    if (currentUser === undefined) return; // still loading
+    if (!currentUser) {
+      upsertUser({ role: 'TEACHER' }).catch(() => {});
+    }
+  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
 
   async function handleStartWordCloud() {
     if (!wcSectionId) return;
