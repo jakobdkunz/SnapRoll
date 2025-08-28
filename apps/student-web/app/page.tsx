@@ -26,22 +26,28 @@ export default function StudentWelcomePage() {
   // Handle Clerk Account Portal hash fallback: "#/?...redirect_url=..."
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const { hash } = window.location;
-    if (!hash || !hash.startsWith('#/')) return;
-    const qsIndex = hash.indexOf('?');
-    if (qsIndex === -1) return;
-    const qs = hash.slice(qsIndex + 1);
-    const params = new URLSearchParams(qs);
-    const redirectUrl = params.get('redirect_url');
-    if (!redirectUrl) return;
-    try {
-      const url = new URL(redirectUrl, window.location.origin);
-      if (url.origin === window.location.origin && url.pathname === '/sign-up') {
-        router.replace('/sign-up');
-      } else if (url.origin === window.location.origin) {
-        router.replace(url.pathname + url.search + url.hash);
-      }
-    } catch {}
+    function handleHash() {
+      const { hash } = window.location;
+      if (!hash || !hash.startsWith('#/')) return;
+      const qsIndex = hash.indexOf('?');
+      if (qsIndex === -1) return;
+      const qs = hash.slice(qsIndex + 1);
+      const params = new URLSearchParams(qs);
+      const redirectUrl = params.get('redirect_url');
+      if (!redirectUrl) return;
+      try {
+        const url = new URL(redirectUrl, window.location.origin);
+        if (url.origin === window.location.origin && url.pathname === '/sign-up') {
+          router.replace('/sign-up');
+        } else if (url.origin === window.location.origin) {
+          router.replace(url.pathname + url.search + url.hash);
+        }
+      } catch {}
+    }
+    // Run once immediately and on hash changes
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
   }, [router]);
   return (
     <div className="mx-auto max-w-md">
