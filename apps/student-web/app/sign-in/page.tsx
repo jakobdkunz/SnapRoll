@@ -8,7 +8,7 @@ export default function StudentSignInPage() {
       <Card className="p-8 text-center">
         <div className="text-2xl font-bold mb-6">Sign in</div>
         <div className="rounded-xl overflow-hidden border">
-          <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" afterSignInUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+          <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" fallbackRedirectUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
         </div>
       </Card>
     </div>
