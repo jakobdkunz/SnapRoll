@@ -12,6 +12,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   // Convex hooks
   const session = useQuery(api.functions.wordcloud.getActiveSession, { sessionId: params.sessionId as any });
+  const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as any } : "skip");
   const answers = useQuery(api.functions.wordcloud.getAnswers, { sessionId: params.sessionId as any });
   const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
   const closeSession = useMutation(api.functions.wordcloud.closeSession);
@@ -314,11 +315,22 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   }, [words]);
 
   return (
-    <div className="min-h-dvh px-4 py-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="relative min-h-dvh px-4 py-6">
+      {/* Subtle animated gradient background like Attendance */}
+      <div className={`pointer-events-none fixed inset-0 ${section?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/35" />
+      <div className="pointer-events-none fixed -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
+      <style jsx>{`
+        @keyframes gradient_drift {
+          0% { transform: translate3d(0,0,0); }
+          50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+          100% { transform: translate3d(0,0,0); }
+        }
+      `}</style>
+      <div className="relative z-10 max-w-6xl mx-auto">
         <div className="mb-4 flex items-center justify-between gap-3">
           <button
-            className="text-slate-600 hover:text-slate-900 inline-flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
             onClick={async () => {
               try {
                 await closeSession({ sessionId: params.sessionId as any });
@@ -328,13 +340,16 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
           >
             ← Back
           </button>
-          {session ? (
-            <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800 text-center flex-1">
-              {session.prompt}
-            </div>
-          ) : (
-            <div className="text-slate-400 flex-1 text-center">Loading…</div>
-          )}
+          <div className="flex-1 text-center">
+            {section?.title && (
+              <div className="text-sm text-slate-700 truncate mb-1">{section.title}</div>
+            )}
+            {session ? (
+              <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800">{session.prompt}</div>
+            ) : (
+              <div className="text-slate-400">Loading…</div>
+            )}
+          </div>
           <div className="w-[64px]" />
         </div>
         <div ref={containerRef} className="relative w-full min-h-[70vh]">
