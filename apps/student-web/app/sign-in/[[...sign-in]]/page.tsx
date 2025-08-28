@@ -12,12 +12,12 @@ export default function StudentSignInCatchAll() {
   }, [isLoaded, isSignedIn, router]);
 
   return (
-    <div className="w-full px-4 sm:px-8 pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] overflow-x-hidden flex justify-center">
+    <div className="w-full px-4 sm:px-8 flex justify-center">
       <SignIn 
         routing="hash" 
         signUpUrl="/sign-up" 
         fallbackRedirectUrl="/" 
-        appearance={{ elements: { rootBox: 'w-full', card: 'mx-auto !w-full max-w-[26rem] shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
+        appearance={{ elements: { rootBox: 'mx-auto w-full', card: 'mx-auto w-full max-w-sm sm:max-w-md', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
       />
     </div>
   );
