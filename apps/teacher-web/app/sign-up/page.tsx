@@ -17,7 +17,7 @@ export default function TeacherSignUpPage() {
         routing="hash"
         signInUrl="/"
         fallbackRedirectUrl="/"
-        appearance={{ elements: { rootBox: 'w-full max-w-full', card: 'w-full max-w-full shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
+        appearance={{ elements: { rootBox: 'mx-auto w-full', card: 'mx-auto max-w-full shadow-none', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
       />
     </div>
   );
