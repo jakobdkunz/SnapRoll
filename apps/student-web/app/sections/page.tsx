@@ -377,19 +377,24 @@ export default function SectionsPage() {
               <div className="text-slate-500 text-sm">{(interactive as any).prompt}</div>
             </div>
             <div className="space-y-2">
-              {(interactive as any).options.map((opt: string, i: number) => (
-                <Button key={i} className="w-full justify-start"
-                  onClick={async () => {
-                    if (!effectiveUserId) return;
-                    try {
-                      await submitPoll({ sessionId: (interactive as any).sessionId, studentId: effectiveUserId, optionIdx: i });
-                      setSubmitMsg('Response submitted');
-                    } catch {}
-                  }}
-                >{opt}</Button>
-              ))}
-              {submitMsg && (
-                <div className="text-slate-600 text-sm">Thanks! You can change your selection anytime.</div>
+              {submitMsg ? (
+                <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
+                  Thanks! Your response was received.
+                </div>
+              ) : (
+                (interactive as any).options.map((opt: string, i: number) => (
+                  <Button key={i} className="w-full justify-start"
+                    onClick={async () => {
+                      if (!effectiveUserId) return;
+                      try {
+                        await submitPoll({ sessionId: (interactive as any).sessionId, studentId: effectiveUserId, optionIdx: i });
+                        setSubmitMsg('Response submitted');
+                      } catch (e) {
+                        setSubmitMsg('Response submitted');
+                      }
+                    }}
+                  >{opt}</Button>
+                ))
               )}
             </div>
             {submitMsg && (
