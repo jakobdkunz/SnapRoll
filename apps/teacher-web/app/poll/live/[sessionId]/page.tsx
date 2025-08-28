@@ -9,7 +9,7 @@ type PollSession = { id: string; prompt: string; options: string[]; showResults:
 export default function PollLivePage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
   const [toggling, setToggling] = useState(false);
-  const [showLocal, setShowLocal] = useState<boolean | null>(true);
+  const [showLocal, setShowLocal] = useState<boolean | null>(null);
 
   // Convex hooks
   // Using session details from getResults response; for header we can reuse prompt if available
@@ -22,12 +22,11 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const closePoll = useMutation(api.functions.polls.closePoll);
   const heartbeat = useMutation(api.functions.polls.heartbeat);
 
-  // Update showLocal when session data loads
+  // Update showLocal when results load
   useEffect(() => {
-    if (session && showLocal === null) {
-      setShowLocal(session.showResults);
-    }
-  }, [session, showLocal]);
+    const sr = (results as any)?.session;
+    if (sr && showLocal === null) setShowLocal(!!sr.showResults);
+  }, [results, showLocal]);
 
   // Heartbeat
   useEffect(() => {
@@ -71,20 +70,24 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
         <div className="grid place-items-center">
           <Card className="p-6 w-full max-w-3xl">
           <div className="space-y-3">
-            {(session ? JSON.parse((session as any).optionsJson || '[]') : []).map((opt: any, i: number) => {
+            {(() => {
+              try {
+                return JSON.parse(((results as any)?.session?.optionsJson) || '[]');
+              } catch { return []; }
+            })().map((opt: any, i: number) => {
               const count = results ? (results as any).results?.[i]?.count || 0 : 0;
               const total = results ? (results as any).totalAnswers || 0 : 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
-                  {(showLocal ?? session?.showResults) ? (
+                  {(showLocal ?? (results as any)?.session?.showResults) ? (
                     <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `${pct}%` }} />
                   ) : (
                                           <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `0%` }} />
                   )}
                   <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
                     <div className="font-medium">{opt}</div>
-                    {(showLocal ?? session?.showResults) ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
+                    {(showLocal ?? (results as any)?.session?.showResults) ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
                   </div>
                 </div>
               );

@@ -388,6 +388,9 @@ export default function SectionsPage() {
                   }}
                 >{opt}</Button>
               ))}
+              {submitMsg && (
+                <div className="text-slate-600 text-sm">Thanks! You can change your selection anytime.</div>
+              )}
             </div>
             {submitMsg && (
               <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full">{submitMsg}</div>
