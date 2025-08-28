@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 const isPublicRoute = createRouteMatcher(["/", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
 
-export default function middleware(req: any) {
+export default function middleware(req: any, ev: any) {
   if (!process.env.CLERK_SECRET_KEY || !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     return NextResponse.next();
   }
@@ -15,7 +15,7 @@ export default function middleware(req: any) {
       return NextResponse.redirect(url);
     }
   });
-  return handler(req as any);
+  return (handler as any)(req as any, ev);
 }
 
 export const config = {
