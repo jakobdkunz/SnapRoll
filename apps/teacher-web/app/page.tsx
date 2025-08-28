@@ -23,7 +23,7 @@ export default function TeacherWelcomePage() {
         <SignedOut>
           <div className="mb-4 text-slate-600">Sign in to continue</div>
           <div className="rounded-xl overflow-hidden border">
-            <SignIn routing="hash" signUpUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+            <SignIn signUpUrl="/sign-up" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
           </div>
         </SignedOut>
         <SignedIn>
