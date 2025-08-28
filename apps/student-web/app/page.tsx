@@ -50,7 +50,13 @@ export default function StudentWelcomePage() {
         <SignedOut>
           <div className="mb-4 text-slate-600">Sign in to continue</div>
           <div className="rounded-xl overflow-hidden border">
-            <SignIn routing="path" path="/" signUpUrl="/sign-up" fallbackRedirectUrl="/" appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} />
+            <SignIn 
+              routing="path"
+              path="/"
+              signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL || '/sign-up'}
+              fallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL || '/'}
+              appearance={{ elements: { formButtonPrimary: 'bg-blue-600 hover:bg-blue-700' } }} 
+            />
           </div>
         </SignedOut>
         <SignedIn>
