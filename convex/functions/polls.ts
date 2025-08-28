@@ -47,12 +47,8 @@ export const submitAnswer = mutation({
       .first();
 
     if (existingAnswer) {
-      // Update existing answer
-      await ctx.db.patch(existingAnswer._id, { 
-        optionIdx: args.optionIdx,
-        createdAt: Date.now(),
-      });
-      return existingAnswer._id;
+      // Do not allow changing selection
+      throw new Error("You already voted");
     } else {
       // Create new answer
       return await ctx.db.insert("pollAnswers", {
