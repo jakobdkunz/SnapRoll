@@ -22,6 +22,27 @@ export default function StudentWelcomePage() {
       if (url.pathname === '/sign-up') router.replace('/sign-up');
     } catch {}
   }, [router]);
+
+  // Handle Clerk Account Portal hash fallback: "#/?...redirect_url=..."
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const { hash } = window.location;
+    if (!hash || !hash.startsWith('#/')) return;
+    const qsIndex = hash.indexOf('?');
+    if (qsIndex === -1) return;
+    const qs = hash.slice(qsIndex + 1);
+    const params = new URLSearchParams(qs);
+    const redirectUrl = params.get('redirect_url');
+    if (!redirectUrl) return;
+    try {
+      const url = new URL(redirectUrl, window.location.origin);
+      if (url.origin === window.location.origin && url.pathname === '/sign-up') {
+        router.replace('/sign-up');
+      } else if (url.origin === window.location.origin) {
+        router.replace(url.pathname + url.search + url.hash);
+      }
+    } catch {}
+  }, [router]);
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-8 text-center">
