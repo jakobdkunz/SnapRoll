@@ -9,12 +9,30 @@ import { api } from '@snaproll/convex-client';
 export default function TeacherWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const didUpsertRef = (globalThis as any).__teacherDidUpsert ?? { current: false };
+  ;(globalThis as any).__teacherDidUpsert = didUpsertRef;
 
+  // Redirect guests to dedicated sign-in page
   useEffect(() => {
-    // When signed in, upsert the user as TEACHER then go to dashboard
-    // Done inside SignedIn via a microtask
-  }, []);
+    if (!isLoaded) return;
+    if (!isSignedIn) router.replace('/sign-in');
+  }, [isLoaded, isSignedIn, router]);
+
+  // One-time upsert after Clerk token is available, then go to dashboard
+  useEffect(() => {
+    if (didUpsertRef.current) return;
+    if (!isLoaded || !isSignedIn) return;
+    (async () => {
+      try {
+        const token = await getToken?.({ template: 'convex' });
+        if (!token) return;
+        didUpsertRef.current = true;
+        await upsertUser({ role: 'TEACHER' });
+      } catch {}
+      router.replace('/dashboard');
+    })();
+  }, [isLoaded, isSignedIn, getToken, upsertUser, router]);
 
   return (
     <div className="mx-auto max-w-md">
@@ -22,18 +40,9 @@ export default function TeacherWelcomePage() {
         <div className="text-2xl font-bold mb-6">SnapRoll</div>
         <SignedOut>
           <div className="mb-4 text-slate-600">Sign in to continue</div>
-          <div className="rounded-xl overflow-hidden border p-6">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-4 py-2" onClick={() => router.push('/sign-in')}>Sign In</button>
-          </div>
         </SignedOut>
         <SignedIn>
           <div className="text-slate-600">Signing you in…</div>
-          {isLoaded && isSignedIn ? (
-            Promise.resolve().then(async () => {
-              try { await upsertUser({ role: "TEACHER" }); } catch {}
-              router.replace('/dashboard');
-            }) as any
-          ) : null}
         </SignedIn>
       </Card>
     </div>
