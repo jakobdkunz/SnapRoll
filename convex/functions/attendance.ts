@@ -80,10 +80,18 @@ export const checkIn = mutation({
     const BLOCK_MS = 30 * 60 * 1000;
     // Count attempts across all codes for this user
     const key = 'checkin:any';
-    const bucket = await ctx.db
+    const buckets = await ctx.db
       .query("rateLimits")
       .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
-      .first();
+      .order("desc")
+      .collect();
+    const bucket = buckets[0];
+    // Cleanup any stale duplicates
+    if (buckets.length > 1) {
+      for (let i = 1; i < buckets.length; i++) {
+        try { await ctx.db.delete(buckets[i]._id); } catch {}
+      }
+    }
     if (bucket?.blockedUntil && bucket.blockedUntil > now) {
       throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
     }
@@ -108,7 +116,7 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      throw new ConvexError(`Invalid code. Please check the code and try again. (${attemptsLeft} attempts remaining)`);
+      throw new ConvexError(`Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)`);
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
