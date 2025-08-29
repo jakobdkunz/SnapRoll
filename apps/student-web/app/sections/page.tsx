@@ -102,7 +102,8 @@ export default function SectionsPage() {
         setCheckinError('Failed to check in. Please try again.');
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to check in.';
+      const serverMsg = (e as any)?.data ?? (e as any)?.message;
+      const msg = typeof serverMsg === 'string' && serverMsg ? serverMsg : 'Failed to check in.';
       setCheckinError(msg);
     } finally {
       setChecking(false);
