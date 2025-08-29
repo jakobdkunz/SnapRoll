@@ -19,13 +19,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For navigations (HTML pages), use network-first to avoid stale pages
+  // For navigations (HTML pages), use network-first; when signed in, do not cache navigations
   if (request.mode === 'navigate') {
+    const isSignedIn = (document.cookie || '').includes('snaproll_auth=1');
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
+          if (!isSignedIn) {
+            const copy = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(request, copy));
+          }
           return response;
         })
         .catch(async () => (await caches.match(request)) || (await caches.match('/')))

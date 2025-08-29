@@ -18,7 +18,10 @@ export function AuthGuard() {
       }, 50);
       return () => clearTimeout(t);
     }
-    // Do not persist PII in localStorage; rely on Clerk/Convex in-memory state
+    // Set a non-PII cookie to indicate auth state for the service worker
+    try {
+      document.cookie = `snaproll_auth=${isSignedIn ? '1' : '0'}; Path=/; SameSite=Lax`;
+    } catch {}
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;
