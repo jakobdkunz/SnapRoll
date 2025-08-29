@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 const EnvSchema = z.object({
-  DATABASE_URL: z.string().url(),
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
   NEXT_PUBLIC_TEACHER_APP_URL: z.string().url().optional(),
   NEXT_PUBLIC_STUDENT_APP_URL: z.string().url().optional(),

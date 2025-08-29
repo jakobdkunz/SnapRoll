@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+import { requireTeacher, requireTeacherOwnsSection, requireStudentEnrollment } from "./_auth";
 
 export const getSectionHistory = query({
   args: {
@@ -8,6 +10,9 @@ export const getSectionHistory = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
+    // Restrict to owner teacher
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all class days for this section, ordered by date desc
@@ -140,6 +145,16 @@ export const getStudentHistory = query({
     limit: v.number(),
   },
   handler: async (ctx, args) => {
+    // Only allow the student to access their own consolidated history
+    // Teachers should use section-scoped history above
+    const identity = await ctx.auth.getUserIdentity();
+    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+    if (!email) throw new Error("Unauthenticated");
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q: any) => q.eq("email", email))
+      .first();
+    if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
     const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all sections the student is enrolled in
