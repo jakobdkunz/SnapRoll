@@ -85,29 +85,30 @@ export const checkIn = mutation({
       .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
       .order("desc")
       .collect();
-    const bucket = buckets[0];
-    // Cleanup any stale duplicates
-    if (buckets.length > 1) {
-      for (let i = 1; i < buckets.length; i++) {
-        try { await ctx.db.delete(buckets[i]._id); } catch {}
-      }
-    }
-    if (bucket?.blockedUntil && bucket.blockedUntil > now) {
+    // Choose the active bucket in the current window, if any
+    let bucket = buckets.find((b: any) => now - b.windowStart < WINDOW_MS) || null;
+    // If any bucket is blocked, enforce block
+    const blocked = buckets.find((b: any) => b.blockedUntil && b.blockedUntil > now);
+    if (blocked) {
       throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
     }
-    const inWindow = bucket && now - bucket.windowStart < WINDOW_MS;
-    const windowStart = inWindow ? bucket!.windowStart : now;
-    const count = inWindow ? (bucket!.count + 1) : 1;
-    const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
+    let windowStart = now;
+    let count = 1;
+    let attemptsLeft = MAX_ATTEMPTS - 1;
     if (bucket) {
+      windowStart = bucket.windowStart;
+      count = bucket.count + 1;
+      const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
       await ctx.db.patch(bucket._id, { windowStart, count, blockedUntil });
+      if (blockedUntil) {
+        throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
+      }
+      attemptsLeft = Math.max(0, MAX_ATTEMPTS - count);
     } else {
-      await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart, count, blockedUntil });
+      // create new bucket in this window
+      attemptsLeft = MAX_ATTEMPTS - 1;
+      await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart, count, blockedUntil: undefined });
     }
-    if (blockedUntil) {
-      throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
-    }
-    const attemptsLeft = Math.max(0, MAX_ATTEMPTS - count);
     
     // Find the class day with this attendance code
     const classDay = await ctx.db
