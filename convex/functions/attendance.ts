@@ -1,5 +1,32 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+
+async function requireCurrentUser(ctx: any) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Unauthenticated");
+  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
+  if (!email) throw new Error("Unauthenticated");
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_email", (q: any) => q.eq("email", email))
+    .first();
+  if (!user) throw new Error("User not provisioned");
+  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
+}
+
+async function requireTeacherOwnsSection(ctx: any, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
+  const section = await ctx.db.get(sectionId);
+  if (!section || section.teacherId !== teacherUserId) throw new Error("Forbidden");
+  return section;
+}
+
+async function requireTeacherOwnershipForClassDay(ctx: any, classDayId: Id<'classDays'>, teacherUserId: Id<'users'>) {
+  const classDay = await ctx.db.get(classDayId);
+  if (!classDay) throw new Error("Not found");
+  await requireTeacherOwnsSection(ctx, classDay.sectionId as Id<'sections'>, teacherUserId);
+  return classDay;
+}
 
 export const getClassDay = query({
   args: { 
@@ -41,9 +68,11 @@ export const createClassDay = mutation({
 export const checkIn = mutation({
   args: {
     attendanceCode: v.string(),
-    studentId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "STUDENT") throw new Error("Only students can check in");
+    const studentId = user._id;
     const now = Date.now();
     
     // Find the class day with this attendance code
@@ -64,7 +93,7 @@ export const checkIn = mutation({
     const enrollment = await ctx.db
       .query("enrollments")
       .withIndex("by_section_student", (q) => 
-        q.eq("sectionId", classDay.sectionId).eq("studentId", args.studentId)
+        q.eq("sectionId", classDay.sectionId).eq("studentId", studentId)
       )
       .first();
     
@@ -76,7 +105,7 @@ export const checkIn = mutation({
     const existingRecord = await ctx.db
       .query("attendanceRecords")
       .withIndex("by_classDay_student", (q) => 
-        q.eq("classDayId", classDay._id).eq("studentId", args.studentId)
+        q.eq("classDayId", classDay._id).eq("studentId", studentId)
       )
       .first();
     
@@ -88,7 +117,7 @@ export const checkIn = mutation({
       // Create new record
       return await ctx.db.insert("attendanceRecords", {
         classDayId: classDay._id,
-        studentId: args.studentId,
+        studentId,
         status: "PRESENT",
       });
     }
@@ -98,6 +127,9 @@ export const checkIn = mutation({
 export const getAttendanceStatus = query({
   args: { sectionId: v.id("sections") },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
     const now = Date.now();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -153,6 +185,9 @@ export const getAttendanceStatus = query({
 export const getAttendanceRecords = query({
   args: { classDayId: v.id("classDays") },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     return await ctx.db
       .query("attendanceRecords")
       .withIndex("by_classDay", (q) => q.eq("classDayId", args.classDayId))
@@ -171,9 +206,11 @@ export const updateManualStatus = mutation({
       v.literal("NOT_JOINED"),
       v.literal("BLANK")
     ),
-    teacherId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     // Check if status is BLANK - only allow if original status was BLANK
     if (args.status === "BLANK") {
       const originalRecord = await ctx.db
@@ -200,7 +237,7 @@ export const updateManualStatus = mutation({
       // Update existing manual change
       await ctx.db.patch(existingManualChange._id, {
         status: args.status,
-        teacherId: args.teacherId,
+        teacherId: user._id,
         createdAt: Date.now(),
       });
       return existingManualChange._id;
@@ -210,7 +247,7 @@ export const updateManualStatus = mutation({
         classDayId: args.classDayId,
         studentId: args.studentId,
         status: args.status,
-        teacherId: args.teacherId,
+        teacherId: user._id,
         createdAt: Date.now(),
       });
     }
@@ -220,6 +257,9 @@ export const updateManualStatus = mutation({
 export const getManualStatusChanges = query({
   args: { classDayId: v.id("classDays") },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     return await ctx.db
       .query("manualStatusChanges")
       .withIndex("by_classDay", (q) => q.eq("classDayId", args.classDayId))
@@ -232,6 +272,9 @@ export const startAttendance = mutation({
     sectionId: v.id("sections"),
   },
   handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
     const now = Date.now();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
