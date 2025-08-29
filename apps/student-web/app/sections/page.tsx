@@ -99,7 +99,11 @@ export default function SectionsPage() {
             setConfirmMsg('You already checked in for this class.');
             setCheckinError(null);
           } else {
-            setCheckinError(msg);
+            if (typeof r.blockedUntil === 'number') {
+              setCheckinError(null);
+            } else {
+              setCheckinError(msg);
+            }
           }
           if (typeof r.blockedUntil === 'number') setBlockedUntil(r.blockedUntil);
         }
@@ -254,13 +258,16 @@ export default function SectionsPage() {
           <div className="font-medium">Attendance</div>
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
+        {blockedUntil && blockedUntil > Date.now() && (
+          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
+        )}
         <div className="flex items-center justify-center gap-3">
           <HiOutlineUserGroup className="w-10 h-10 text-black" />
           {digits.map((d, i) => (
             <input
               key={i}
               ref={inputRefs[i]}
-              className="w-12 h-12 text-center text-xl rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300"
+              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-900 border-slate-300' }`}
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
@@ -273,13 +280,10 @@ export default function SectionsPage() {
             />
           ))}
         </div>
-        {blockedUntil && blockedUntil > Date.now() && (
-          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
-        )}
         {confirmMsg && (
           <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
         )}
-        {checkinError && (
+        {checkinError && (!(blockedUntil && blockedUntil > Date.now())) && (
           <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
         )}
         <div className="flex items-center justify-center">
@@ -448,7 +452,7 @@ function BlockedBanner({ blockedUntil, onUnblock }: { blockedUntil: number; onUn
   const ss = String(totalSeconds % 60).padStart(2, '0');
   return (
     <div className="mt-3 w-full rounded-lg bg-amber-50 border border-amber-200 text-amber-900 p-2 text-sm text-center">
-      Too many attempts. Try again in {mm}:{ss}
+      Too many attempts. Try again in {mm}:{ss} or ask your instructor to mark your attendance manually.
     </div>
   );
 }
