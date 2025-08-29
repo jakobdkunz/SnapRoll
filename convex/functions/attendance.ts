@@ -1,17 +1,17 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
 async function requireCurrentUser(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthenticated");
+  if (!identity) throw new ConvexError("Please sign in to continue.");
   const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new Error("Unauthenticated");
+  if (!email) throw new ConvexError("Please sign in to continue.");
   const user = await ctx.db
     .query("users")
     .withIndex("by_email", (q: any) => q.eq("email", email))
     .first();
-  if (!user) throw new Error("User not provisioned");
+  if (!user) throw new ConvexError("Account not provisioned. Try refreshing or contact your instructor.");
   return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
 }
 
@@ -71,7 +71,7 @@ export const checkIn = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
-    if (user.role !== "STUDENT") throw new Error("Only students can check in");
+    if (user.role !== "STUDENT") throw new ConvexError("Only students can check in.");
     const studentId = user._id;
     const now = Date.now();
     
@@ -82,11 +82,11 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      throw new Error("Invalid attendance code");
+      throw new ConvexError("Invalid code. Please check the code and try again.");
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
-      throw new Error("Attendance code has expired");
+      throw new ConvexError("This code has expired. Ask your instructor for a new one.");
     }
     
     // Check if student is enrolled
@@ -98,7 +98,7 @@ export const checkIn = mutation({
       .first();
     
     if (!enrollment) {
-      throw new Error("Student not enrolled in this section");
+      throw new ConvexError("You’re not enrolled in this course. Ask your instructor to add you.");
     }
     
     // Check if attendance record already exists
