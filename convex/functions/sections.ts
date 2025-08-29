@@ -93,3 +93,22 @@ export const deleteSection = mutation({
     return await ctx.db.delete(args.id);
   },
 });
+
+export const getByIds = query({
+  args: { ids: v.array(v.id("sections")) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const docs = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
+    const sections = docs.filter(Boolean) as Array<{ _id: Id<'sections'>; teacherId: Id<'users'>; title: string; gradient?: string }>;
+    if (user.role === "TEACHER") {
+      return sections.filter((s) => s.teacherId === user._id);
+    }
+    // Student: return only sections where the student is enrolled
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_student", (q) => q.eq("studentId", user._id))
+      .collect();
+    const allowed = new Set(enrollments.map((e) => e.sectionId));
+    return sections.filter((s) => allowed.has(s._id));
+  },
+});
