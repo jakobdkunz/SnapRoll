@@ -1,6 +1,6 @@
 "use client";
 import { Card } from '@snaproll/ui';
-import { SignedIn, SignedOut, useAuth } from '@clerk/nextjs';
+import { SignedOut, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useMutation } from 'convex/react';
@@ -9,9 +9,8 @@ import { api } from '@snaproll/convex-client';
 export default function TeacherWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
-  const { isLoaded, isSignedIn, getToken } = useAuth();
-  const didUpsertRef = (globalThis as any).__teacherDidUpsert ?? { current: false };
-  ;(globalThis as any).__teacherDidUpsert = didUpsertRef;
+  const { isLoaded, isSignedIn } = useAuth();
+  const didUpsertRef = { current: false };
 
   // Redirect guests to dedicated sign-in page
   useEffect(() => {
@@ -19,20 +18,21 @@ export default function TeacherWelcomePage() {
     if (!isSignedIn) router.replace('/sign-in');
   }, [isLoaded, isSignedIn, router]);
 
-  // One-time upsert after Clerk token is available, then go to dashboard
+  // Upsert once per browser session (non-blocking), then redirect immediately
   useEffect(() => {
-    if (didUpsertRef.current) return;
     if (!isLoaded || !isSignedIn) return;
-    (async () => {
-      try {
-        const token = await getToken?.({ template: 'convex' });
-        if (!token) return;
-        didUpsertRef.current = true;
-        await upsertUser({ role: 'TEACHER' });
-      } catch {}
-      router.replace('/dashboard');
-    })();
-  }, [isLoaded, isSignedIn, getToken, upsertUser, router]);
+    try {
+      const key = 'snaproll.teacher.upserted';
+      const already = typeof window !== 'undefined' ? sessionStorage.getItem(key) : '1';
+      if (!already) {
+        // Fire and forget; do not block navigation
+        upsertUser({ role: 'TEACHER' }).finally(() => {
+          try { sessionStorage.setItem(key, '1'); } catch {}
+        });
+      }
+    } catch {}
+    router.replace('/dashboard');
+  }, [isLoaded, isSignedIn, upsertUser, router]);
 
   return (
     <div className="mx-auto max-w-md">
@@ -41,9 +41,6 @@ export default function TeacherWelcomePage() {
         <SignedOut>
           <div className="mb-4 text-slate-600">Sign in to continue</div>
         </SignedOut>
-        <SignedIn>
-          <div className="text-slate-600">Signing you in…</div>
-        </SignedIn>
       </Card>
     </div>
   );
