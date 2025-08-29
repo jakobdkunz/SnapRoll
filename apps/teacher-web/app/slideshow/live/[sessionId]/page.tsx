@@ -351,11 +351,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => { cancelled = true; window.clearInterval(id); };
   }, [sessionId]);
 
-  // Heartbeat
+  // Heartbeat (10s) to keep session fresh for students
   useEffect(() => {
-    const id = window.setInterval(() => { /* heartbeat via Convex if needed elsewhere */ }, 5000);
+    const id = window.setInterval(() => { 
+      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+    }, 10000);
     return () => window.clearInterval(id);
-  }, [sessionId]);
+  }, [sessionId, heartbeat]);
 
   // Recompute frame on resize
   useEffect(() => {
