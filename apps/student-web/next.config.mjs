@@ -39,6 +39,7 @@ const nextConfig = {
       "img-src 'self' data: blob:",
       "font-src 'self'",
       "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud",
+      "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
