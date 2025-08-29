@@ -87,11 +87,12 @@ export default function SectionsPage() {
       // Use Convex mutation (server derives student from identity)
       const result: unknown = await checkInMutation({ attendanceCode: code });
       if (result && typeof result === 'object' && result !== null && 'ok' in result) {
-        const r = result as { ok: boolean; error?: string };
+        const r = result as { ok: boolean; error?: string; attemptsLeft?: number; blockedUntil?: number };
         if (r.ok) {
           setConfirmMsg(`Checked in successfully!`);
           setDigits(['', '', '', '']);
           inputRefs[0].current?.focus();
+          setBlockedUntil(null);
         } else {
           const msg = r.error || 'Failed to check in.';
           if (/already checked in/i.test(msg)) {
@@ -100,12 +101,14 @@ export default function SectionsPage() {
           } else {
             setCheckinError(msg);
           }
+          if (typeof r.blockedUntil === 'number') setBlockedUntil(r.blockedUntil);
         }
       } else if (typeof result === 'string') {
         // Back-compat: server returned a recordId string
         setConfirmMsg(`Checked in successfully!`);
         setDigits(['', '', '', '']);
         inputRefs[0].current?.focus();
+        setBlockedUntil(null);
       } else {
         setCheckinError('Failed to check in. Please try again.');
       }
@@ -152,6 +155,7 @@ export default function SectionsPage() {
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [checking, setChecking] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -262,13 +266,16 @@ export default function SectionsPage() {
               maxLength={1}
               value={d}
               placeholder={String(i + 1)}
-              disabled={checking}
+              disabled={checking || (blockedUntil !== null && blockedUntil > Date.now())}
               onChange={(e) => handleDigitChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={i === 0 ? handlePaste : undefined}
             />
           ))}
         </div>
+        {blockedUntil && blockedUntil > Date.now() && (
+          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
+        )}
         {confirmMsg && (
           <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
         )}
@@ -342,7 +349,7 @@ export default function SectionsPage() {
                 }}
               >Submit</Button>
             </div>
-            {/* removed noisy green banner  */}
+            {/* removed noisy green banner */}
           </div>
         ) : interactive.kind === 'poll' ? (
           <div className="space-y-3">
@@ -422,6 +429,26 @@ export default function SectionsPage() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function BlockedBanner({ blockedUntil, onUnblock }: { blockedUntil: number; onUnblock: () => void }) {
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+  const remainingMs = Math.max(0, blockedUntil - now);
+  useEffect(() => {
+    if (remainingMs <= 0) onUnblock();
+  }, [remainingMs, onUnblock]);
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const ss = String(totalSeconds % 60).padStart(2, '0');
+  return (
+    <div className="mt-3 w-full rounded-lg bg-amber-50 border border-amber-200 text-amber-900 p-2 text-sm text-center">
+      Too many attempts. Try again in {mm}:{ss}
     </div>
   );
 }
