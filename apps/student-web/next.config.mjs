@@ -19,30 +19,45 @@ const nextConfig = {
   },
   // Add cache-busting headers only in development
   async headers() {
-    // Only apply no-cache headers in development
     if (process.env.NODE_ENV === 'development') {
       return [
         {
           source: '/_next/static/:path*',
           headers: [
-            {
-              key: 'Cache-Control',
-              value: 'no-cache, no-store, must-revalidate',
-            },
-            {
-              key: 'Pragma',
-              value: 'no-cache',
-            },
-            {
-              key: 'Expires',
-              value: '0',
-            },
+            { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+            { key: 'Pragma', value: 'no-cache' },
+            { key: 'Expires', value: '0' },
           ],
         },
       ];
     }
-    // In production, return empty array (use default caching)
-    return [];
+    // Production security headers
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.dev https://*.convex.cloud https://*.vercel-insights.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self'",
+      "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.convex.cloud wss://*.convex.cloud",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; ');
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'geolocation=(), microphone=(), camera=()' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
+        ],
+      },
+    ];
   },
 };
 export default nextConfig;
