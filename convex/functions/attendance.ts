@@ -90,24 +90,12 @@ export const checkIn = mutation({
     // If any bucket is blocked, enforce block
     const blocked = buckets.find((b: any) => b.blockedUntil && b.blockedUntil > now);
     if (blocked) {
-      return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again." };
+      return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again.", attemptsLeft: 0, blockedUntil: blocked.blockedUntil };
     }
-    let windowStart = now;
-    let count = 1;
-    let attemptsLeft = MAX_ATTEMPTS - 1;
-    if (bucket) {
-      windowStart = bucket.windowStart;
-      count = bucket.count + 1;
-      const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
-      await ctx.db.patch(bucket._id, { windowStart, count, blockedUntil });
-      if (blockedUntil) {
-        return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again." };
-      }
-      attemptsLeft = Math.max(0, MAX_ATTEMPTS - count);
-    } else {
-      // create new bucket in this window
-      attemptsLeft = MAX_ATTEMPTS - 1;
-      await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart, count, blockedUntil: undefined });
+    // Create a window bucket if none exists yet (count will be incremented only on failures)
+    if (!bucket) {
+      const id = await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart: now, count: 0, blockedUntil: undefined });
+      bucket = await ctx.db.get(id);
     }
     
     // Find the class day with this attendance code
@@ -117,11 +105,19 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      return { ok: false, error: `Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)` };
+      const nextCount = (bucket as any).count + 1;
+      const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
+      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
+      return { ok: false, error: `Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)`, attemptsLeft, blockedUntil };
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
-      return { ok: false, error: "This code has expired. Ask your instructor for a new one." };
+      const nextCount = (bucket as any).count + 1;
+      const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
+      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
+      return { ok: false, error: "This code has expired. Ask your instructor for a new one.", attemptsLeft, blockedUntil };
     }
     
     // Check if student is enrolled
@@ -133,7 +129,11 @@ export const checkIn = mutation({
       .first();
     
     if (!enrollment) {
-      return { ok: false, error: "You’re not enrolled in this course. Ask your instructor to add you." };
+      const nextCount = (bucket as any).count + 1;
+      const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
+      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
+      return { ok: false, error: "You’re not enrolled in this course. Ask your instructor to add you.", attemptsLeft, blockedUntil };
     }
     
     // Check if attendance record already exists
@@ -145,20 +145,24 @@ export const checkIn = mutation({
       .first();
     
     if (existingRecord) {
-      // If already present, return a user-friendly message
+      // If already present, do not count as failure, do not reset counter
       if (existingRecord.status === "PRESENT") {
-        return { ok: false, error: "You already checked in for this class." };
+        return { ok: false, error: "You already checked in for this class.", attemptsLeft: Math.max(0, MAX_ATTEMPTS - (bucket as any).count) };
       }
-      // Update existing record from other status to PRESENT
+      // Update existing record from other status to PRESENT (success)
       await ctx.db.patch(existingRecord._id, { status: "PRESENT" });
+      // Reset attempts on success
+      await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: existingRecord._id };
     } else {
-      // Create new record
+      // Create new record (success)
       const id = await ctx.db.insert("attendanceRecords", {
         classDayId: classDay._id,
         studentId,
         status: "PRESENT",
       });
+      // Reset attempts on success
+      await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: id };
     }
   },
