@@ -12,7 +12,7 @@ export default function StudentSignUpCatchAll() {
   }, [isLoaded, isSignedIn, router]);
 
   return (
-    <div className="w-screen ml-[calc(50%-50vw)] px-4 sm:px-6 flex justify-center">
+    <div className="w-full px-4 sm:px-6 flex justify-center">
       <div className="w-full max-w-sm sm:max-w-md">
         <SignUp 
           routing="hash" 
