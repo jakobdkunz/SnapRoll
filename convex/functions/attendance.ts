@@ -74,6 +74,29 @@ export const checkIn = mutation({
     if (user.role !== "STUDENT") throw new ConvexError("Only students can check in.");
     const studentId = user._id;
     const now = Date.now();
+    // Rate limit: 6 attempts per minute, backoff 2 minutes on block
+    const WINDOW_MS = 60_000;
+    const MAX_ATTEMPTS = 6;
+    const BLOCK_MS = 120_000;
+    const key = `checkin:${args.attendanceCode.slice(0, 2)}`; // shard a bit but avoid echoing full code
+    const bucket = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
+      .first();
+    if (bucket?.blockedUntil && bucket.blockedUntil > now) {
+      throw new ConvexError("Too many attempts. Please wait a minute and try again.");
+    }
+    const windowStart = bucket && now - bucket.windowStart < WINDOW_MS ? bucket.windowStart : now;
+    const count = bucket && now - bucket.windowStart < WINDOW_MS ? (bucket.count + 1) : 1;
+    const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
+    if (bucket) {
+      await ctx.db.patch(bucket._id, { windowStart, count, blockedUntil });
+    } else {
+      await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart, count, blockedUntil });
+    }
+    if (blockedUntil) {
+      throw new ConvexError("Too many attempts. Please wait a minute and try again.");
+    }
     
     // Find the class day with this attendance code
     const classDay = await ctx.db
