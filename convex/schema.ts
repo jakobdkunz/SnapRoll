@@ -157,4 +157,14 @@ export default defineSchema({
     .index("by_asset", ["assetId"])
     .index("by_session_index", ["sessionId", "index"])
     .index("by_asset_index", ["assetId", "index"]),
+
+  // Simple rate limiter buckets per user + key
+  rateLimits: defineTable({
+    userId: v.id("users"),
+    key: v.string(),
+    windowStart: v.number(),
+    count: v.number(),
+    blockedUntil: v.optional(v.number()),
+  })
+    .index("by_user_key", ["userId", "key"]) ,
 });
