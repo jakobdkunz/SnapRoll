@@ -12,8 +12,8 @@ export default function TeacherSignInCatchAll() {
   }, [isLoaded, isSignedIn, router]);
 
   return (
-    <div className="w-full px-4 sm:px-6">
-      <div className="mx-auto w-full max-w-sm sm:max-w-md">
+    <div className="w-screen ml-[calc(50%-50vw)] px-4 sm:px-6 flex justify-center">
+      <div className="w-full max-w-sm sm:max-w-md">
         <SignIn 
           routing="hash" 
           signUpUrl="/sign-up" 
