@@ -91,8 +91,8 @@ export default function SectionsPage() {
     try {
       setChecking(true);
       
-      // Use Convex mutation
-      const recordId = await checkInMutation({ attendanceCode: code, studentId: effectiveUserId });
+      // Use Convex mutation (server derives student from identity)
+      const recordId = await checkInMutation({ attendanceCode: code });
       
       if (recordId) {
         setConfirmMsg(`Checked in successfully!`);
@@ -260,7 +260,7 @@ export default function SectionsPage() {
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="text-xl font-semibold">Welcome, {studentName ?? localStorage.getItem('snaproll.studentName')}!</div>
+        <div className="text-xl font-semibold">Welcome, {studentName ?? ''}!</div>
       </div>
 
       <Card className="p-6 space-y-3">

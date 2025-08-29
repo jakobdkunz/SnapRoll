@@ -19,14 +19,7 @@ export function AuthGuard() {
       }, 50);
       return () => clearTimeout(t);
     }
-    if (isSignedIn && user) {
-      try {
-        const email = user.primaryEmailAddress?.emailAddress;
-        const fullName = user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        if (email) localStorage.setItem('snaproll.teacherEmail', email);
-        if (fullName) localStorage.setItem('snaproll.teacherName', fullName);
-      } catch {}
-    }
+    // Do not persist PII in localStorage; rely on Clerk/Convex in-memory state
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;

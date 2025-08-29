@@ -34,12 +34,7 @@ export function TeacherHeaderRight() {
     if (currentUser) {
       const newId = (currentUser._id as unknown as string) || null;
       setTeacherId(newId);
-      try {
-        localStorage.setItem('snaproll.teacherId', newId || '');
-        const full = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-        if (full) localStorage.setItem('snaproll.teacherName', full);
-        if ((currentUser as any).email) localStorage.setItem('snaproll.teacherEmail', (currentUser as any).email);
-      } catch {}
+      // Avoid persisting PII to localStorage
     }
   }, [currentUser]);
 
@@ -48,9 +43,6 @@ export function TeacherHeaderRight() {
     if (teacher) {
       setFirstName(teacher.firstName);
       setLastName(teacher.lastName);
-      const full = `${teacher.firstName} ${teacher.lastName}`;
-      localStorage.setItem('snaproll.teacherName', full);
-      localStorage.setItem('snaproll.teacherEmail', teacher.email);
     }
   }, [teacher]);
 
@@ -63,20 +55,8 @@ export function TeacherHeaderRight() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') { setOpen(false); setProfileOpen(false); }
     }
-    function handleFocus() {
-      const id = localStorage.getItem('snaproll.teacherId');
-      setTeacherId(id);
-    }
-    function handleStorage() {
-      const id = localStorage.getItem('snaproll.teacherId');
-      setTeacherId(id);
-      if (!id) {
-        setFirstName('');
-        setLastName('');
-        setOpen(false);
-        setProfileOpen(false);
-      }
-    }
+    function handleFocus() {}
+    function handleStorage() {}
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
@@ -92,13 +72,11 @@ export function TeacherHeaderRight() {
   }, [open]);
 
   async function saveProfile() {
-    const id = localStorage.getItem('snaproll.teacherId');
+    const id = teacherId;
     if (!id || !firstName.trim() || !lastName.trim()) return;
     setSaving(true);
     try {
       await updateUser({ id: id as any, firstName: firstName.trim(), lastName: lastName.trim() });
-      const full = `${firstName.trim()} ${lastName.trim()}`;
-      localStorage.setItem('snaproll.teacherName', full);
       setProfileOpen(false);
     } finally {
       setSaving(false);
@@ -108,9 +86,6 @@ export function TeacherHeaderRight() {
   const { signOut } = useClerk();
   function logout() {
     try { signOut().catch(() => {}); } catch {}
-    localStorage.removeItem('snaproll.teacherId');
-    localStorage.removeItem('snaproll.teacherName');
-    localStorage.removeItem('snaproll.teacherEmail');
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
