@@ -342,7 +342,7 @@ export default function SectionsPage() {
                 }}
               >Submit</Button>
             </div>
-            {/* removed noisy green banner */}
+            {/* removed noisy green banner  */}
           </div>
         ) : interactive.kind === 'poll' ? (
           <div className="space-y-3">
