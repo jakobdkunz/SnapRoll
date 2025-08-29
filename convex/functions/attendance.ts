@@ -78,7 +78,8 @@ export const checkIn = mutation({
     const WINDOW_MS = 60_000;
     const MAX_ATTEMPTS = 6;
     const BLOCK_MS = 120_000;
-    const key = `checkin:${args.attendanceCode.slice(0, 2)}`; // shard a bit but avoid echoing full code
+    // Count attempts across all codes for this user
+    const key = 'checkin:any';
     const bucket = await ctx.db
       .query("rateLimits")
       .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
