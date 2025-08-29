@@ -29,11 +29,11 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     return Array.from(map.entries()).map(([word, count]) => ({ word, count }));
   })();
 
-  // Heartbeat to keep session active
+  // Heartbeat to keep session active (10s)
   useEffect(() => {
     const interval = window.setInterval(() => {
       void heartbeat({ sessionId: params.sessionId as any });
-    }, 5000);
+    }, 10000);
     return () => window.clearInterval(interval);
   }, [sessionId, heartbeat]);
 

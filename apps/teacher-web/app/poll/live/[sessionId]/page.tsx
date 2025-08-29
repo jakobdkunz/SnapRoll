@@ -28,11 +28,11 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     if (sr && showLocal === null) setShowLocal(!!sr.showResults);
   }, [results, showLocal]);
 
-  // Heartbeat
+  // Heartbeat (10s to reduce DB writes)
   useEffect(() => {
     const id = window.setInterval(() => { 
       void heartbeat({ sessionId: params.sessionId as any }); 
-    }, 5000);
+    }, 10000);
     return () => window.clearInterval(id);
   }, [sessionId, heartbeat]);
 
