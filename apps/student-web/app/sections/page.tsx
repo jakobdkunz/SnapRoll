@@ -343,7 +343,7 @@ export default function SectionsPage() {
                 onClick={async () => {
                   if (!effectiveUserId || !answer.trim()) return;
                   try {
-                    await submitWordcloud({ sessionId: interactive.sessionId, studentId: effectiveUserId, text: answer.trim() });
+                    await submitWordcloud({ sessionId: interactive.sessionId, text: answer.trim() });
                     setAnswer('');
                     setSubmitMsg('Answer submitted.');
                   } catch (e: unknown) {
@@ -372,7 +372,7 @@ export default function SectionsPage() {
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: interactive.sessionId, studentId: effectiveUserId, optionIdx: i });
+                        await submitPoll({ sessionId: interactive.sessionId, optionIdx: i });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');
