@@ -19,11 +19,17 @@ export const get = query({
   args: { id: v.id("sections") },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
-    // Allow teachers to fetch their own section; students should not fetch arbitrary sections yet
+    // Allow teachers to fetch their own section; allow students if enrolled
     const section = await ctx.db.get(args.id);
     if (!section) return null;
     if (user.role === "TEACHER" && section.teacherId === user._id) return section;
-    // For now, deny others (we can expand to enrolled students later)
+    if (user.role === "STUDENT") {
+      const enrollment = await ctx.db
+        .query("enrollments")
+        .withIndex("by_section_student", (q) => q.eq("sectionId", args.id).eq("studentId", user._id))
+        .first();
+      if (enrollment) return section;
+    }
     throw new Error("Forbidden");
   },
 });
