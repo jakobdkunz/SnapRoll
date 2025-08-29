@@ -1,21 +1,30 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+import { requireTeacher, requireTeacherOwnsSection, requireCurrentUser } from "./_auth";
+import { checkAndIncrementRateLimit } from "./_rateLimit";
 
 // Asset management
 export const createAsset = mutation({
   args: {
-    teacherId: v.id("users"),
     title: v.string(),
     filePath: v.string(),
     mimeType: v.string(),
     totalSlides: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const title = (args.title || "").trim();
+    if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
+    const filePath = (args.filePath || "").trim();
+    if (filePath.length === 0 || filePath.length > 1024) throw new Error("Invalid file path");
+    const mimeType = (args.mimeType || "").trim();
+    if (mimeType.length === 0 || mimeType.length > 100) throw new Error("Invalid mime type");
     return await ctx.db.insert("slideshowAssets", {
-      teacherId: args.teacherId,
-      title: args.title,
-      filePath: args.filePath,
-      mimeType: args.mimeType,
+      teacherId: teacher._id,
+      title,
+      filePath,
+      mimeType,
       totalSlides: args.totalSlides,
       createdAt: Date.now(),
     });
@@ -25,6 +34,8 @@ export const createAsset = mutation({
 export const getAssetsByTeacher = query({
   args: { teacherId: v.id("users") },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    if (teacher._id !== args.teacherId) throw new Error("Forbidden");
     return await ctx.db
       .query("slideshowAssets")
       .withIndex("by_teacher", (q) => q.eq("teacherId", args.teacherId))
@@ -45,6 +56,10 @@ export const startSlideshow = mutation({
     officeMode: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
+    if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
     return await ctx.db.insert("slideshowSessions", {
       sectionId: args.sectionId,
       assetId: args.assetId,
@@ -62,6 +77,26 @@ export const startSlideshow = mutation({
 export const getActiveSlideshow = query({
   args: { sectionId: v.id("sections") },
   handler: async (ctx, args) => {
+    // Allow owner teacher or enrolled student to see session info
+    try {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    } catch {
+      // Not teacher owner; allow only enrolled students
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+      if (!email) throw new Error("Forbidden");
+      const currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q: any) => q.eq("email", email))
+        .first();
+      if (!currentUser) throw new Error("Forbidden");
+      const enrollment = await ctx.db
+        .query("enrollments")
+        .withIndex("by_section_student", (q) => q.eq("sectionId", args.sectionId).eq("studentId", currentUser._id))
+        .first();
+      if (!enrollment) throw new Error("Forbidden");
+    }
     return await ctx.db
       .query("slideshowSessions")
       .withIndex("by_section_active", (q) => 
@@ -74,6 +109,12 @@ export const getActiveSlideshow = query({
 export const closeSlideshow = mutation({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Slideshow session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:close:${args.sessionId}` as any, 5 * 60 * 1000, 60);
+    if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
     await ctx.db.patch(args.sessionId, {
       closedAt: Date.now(),
     });
@@ -86,6 +127,12 @@ export const gotoSlide = mutation({
     slideNumber: v.number(),
   },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Slideshow session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:goto:${args.sessionId}` as any, 5 * 60 * 1000, 300);
+    if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
     await ctx.db.patch(args.sessionId, {
       currentSlide: args.slideNumber,
     });
@@ -95,6 +142,10 @@ export const gotoSlide = mutation({
 export const heartbeat = mutation({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Slideshow session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     await ctx.db.patch(args.sessionId, {
       instructorLastSeenAt: Date.now(),
     });
@@ -112,6 +163,16 @@ export const addSlide = mutation({
     height: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    if (args.sessionId) {
+      const session = await ctx.db.get(args.sessionId);
+      if (!session) throw new Error("Slideshow session not found");
+      await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    }
+    if (args.assetId) {
+      const asset = await ctx.db.get(args.assetId);
+      if (!asset || asset.teacherId !== teacher._id) throw new Error("Forbidden");
+    }
     return await ctx.db.insert("slideshowSlides", {
       sessionId: args.sessionId,
       assetId: args.assetId,
@@ -131,12 +192,36 @@ export const getSlides = query({
   },
   handler: async (ctx, args) => {
     if (args.sessionId) {
+      // Allow enrolled students to view, and owner teacher
+      const session = await ctx.db.get(args.sessionId);
+      if (!session) return [];
+      try {
+        const teacher = await requireTeacher(ctx);
+        await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+      } catch {
+        const identity = await ctx.auth.getUserIdentity();
+        const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+        if (!email) throw new Error("Forbidden");
+        const currentUser = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q: any) => q.eq("email", email))
+          .first();
+        if (!currentUser) throw new Error("Forbidden");
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+          .first();
+        if (!enrollment) throw new Error("Forbidden");
+      }
       return await ctx.db
         .query("slideshowSlides")
         .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
         .order("asc")
         .collect();
     } else if (args.assetId) {
+      const teacher = await requireTeacher(ctx);
+      const asset = await ctx.db.get(args.assetId);
+      if (!asset || asset.teacherId !== teacher._id) throw new Error("Forbidden");
       return await ctx.db
         .query("slideshowSlides")
         .withIndex("by_asset", (q) => q.eq("assetId", args.assetId))
@@ -155,8 +240,11 @@ export const saveDrawing = mutation({
     drawingData: v.string(), // JSON string of drawing data
   },
   handler: async (ctx, args) => {
-    // This would store drawing data - you might want to create a separate table for this
-    // For now, we'll just return success
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Slideshow session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    // Placeholder response
     return "drawing_saved";
   },
 });
@@ -164,15 +252,23 @@ export const saveDrawing = mutation({
 export const getActiveSession = query({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.sessionId);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return null;
+    // Owner teacher only for full details
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    return session;
   },
 });
 
 export const getDrawings = query({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
-    // This would return drawing data - you might want to create a separate table for this
-    // For now, we'll just return empty array
+    // Placeholder; restrict to owner teacher for now
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return [];
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     return [];
   },
 });
@@ -180,6 +276,12 @@ export const getDrawings = query({
 export const closeSession = mutation({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Slideshow session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:close:${args.sessionId}` as any, 5 * 60 * 1000, 60);
+    if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
     await ctx.db.patch(args.sessionId, {
       closedAt: Date.now(),
     });

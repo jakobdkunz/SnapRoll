@@ -48,8 +48,10 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
+    const title = (args.title || "").trim();
+    if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
     return await ctx.db.insert("sections", {
-      title: args.title,
+      title,
       gradient: args.gradient ?? "gradient-1",
       teacherId: user._id,
     });
@@ -79,7 +81,18 @@ export const update = mutation({
     const { id, ...updates } = args;
     const section = await ctx.db.get(id);
     if (!section || section.teacherId !== user._id) throw new Error("Forbidden");
-    return await ctx.db.patch(id, updates);
+    const safe: any = {};
+    if (updates.title !== undefined) {
+      const t = (updates.title || "").trim();
+      if (t.length === 0 || t.length > 200) throw new Error("Title must be 1-200 chars");
+      safe.title = t;
+    }
+    if (updates.gradient !== undefined) {
+      const g = (updates.gradient || "").trim();
+      if (g.length === 0 || g.length > 100) throw new Error("Invalid gradient");
+      safe.gradient = g;
+    }
+    return await ctx.db.patch(id, safe);
   },
 });
 

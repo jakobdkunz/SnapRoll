@@ -1,9 +1,21 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+import { requireStudentEnrollment, requireTeacher, requireTeacherOwnsSection } from "./_auth";
 
 export const getActiveInteractive = query({
   args: { studentId: v.id("users") },
   handler: async (ctx, args) => {
+    // Only allow the student themselves to query their active interactive
+    const identity = await ctx.auth.getUserIdentity();
+    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+    if (!email) throw new Error("Unauthenticated");
+    const currentUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q: any) => q.eq("email", email))
+      .first();
+    if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
+
     // Get student's enrollments
     const enrollments = await ctx.db
       .query("enrollments")
