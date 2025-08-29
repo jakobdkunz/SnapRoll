@@ -1,20 +1,12 @@
 "use client";
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { usePathname } from 'next/navigation';
-import { Card, Badge, Button, TextInput, Skeleton } from '@snaproll/ui';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, Button, TextInput, Skeleton } from '@snaproll/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
-
-type CheckinResponse = {
-  ok: boolean;
-  record?: any;
-  status?: string;
-  section?: { id: string; title: string };
-  error?: string;
-};
 
 type Section = {
   id: string;
@@ -23,13 +15,9 @@ type Section = {
 };
 
 export default function SectionsPage() {
-  const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
-  const [checkedInIds, setCheckedInIds] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
 
   // Convex hooks
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
@@ -37,8 +25,8 @@ export default function SectionsPage() {
   const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
   // Get current user from Convex based on Clerk identity
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const { isLoaded, isSignedIn } = useAuth();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);
   useEffect(() => {
@@ -48,11 +36,12 @@ export default function SectionsPage() {
     if (!currentUser) {
       (async () => {
         try {
-          const token = await getToken?.({ template: 'convex' });
-          if (!token) return;
           didUpsertRef.current = true;
           await upsertUser({ role: 'STUDENT' });
-        } catch {}
+        } catch (e) {
+          // Best-effort upsert; ignore failures in UI but log for debugging
+          console.error(e);
+        }
       })();
     }
   }, [isLoaded, isSignedIn, currentUser, upsertUser]);
@@ -67,17 +56,17 @@ export default function SectionsPage() {
   // Get sections data (authorized) for the student's enrollments only
   const sectionIds = useMemo(() => {
     if (!enrollments) return null as Id<'sections'>[] | null;
-    return (enrollments as any[]).map((e: any) => e.sectionId) as Id<'sections'>[];
+    return enrollments.map((e) => e.sectionId as Id<'sections'>);
   }, [enrollments]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
-    sectionIds && sectionIds.length > 0 ? { ids: sectionIds as any } : "skip"
+    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
   );
   
   // Shape sections for display
   const sections = useMemo(() => {
     if (!sectionsData) return [];
-    return (sectionsData as any[]).map((section: any) => ({
+    return sectionsData.map((section) => ({
       id: section._id,
       title: section.title,
       gradient: section.gradient || 'gradient-1'
@@ -106,8 +95,16 @@ export default function SectionsPage() {
         setCheckinError('Failed to check in. Please try again.');
       }
     } catch (e: unknown) {
-      const serverMsg = (e as any)?.data ?? (e as any)?.message;
-      const msg = typeof serverMsg === 'string' && serverMsg ? serverMsg : 'Failed to check in.';
+      let msgFromServer: string | undefined;
+      if (typeof e === 'object' && e !== null) {
+        const data = (e as Record<string, unknown>).data;
+        if (typeof data === 'string') {
+          msgFromServer = data;
+        } else if ('message' in e && typeof (e as { message?: unknown }).message === 'string') {
+          msgFromServer = (e as { message: string }).message;
+        }
+      }
+      const msg = msgFromServer && msgFromServer.length > 0 ? msgFromServer : 'Failed to check in.';
       // Special-case friendly copy for already checked in
       if (/already checked in/i.test(msg)) {
         setConfirmMsg('You already checked in for this class.');
@@ -122,45 +119,8 @@ export default function SectionsPage() {
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
-  // Interactive state
-  type InteractiveWordCloud = {
-    kind: 'wordcloud';
-    sessionId: string;
-    prompt: string;
-    showPromptToStudents: boolean;
-    allowMultipleAnswers: boolean;
-    sectionId: string;
-    hasAnswered?: boolean;
-  };
-  type InteractivePoll = {
-    kind: 'poll';
-    sessionId: string;
-    prompt: string;
-    options: string[];
-    showResults: boolean;
-    sectionId: string;
-    hasAnswered?: boolean;
-  };
-  type InteractiveSlideshow = {
-    kind: 'slideshow';
-    sessionId: string;
-    title: string;
-    filePath: string;
-    mimeType: string;
-    currentSlide: number;
-    totalSlides: number | null;
-    showOnDevices: boolean;
-    allowDownload: boolean;
-    requireStay: boolean;
-    preventJump: boolean;
-    sectionId: string;
-  };
-
-
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
-  const submittedOnceRef = useRef<boolean>(false);
-  const lastSeenRef = useRef<number>(Date.now());
 
   // Get interactive activity from Convex
   const interactive = useQuery(
@@ -170,7 +130,6 @@ export default function SectionsPage() {
 
   // Reset local single-submit state when a new session starts
   useEffect(() => {
-    submittedOnceRef.current = false;
     setSubmitMsg(null);
     setAnswer('');
   }, [interactive?.sessionId]);
@@ -181,15 +140,12 @@ export default function SectionsPage() {
 
   useEffect(() => {
     setMounted(true);
-    setIsClient(true);
   }, []);
 
   // Set student name from Convex data
   useEffect(() => {
     if (currentUser) {
       setStudentName(`${currentUser.firstName} ${currentUser.lastName}`);
-      const newId = (currentUser._id as unknown as string) || null;
-      setStudentId(newId);
     }
   }, [currentUser]);
 
@@ -308,13 +264,7 @@ export default function SectionsPage() {
           <button
             className="text-blue-500 font-medium hover:underline"
             onClick={() => {
-              try {
-                const { useRouter } = require('next/navigation');
-                const r = useRouter();
-                r.push('/my-attendance');
-              } catch {
-                window.location.href = '/my-attendance';
-              }
+              router.push('/my-attendance');
             }}
           >
             My attendance →
@@ -367,7 +317,7 @@ export default function SectionsPage() {
                 onClick={async () => {
                   if (!effectiveUserId || !answer.trim()) return;
                   try {
-                    await submitWordcloud({ sessionId: (interactive.sessionId as any), studentId: effectiveUserId, text: answer.trim() });
+                    await submitWordcloud({ sessionId: interactive.sessionId, studentId: effectiveUserId, text: answer.trim() });
                     setAnswer('');
                     setSubmitMsg('Answer submitted.');
                   } catch (e: unknown) {
@@ -383,7 +333,7 @@ export default function SectionsPage() {
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Poll</div>
-              <div className="text-slate-500 text-sm">{(interactive as any).prompt}</div>
+              <div className="text-slate-500 text-sm">{interactive.prompt}</div>
             </div>
             <div className="space-y-2">
               {submitMsg ? (
@@ -391,14 +341,14 @@ export default function SectionsPage() {
                   Thanks! Your response was received.
                 </div>
               ) : (
-                (interactive as any).options.map((opt: string, i: number) => (
+                interactive.options.map((opt: string, i: number) => (
                   <Button key={i} className="w-full justify-start"
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: (interactive as any).sessionId, studentId: effectiveUserId, optionIdx: i });
+                        await submitPoll({ sessionId: interactive.sessionId, studentId: effectiveUserId, optionIdx: i });
                         setSubmitMsg('Response submitted');
-                      } catch (e) {
+                      } catch {
                         setSubmitMsg('Response submitted');
                       }
                     }}
@@ -416,8 +366,8 @@ export default function SectionsPage() {
               <div className="font-medium">Activities</div>
               <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
             </div>
-            {(interactive as any).showOnDevices ? (
-              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${(interactive as any).sessionId}`; }}>View Slides Live →</Button>
+            {interactive.showOnDevices ? (
+              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${interactive.sessionId}`; }}>View Slides Live →</Button>
             ) : (
               <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
             )}
@@ -429,8 +379,6 @@ export default function SectionsPage() {
       <div className="text-slate-600 text-sm">My courses</div>
       {!enrollments || !sectionsData ? (
         <div className="text-center text-slate-600">Loading sections...</div>
-      ) : error ? (
-        <div className="text-center text-red-600">{error}</div>
       ) : sections.length === 0 ? (
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No courses yet</div>
@@ -443,17 +391,10 @@ export default function SectionsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {sections.map((s) => {
             const gradientClass = s.gradient || 'gradient-1';
-            const isCheckedIn = checkedInIds.includes(s.id);
             return (
               <Card key={s.id} className="p-3 sm:p-4 flex flex-col overflow-hidden group">
                 <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 text-white relative overflow-hidden grid place-items-center`}>
                   <div className="absolute inset-0 bg-black/10"></div>
-                  {isCheckedIn && (
-                    <div className="absolute top-2 right-2 z-20 bg-green-500 text-white text-xs px-2 py-1 rounded-full shadow-lg ring-1 ring-black/40 inline-flex items-center gap-1">
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414L9 13.414l4.707-4.707z"/></svg>
-                      Checked in
-                    </div>
-                  )}
                   <div className="relative z-10 text-center">
                     <div className="font-futuristic font-bold text-lg leading-tight px-2">{s.title}</div>
                   </div>
