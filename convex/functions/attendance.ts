@@ -74,10 +74,10 @@ export const checkIn = mutation({
     if (user.role !== "STUDENT") throw new ConvexError("Only students can check in.");
     const studentId = user._id;
     const now = Date.now();
-    // Rate limit: 6 attempts per minute, backoff 2 minutes on block
-    const WINDOW_MS = 60_000;
+    // Rate limit: 6 attempts per 30 minutes; block for 30 minutes when exceeded
+    const WINDOW_MS = 30 * 60 * 1000;
     const MAX_ATTEMPTS = 6;
-    const BLOCK_MS = 120_000;
+    const BLOCK_MS = 30 * 60 * 1000;
     // Count attempts across all codes for this user
     const key = 'checkin:any';
     const bucket = await ctx.db
@@ -85,10 +85,11 @@ export const checkIn = mutation({
       .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
       .first();
     if (bucket?.blockedUntil && bucket.blockedUntil > now) {
-      throw new ConvexError("Too many attempts. Please wait a minute and try again.");
+      throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
     }
-    const windowStart = bucket && now - bucket.windowStart < WINDOW_MS ? bucket.windowStart : now;
-    const count = bucket && now - bucket.windowStart < WINDOW_MS ? (bucket.count + 1) : 1;
+    const inWindow = bucket && now - bucket.windowStart < WINDOW_MS;
+    const windowStart = inWindow ? bucket!.windowStart : now;
+    const count = inWindow ? (bucket!.count + 1) : 1;
     const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
     if (bucket) {
       await ctx.db.patch(bucket._id, { windowStart, count, blockedUntil });
@@ -96,8 +97,9 @@ export const checkIn = mutation({
       await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart, count, blockedUntil });
     }
     if (blockedUntil) {
-      throw new ConvexError("Too many attempts. Please wait a minute and try again.");
+      throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
     }
+    const attemptsLeft = Math.max(0, MAX_ATTEMPTS - count);
     
     // Find the class day with this attendance code
     const classDay = await ctx.db
@@ -106,7 +108,7 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      throw new ConvexError("Invalid code. Please check the code and try again.");
+      throw new ConvexError(`Invalid code. Please check the code and try again. (${attemptsLeft} attempts remaining)`);
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
