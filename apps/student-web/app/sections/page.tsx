@@ -85,9 +85,24 @@ export default function SectionsPage() {
       setChecking(true);
       
       // Use Convex mutation (server derives student from identity)
-      const recordId = await checkInMutation({ attendanceCode: code });
-      
-      if (recordId) {
+      const result: unknown = await checkInMutation({ attendanceCode: code });
+      if (result && typeof result === 'object' && result !== null && 'ok' in result) {
+        const r = result as { ok: boolean; error?: string };
+        if (r.ok) {
+          setConfirmMsg(`Checked in successfully!`);
+          setDigits(['', '', '', '']);
+          inputRefs[0].current?.focus();
+        } else {
+          const msg = r.error || 'Failed to check in.';
+          if (/already checked in/i.test(msg)) {
+            setConfirmMsg('You already checked in for this class.');
+            setCheckinError(null);
+          } else {
+            setCheckinError(msg);
+          }
+        }
+      } else if (typeof result === 'string') {
+        // Back-compat: server returned a recordId string
         setConfirmMsg(`Checked in successfully!`);
         setDigits(['', '', '', '']);
         inputRefs[0].current?.focus();

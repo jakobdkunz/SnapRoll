@@ -90,7 +90,7 @@ export const checkIn = mutation({
     // If any bucket is blocked, enforce block
     const blocked = buckets.find((b: any) => b.blockedUntil && b.blockedUntil > now);
     if (blocked) {
-      throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
+      return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again." };
     }
     let windowStart = now;
     let count = 1;
@@ -101,7 +101,7 @@ export const checkIn = mutation({
       const blockedUntil = count > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
       await ctx.db.patch(bucket._id, { windowStart, count, blockedUntil });
       if (blockedUntil) {
-        throw new ConvexError("Too many attempts. Please wait 30 minutes and try again.");
+        return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again." };
       }
       attemptsLeft = Math.max(0, MAX_ATTEMPTS - count);
     } else {
@@ -117,11 +117,11 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      throw new ConvexError(`Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)`);
+      return { ok: false, error: `Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)` };
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
-      throw new ConvexError("This code has expired. Ask your instructor for a new one.");
+      return { ok: false, error: "This code has expired. Ask your instructor for a new one." };
     }
     
     // Check if student is enrolled
@@ -133,7 +133,7 @@ export const checkIn = mutation({
       .first();
     
     if (!enrollment) {
-      throw new ConvexError("You’re not enrolled in this course. Ask your instructor to add you.");
+      return { ok: false, error: "You’re not enrolled in this course. Ask your instructor to add you." };
     }
     
     // Check if attendance record already exists
@@ -147,18 +147,19 @@ export const checkIn = mutation({
     if (existingRecord) {
       // If already present, return a user-friendly message
       if (existingRecord.status === "PRESENT") {
-        throw new ConvexError("You already checked in for this class.");
+        return { ok: false, error: "You already checked in for this class." };
       }
       // Update existing record from other status to PRESENT
       await ctx.db.patch(existingRecord._id, { status: "PRESENT" });
-      return existingRecord._id;
+      return { ok: true, recordId: existingRecord._id };
     } else {
       // Create new record
-      return await ctx.db.insert("attendanceRecords", {
+      const id = await ctx.db.insert("attendanceRecords", {
         classDayId: classDay._id,
         studentId,
         status: "PRESENT",
       });
+      return { ok: true, recordId: id };
     }
   },
 });
