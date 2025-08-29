@@ -146,7 +146,7 @@ export default function DashboardPage() {
           <Button variant="primary" className="mt-4 inline-flex items-center gap-2 bg-white text-black border-0 hover:bg-slate-100" onClick={async () => {
             const title = prompt('Section title?');
             if (!title || !teacherId) return;
-            await createSection({ title, teacherId });
+            await createSection({ title });
           }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
@@ -325,7 +325,7 @@ export default function DashboardPage() {
               <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim(), teacherId }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim() }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
             </div>
           </div>
