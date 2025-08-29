@@ -64,21 +64,25 @@ export default function SectionsPage() {
     effectiveUserId ? { studentId: effectiveUserId } : "skip"
   );
   
-  // Get sections data
-  const sectionsData = useQuery(api.functions.sections.list);
+  // Get sections data (authorized) for the student's enrollments only
+  const sectionIds = useMemo(() => {
+    if (!enrollments) return null as Id<'sections'>[] | null;
+    return (enrollments as any[]).map((e: any) => e.sectionId) as Id<'sections'>[];
+  }, [enrollments]);
+  const sectionsData = useQuery(
+    api.functions.sections.getByIds,
+    sectionIds && sectionIds.length > 0 ? { ids: sectionIds as any } : "skip"
+  );
   
-  // Combine enrollments with sections data
+  // Shape sections for display
   const sections = useMemo(() => {
-    if (!enrollments || !sectionsData) return [];
-    return enrollments.map((enrollment: any) => {
-      const section = sectionsData.find((s: any) => s._id === (enrollment as any).sectionId);
-      return section ? {
-        id: section._id,
-        title: section.title,
-        gradient: section.gradient || 'gradient-1'
-      } : null;
-    }).filter(Boolean) as Section[];
-  }, [enrollments, sectionsData]);
+    if (!sectionsData) return [];
+    return (sectionsData as any[]).map((section: any) => ({
+      id: section._id,
+      title: section.title,
+      gradient: section.gradient || 'gradient-1'
+    })) as Section[];
+  }, [sectionsData]);
 
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
