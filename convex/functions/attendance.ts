@@ -110,7 +110,11 @@ export const checkIn = mutation({
       .first();
     
     if (existingRecord) {
-      // Update existing record
+      // If already present, return a user-friendly message
+      if (existingRecord.status === "PRESENT") {
+        throw new ConvexError("You already checked in for this class.");
+      }
+      // Update existing record from other status to PRESENT
       await ctx.db.patch(existingRecord._id, { status: "PRESENT" });
       return existingRecord._id;
     } else {

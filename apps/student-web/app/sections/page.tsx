@@ -104,7 +104,13 @@ export default function SectionsPage() {
     } catch (e: unknown) {
       const serverMsg = (e as any)?.data ?? (e as any)?.message;
       const msg = typeof serverMsg === 'string' && serverMsg ? serverMsg : 'Failed to check in.';
-      setCheckinError(msg);
+      // Special-case friendly copy for already checked in
+      if (/already checked in/i.test(msg)) {
+        setConfirmMsg('You already checked in for this class.');
+        setCheckinError(null);
+      } else {
+        setCheckinError(msg);
+      }
     } finally {
       setChecking(false);
     }
