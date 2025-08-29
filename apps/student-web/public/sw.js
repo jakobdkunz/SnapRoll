@@ -21,7 +21,7 @@ self.addEventListener('fetch', (event) => {
 
   // For navigations (HTML pages), use network-first; when signed in, do not cache navigations
   if (request.mode === 'navigate') {
-    const isSignedIn = (document.cookie || '').includes('snaproll_auth=1');
+    const isSignedIn = (request.headers.get('cookie') || '').includes('snaproll_auth=1');
     event.respondWith(
       fetch(request)
         .then((response) => {
