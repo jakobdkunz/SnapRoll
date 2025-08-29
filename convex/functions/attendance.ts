@@ -296,18 +296,25 @@ export const startAttendance = mutation({
       .first();
     
     if (existingClassDay) {
+      // Rotate the code on the existing class day
+      const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+      const newExpiresAt = now + 24 * 60 * 60 * 1000; // 24 hours from now
+      await ctx.db.patch(existingClassDay._id, {
+        attendanceCode: newCode,
+        attendanceCodeExpiresAt: newExpiresAt,
+      });
       return existingClassDay;
     }
     
-    // Generate a random 4-digit code
-    const attendanceCode = Math.floor(1000 + Math.random() * 9000).toString();
-    const expiresAt = now + 24 * 60 * 60 * 1000; // 24 hours from now
+    // Create new class day with a fresh 4-digit code
+    const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const newExpiresAt = now + 24 * 60 * 60 * 1000; // 24 hours from now
     
     return await ctx.db.insert("classDays", {
       sectionId: args.sectionId,
       date: startOfDay.getTime(),
-      attendanceCode,
-      attendanceCodeExpiresAt: expiresAt,
+      attendanceCode: newCode,
+      attendanceCodeExpiresAt: newExpiresAt,
     });
   },
 });
