@@ -258,9 +258,6 @@ export default function SectionsPage() {
           <div className="font-medium">Attendance</div>
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
-        {blockedUntil && blockedUntil > Date.now() && (
-          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
-        )}
         <div className="flex items-center justify-center gap-3">
           <HiOutlineUserGroup className="w-10 h-10 text-black" />
           {digits.map((d, i) => (
@@ -280,6 +277,9 @@ export default function SectionsPage() {
             />
           ))}
         </div>
+        {blockedUntil && blockedUntil > Date.now() && (
+          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
+        )}
         {confirmMsg && (
           <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
         )}
