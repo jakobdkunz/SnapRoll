@@ -9,11 +9,10 @@ export const getActiveInteractive = query({
     const identity = await ctx.auth.getUserIdentity();
     const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
     if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-    if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
+    // Authorize: ensure the provided studentId matches the caller's identity email
+    const currentUser = await ctx.db.get(args.studentId);
+    if (!currentUser) throw new Error("Forbidden");
+    if ((currentUser.email || "").toString().trim().toLowerCase() !== email) throw new Error("Forbidden");
     // Get student's enrollments
     const enrollments = await ctx.db
       .query("enrollments")
