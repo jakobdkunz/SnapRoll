@@ -15,7 +15,7 @@ self.addEventListener('fetch', (event) => {
 
   // Never cache cross-origin (e.g., API) requests
   if (url.origin !== self.location.origin) {
-    event.respondWith(fetch(request));
+    // Let the browser handle cross-origin requests directly to avoid CSP connect-src issues
     return;
   }
 
