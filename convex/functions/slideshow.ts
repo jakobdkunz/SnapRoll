@@ -254,11 +254,41 @@ export const getActiveSession = query({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
-    // Owner teacher only for full details
-    const teacher = await requireTeacher(ctx);
-    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    // Allow owner teacher OR enrolled students to read limited details
+    let isTeacherOwner = false;
+    try {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+      isTeacherOwner = true;
+    } catch {
+      // Not a teacher; verify enrolled student
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+      if (!email) throw new Error("Forbidden");
+      const currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q: any) => q.eq("email", email))
+        .first();
+      if (!currentUser) throw new Error("Forbidden");
+      const enrollment = await ctx.db
+        .query("enrollments")
+        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+        .first();
+      if (!enrollment) throw new Error("Forbidden");
+    }
+
     // Include asset details expected by the client UI
     const asset = await ctx.db.get(session.assetId as Id<"slideshowAssets">);
+    // Students receive limited fields; teachers receive full session + asset details
+    if (!isTeacherOwner) {
+      return {
+        _id: session._id,
+        sectionId: session.sectionId,
+        currentSlide: session.currentSlide,
+        title: (asset as any)?.title,
+        totalSlides: (asset as any)?.totalSlides ?? null,
+      } as any;
+    }
     return {
       ...session,
       title: (asset as any)?.title,
@@ -272,12 +302,28 @@ export const getActiveSession = query({
 export const getDrawings = query({
   args: { sessionId: v.id("slideshowSessions") },
   handler: async (ctx, args) => {
-    // Placeholder; restrict to owner teacher for now
-    const teacher = await requireTeacher(ctx);
     const session = await ctx.db.get(args.sessionId);
     if (!session) return [];
-    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
-    return [];
+    // Allow owner teacher or enrolled student (currently returns empty drawings placeholder)
+    try {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    } catch {
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+      if (!email) throw new Error("Forbidden");
+      const currentUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q: any) => q.eq("email", email))
+        .first();
+      if (!currentUser) throw new Error("Forbidden");
+      const enrollment = await ctx.db
+        .query("enrollments")
+        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+        .first();
+      if (!enrollment) throw new Error("Forbidden");
+    }
+    return [] as any;
   },
 });
 
