@@ -145,9 +145,15 @@ export default function SectionsPage() {
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
   // Get interactive activity from Convex
+  // Include a periodic tick to re-evaluate time-based staleness (heartbeat expiry)
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 5000);
+    return () => clearInterval(id);
+  }, []);
   const interactive = useQuery(
     api.functions.students.getActiveInteractive,
-    effectiveUserId ? { studentId: effectiveUserId } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId, tick } : "skip"
   );
 
   // Reset local single-submit state when a new session starts
