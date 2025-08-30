@@ -156,11 +156,24 @@ export default function SectionsPage() {
     effectiveUserId ? { studentId: effectiveUserId, tick } : "skip"
   );
 
+  // Smooth flicker: preserve last non-undefined value; delay clearing null briefly
+  const [renderInteractive, setRenderInteractive] = useState<any>(undefined);
+  useEffect(() => {
+    // Keep current UI while refetching
+    if (interactive === undefined) return;
+    // Delay clearing to avoid brief nulls during revalidation
+    if (interactive === null) {
+      const id = window.setTimeout(() => setRenderInteractive(null), 2000);
+      return () => window.clearTimeout(id);
+    }
+    setRenderInteractive(interactive);
+  }, [interactive]);
+
   // Reset local single-submit state when a new session starts
   useEffect(() => {
     setSubmitMsg(null);
     setAnswer('');
-  }, [interactive?.sessionId]);
+  }, [renderInteractive?.sessionId]);
 
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [checking, setChecking] = useState(false);
@@ -304,10 +317,10 @@ export default function SectionsPage() {
         </div>
       </Card>
 
-      <Card className={`relative overflow-hidden ${interactive ? '' : 'p-6'}`}>
-        {interactive && (
+      <Card className={`relative overflow-hidden ${renderInteractive ? '' : 'p-6'}`}>
+        {renderInteractive && (
           <>
-            <div className={`pointer-events-none absolute inset-0 ${sections.find(s=>s.id===interactive.sectionId)?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
+            <div className={`pointer-events-none absolute inset-0 ${sections.find(s=>s.id===renderInteractive.sectionId)?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
             <div className="pointer-events-none absolute inset-0 bg-white/35" />
             <div className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
             <style jsx>{`
@@ -319,8 +332,8 @@ export default function SectionsPage() {
             `}</style>
           </>
         )}
-        <div className={interactive ? 'relative z-10 p-6' : ''}>
-        {!interactive ? (
+        <div className={renderInteractive ? 'relative z-10 p-6' : ''}>
+        {!renderInteractive ? (
           <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
             <div className="font-medium mb-1">Activities</div>
             <div className="text-sm">Your instructors have not started any live activites yet...</div>
@@ -330,12 +343,12 @@ export default function SectionsPage() {
               <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.4s_ease-in-out_infinite]" />
             </div>
           </div>
-        ) : interactive.kind === 'wordcloud' ? (
+        ) : renderInteractive.kind === 'wordcloud' ? (
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Word Cloud</div>
-              {Boolean((interactive as unknown as { showPromptToStudents?: boolean }).showPromptToStudents) && (
-                <div className="text-slate-500 text-sm">{String((interactive as unknown as { prompt?: string }).prompt || '')}</div>
+              {Boolean((renderInteractive as unknown as { showPromptToStudents?: boolean }).showPromptToStudents) && (
+                <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
               )}
             </div>
             <div className="flex gap-2 items-center">
@@ -349,7 +362,7 @@ export default function SectionsPage() {
                 onClick={async () => {
                   if (!effectiveUserId || !answer.trim()) return;
                   try {
-                    await submitWordcloud({ sessionId: (interactive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
+                    await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
                     setAnswer('');
                     setSubmitMsg('Answer submitted.');
                   } catch (e: unknown) {
@@ -361,11 +374,11 @@ export default function SectionsPage() {
             </div>
             {/* removed noisy green banner */}
           </div>
-        ) : interactive.kind === 'poll' ? (
+        ) : renderInteractive.kind === 'poll' ? (
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Poll</div>
-              <div className="text-slate-500 text-sm">{String((interactive as unknown as { prompt?: string }).prompt || '')}</div>
+              <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
             </div>
             <div className="space-y-2">
               {submitMsg ? (
@@ -373,12 +386,12 @@ export default function SectionsPage() {
                   Thanks! Your response was received.
                 </div>
               ) : (
-                (interactive as unknown as { options: string[] }).options.map((opt: string, i: number) => (
+                (renderInteractive as unknown as { options: string[] }).options.map((opt: string, i: number) => (
                   <Button key={i} className="w-full justify-start"
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: interactive.sessionId, optionIdx: i });
+                        await submitPoll({ sessionId: renderInteractive.sessionId, optionIdx: i });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');
@@ -392,14 +405,14 @@ export default function SectionsPage() {
               <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full">{submitMsg}</div>
             )}
           </div>
-        ) : interactive.kind === 'slideshow' ? (
+        ) : renderInteractive.kind === 'slideshow' ? (
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Activities</div>
               <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
             </div>
-            {((interactive as unknown as { showOnDevices?: boolean }).showOnDevices ?? false) ? (
-              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${interactive.sessionId}`; }}>View Slides Live →</Button>
+            {((renderInteractive as unknown as { showOnDevices?: boolean }).showOnDevices ?? false) ? (
+              <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${renderInteractive.sessionId}`; }}>View Slides Live →</Button>
             ) : (
               <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
             )}
