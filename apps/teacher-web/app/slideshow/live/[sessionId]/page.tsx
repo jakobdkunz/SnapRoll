@@ -353,6 +353,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   // Heartbeat (10s) to keep session fresh for students
   useEffect(() => {
+    // send an immediate heartbeat on mount to mark session as active right away
+    try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
     const id = window.setInterval(() => { 
       try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
     }, 10000);

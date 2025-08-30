@@ -54,13 +54,13 @@ export const getActiveInteractive = query({
     })();
 
     const slideshows = await (async () => {
-      const all: Array<{ _id: Id<"slideshowSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
+      const all: Array<{ _id: Id<"slideshowSessions">; sectionId: Id<"sections">; assetId: Id<"slideshowAssets">; showOnDevices: boolean; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
       for (const sid of sectionIds) {
         const rows = await ctx.db
           .query("slideshowSessions")
           .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
           .collect();
-        all.push(...rows);
+        all.push(...rows as any);
       }
       return all;
     })();
@@ -73,7 +73,27 @@ export const getActiveInteractive = query({
     const candidates: Array<{ kind: 'wordcloud'|'poll'|'slideshow'; session: AnySession }> = [];
     for (const wc of wordClouds) if (notStale(wc)) candidates.push({ kind: 'wordcloud', session: wc as AnySession });
     for (const p of polls) if (notStale(p)) candidates.push({ kind: 'poll', session: p as AnySession });
-    for (const ss of slideshows) if (notStale(ss)) candidates.push({ kind: 'slideshow', session: ss as AnySession });
+    for (const ss of slideshows) {
+      if (!notStale(ss)) continue;
+      // Gate visibility until instructor opts to show and rendering is ready
+      if ((ss as any).showOnDevices !== true) continue;
+      // Determine readiness: if asset.totalSlides is known, require that many slides uploaded; otherwise require at least one slide
+      const asset = await ctx.db.get((ss as any).assetId as Id<'slideshowAssets'>);
+      const firstSlide = await ctx.db
+        .query('slideshowSlides')
+        .withIndex('by_session', (q) => q.eq('sessionId', ss._id as unknown as Id<'slideshowSessions'>))
+        .first();
+      if (!firstSlide) continue; // no slides yet
+      const totalSlides = (asset as any)?.totalSlides as number | undefined;
+      if (typeof totalSlides === 'number' && totalSlides > 0) {
+        const allSlides = await ctx.db
+          .query('slideshowSlides')
+          .withIndex('by_session', (q) => q.eq('sessionId', ss._id as unknown as Id<'slideshowSessions'>))
+          .collect();
+        if (allSlides.length < totalSlides) continue;
+      }
+      candidates.push({ kind: 'slideshow', session: ss as AnySession });
+    }
 
     if (candidates.length === 0) return null;
 

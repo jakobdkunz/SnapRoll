@@ -60,11 +60,12 @@ export const startSlideshow = mutation({
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
     if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
+    // Default: do not show on devices until rendering finishes
     return await ctx.db.insert("slideshowSessions", {
       sectionId: args.sectionId,
       assetId: args.assetId,
       currentSlide: args.currentSlide ?? 1,
-      showOnDevices: args.showOnDevices ?? true,
+      showOnDevices: args.showOnDevices ?? false,
       allowDownload: args.allowDownload ?? true,
       requireStay: args.requireStay ?? false,
       preventJump: args.preventJump ?? false,
