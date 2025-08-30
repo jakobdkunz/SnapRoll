@@ -202,17 +202,17 @@ export const getSlides = query({
       } catch {
         const identity = await ctx.auth.getUserIdentity();
         const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-        if (!email) throw new Error("Forbidden");
+        if (!email) return [];
         const currentUser = await ctx.db
           .query("users")
           .withIndex("by_email", (q: any) => q.eq("email", email))
           .first();
-        if (!currentUser) throw new Error("Forbidden");
+        if (!currentUser) return [];
         const enrollment = await ctx.db
           .query("enrollments")
           .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
           .first();
-        if (!enrollment) throw new Error("Forbidden");
+        if (!enrollment) return [];
       }
       return await ctx.db
         .query("slideshowSlides")
@@ -257,6 +257,7 @@ export const getActiveSession = query({
     if (!session) return null;
     // Allow owner teacher OR enrolled students to read limited details
     let isTeacherOwner = false;
+    let isAuthorizedStudent = false;
     try {
       const teacher = await requireTeacher(ctx);
       await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -265,23 +266,24 @@ export const getActiveSession = query({
       // Not a teacher; verify enrolled student
       const identity = await ctx.auth.getUserIdentity();
       const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) throw new Error("Forbidden");
+      if (!email) return null;
       const currentUser = await ctx.db
         .query("users")
         .withIndex("by_email", (q: any) => q.eq("email", email))
         .first();
-      if (!currentUser) throw new Error("Forbidden");
+      if (!currentUser) return null;
       const enrollment = await ctx.db
         .query("enrollments")
         .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
         .first();
-      if (!enrollment) throw new Error("Forbidden");
+      if (!enrollment) return null;
+      isAuthorizedStudent = true;
     }
 
     // Include asset details expected by the client UI
     const asset = await ctx.db.get(session.assetId as Id<"slideshowAssets">);
     // Students receive limited fields; teachers receive full session + asset details
-    if (!isTeacherOwner) {
+    if (!isTeacherOwner && isAuthorizedStudent) {
       return {
         _id: session._id,
         sectionId: session.sectionId,
@@ -290,6 +292,7 @@ export const getActiveSession = query({
         totalSlides: (asset as any)?.totalSlides ?? null,
       } as any;
     }
+    if (!isTeacherOwner) return null;
     return {
       ...session,
       title: (asset as any)?.title,
@@ -312,17 +315,17 @@ export const getDrawings = query({
     } catch {
       const identity = await ctx.auth.getUserIdentity();
       const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) throw new Error("Forbidden");
+      if (!email) return [];
       const currentUser = await ctx.db
         .query("users")
         .withIndex("by_email", (q: any) => q.eq("email", email))
         .first();
-      if (!currentUser) throw new Error("Forbidden");
+      if (!currentUser) return [];
       const enrollment = await ctx.db
         .query("enrollments")
         .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
         .first();
-      if (!enrollment) throw new Error("Forbidden");
+      if (!enrollment) return [];
     }
     return [] as any;
   },
