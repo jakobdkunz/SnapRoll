@@ -34,12 +34,12 @@ const nextConfig = {
     // Production security headers
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud https://*.vercel-insights.com",
+      "script-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud https://*.vercel-insights.com https://cdnjs.cloudflare.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' https: data: blob:",
       "font-src 'self'",
       "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://blob.vercel-storage.com",
-      "worker-src 'self' blob:",
+      "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
