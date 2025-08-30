@@ -13,6 +13,8 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as functions__auth from "../functions/_auth.js";
+import type * as functions__rateLimit from "../functions/_rateLimit.js";
 import type * as functions_attendance from "../functions/attendance.js";
 import type * as functions_auth from "../functions/auth.js";
 import type * as functions_demo from "../functions/demo.js";
@@ -35,6 +37,8 @@ import type * as functions_wordcloud from "../functions/wordcloud.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "functions/_auth": typeof functions__auth;
+  "functions/_rateLimit": typeof functions__rateLimit;
   "functions/attendance": typeof functions_attendance;
   "functions/auth": typeof functions_auth;
   "functions/demo": typeof functions_demo;
