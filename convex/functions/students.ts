@@ -5,14 +5,15 @@ import type { Id } from "../_generated/dataModel";
 export const getActiveInteractive = query({
   args: { studentId: v.id("users"), tick: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    // Only allow the student themselves to query their active interactive
+    // Only allow the student themselves to query their active interactive.
+    // Be defensive: on any auth mismatch, return null instead of throwing to avoid crashing the client UI.
     const identity = await ctx.auth.getUserIdentity();
     const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
+    if (!email) return null;
     // Authorize: ensure the provided studentId matches the caller's identity email
     const currentUser = await ctx.db.get(args.studentId);
-    if (!currentUser) throw new Error("Forbidden");
-    if ((currentUser.email || "").toString().trim().toLowerCase() !== email) throw new Error("Forbidden");
+    if (!currentUser) return null;
+    if ((currentUser.email || "").toString().trim().toLowerCase() !== email) return null;
     // Get student's enrollments
     const enrollments = await ctx.db
       .query("enrollments")
@@ -99,11 +100,17 @@ export const getActiveInteractive = query({
     }
     if (top.kind === 'poll') {
       const pollSession = top.session as unknown as { prompt?: unknown; optionsJson?: unknown; showResults: boolean; sectionId: Id<'sections'>; _id: Id<'pollSessions'> };
+      let options: string[] = [];
+      try {
+        options = JSON.parse(String(pollSession.optionsJson ?? '[]')) as string[];
+      } catch {
+        options = [];
+      }
       return {
         kind: 'poll' as const,
         sessionId: pollSession._id,
         prompt: String(pollSession.prompt || ''),
-        options: JSON.parse(String(pollSession.optionsJson || '[]')),
+        options,
         showResults: pollSession.showResults,
         sectionId: pollSession.sectionId,
       };
