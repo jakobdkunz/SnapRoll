@@ -1,10 +1,9 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { requireStudentEnrollment, requireTeacher, requireTeacherOwnsSection } from "./_auth";
 
 export const getActiveInteractive = query({
-  args: { studentId: v.id("users") },
+  args: { studentId: v.id("users"), tick: v.optional(v.number()) },
   handler: async (ctx, args) => {
     // Only allow the student themselves to query their active interactive
     const identity = await ctx.auth.getUserIdentity();
@@ -12,7 +11,7 @@ export const getActiveInteractive = query({
     if (!email) throw new Error("Unauthenticated");
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .first();
     if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
     // Get student's enrollments
@@ -51,7 +50,8 @@ export const getActiveInteractive = query({
       ))
       .collect();
 
-    type AnySession = { _id: Id<any>; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, any>;
+    type SessionTable = "wordCloudSessions" | "pollSessions" | "slideshowSessions";
+    type AnySession = { _id: Id<SessionTable>; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>;
     const toLastSeen = (s: AnySession) => (s.instructorLastSeenAt ?? s.createdAt);
     const notStale = (s: AnySession) => (now - toLastSeen(s)) <= STALE_MS;
 
@@ -62,12 +62,15 @@ export const getActiveInteractive = query({
 
     if (candidates.length === 0) return null;
 
-    // pick the freshest by lastSeen, then createdAt as tie-breaker
+    // Prioritize the newest activity by createdAt first (overwrite behavior),
+    // then use recency of heartbeat as a tie-breaker.
     candidates.sort((a, b) => {
+      const ca = (a.session.createdAt || 0);
+      const cb = (b.session.createdAt || 0);
+      if (cb !== ca) return cb - ca;
       const la = toLastSeen(a.session);
       const lb = toLastSeen(b.session);
-      if (lb !== la) return lb - la;
-      return (b.session.createdAt || 0) - (a.session.createdAt || 0);
+      return lb - la;
     });
 
     const top = candidates[0];
@@ -82,13 +85,14 @@ export const getActiveInteractive = query({
       };
     }
     if (top.kind === 'poll') {
+      const pollSession = top.session as unknown as { prompt?: unknown; optionsJson?: unknown; showResults: boolean; sectionId: Id<'sections'>; _id: Id<'pollSessions'> };
       return {
         kind: 'poll' as const,
-        sessionId: top.session._id,
-        prompt: top.session.prompt,
-        options: JSON.parse(top.session.optionsJson),
-        showResults: top.session.showResults,
-        sectionId: top.session.sectionId,
+        sessionId: pollSession._id,
+        prompt: String(pollSession.prompt || ''),
+        options: JSON.parse(String(pollSession.optionsJson || '[]')),
+        showResults: pollSession.showResults,
+        sectionId: pollSession.sectionId,
       };
     }
     return {
