@@ -612,6 +612,26 @@ export default function DashboardPage() {
                     } as any);
                     setSlideOpen(false);
                     setTimeout(() => router.push(`/slideshow/live/${(sessionId as any)._id || sessionId}`), 120);
+                  } else if (slideUploadFile) {
+                    const fd = new FormData();
+                    fd.append('file', slideUploadFile);
+                    if (slideTitle) fd.append('title', slideTitle);
+                    const res = await fetch('/api/slideshow/assets', { method: 'POST', body: fd, credentials: 'include' });
+                    if (!res.ok) {
+                      const j = await res.json().catch(() => ({}));
+                      throw new Error(j.error || 'Failed to upload file');
+                    }
+                    const j = await res.json();
+                    const newAssetId = j.assetId || j.id || j._id;
+                    if (!newAssetId) throw new Error('Upload succeeded but no assetId returned');
+                    const sessionId = await startSlideshow({ sectionId: slideSectionId as any, assetId: newAssetId as any, 
+                      showOnDevices: slideShowOnDevices,
+                      allowDownload: slideAllowDownload,
+                      requireStay: slideRequireStay,
+                      preventJump: slidePreventJump,
+                    } as any);
+                    setSlideOpen(false);
+                    setTimeout(() => router.push(`/slideshow/live/${(sessionId as any)._id || sessionId}`), 120);
                   } else {
                     setSlideError('Please select an asset to present');
                   }

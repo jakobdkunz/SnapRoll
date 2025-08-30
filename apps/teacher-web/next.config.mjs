@@ -30,12 +30,15 @@ const nextConfig = {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud https://*.vercel-insights.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      // Allow images from blob storage and https
+      "img-src 'self' https: data: blob:",
       "font-src 'self'",
-      "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud",
+      // Allow connections to Convex and Vercel Blob API domains
+      "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://blob.vercel-storage.com",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
+      // Allow form posts to our origin (for FormData uploads to Next routes)
       "form-action 'self'",
     ].join('; ');
     return [

@@ -257,7 +257,15 @@ export const getActiveSession = query({
     // Owner teacher only for full details
     const teacher = await requireTeacher(ctx);
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
-    return session;
+    // Include asset details expected by the client UI
+    const asset = await ctx.db.get(session.assetId as Id<"slideshowAssets">);
+    return {
+      ...session,
+      title: (asset as any)?.title,
+      filePath: (asset as any)?.filePath,
+      mimeType: (asset as any)?.mimeType,
+      totalSlides: (asset as any)?.totalSlides ?? null,
+    } as any;
   },
 });
 
