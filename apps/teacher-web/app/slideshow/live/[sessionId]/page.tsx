@@ -492,7 +492,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const pdfjsLib = (window as any).pdfjsLib;
       if (!pdfjsLib) throw new Error('PDF.js library not loaded');
-      const doc = await pdfjsLib.getDocument({ url: proxiedFileUrl, withCredentials: true }).promise;
+      const doc = await pdfjsLib.getDocument({ url: proxiedFileUrl }).promise;
       for (let i = 1; i <= doc.numPages; i++) {
         setRenderMsg(`Rendering slide ${i}/${doc.numPages}…`);
         const page = await doc.getPage(i);
