@@ -21,6 +21,8 @@ export const getActiveInteractive = query({
       .collect();
 
     const sectionIds = enrollments.map(e => e.sectionId);
+    // If the student isn't enrolled in any sections, there can't be any activities
+    if (sectionIds.length === 0) return null;
 
     const now = Date.now();
     const STALE_MS = 30 * 1000; // consider sessions stale if no heartbeat for 30s
