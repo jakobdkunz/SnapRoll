@@ -33,8 +33,8 @@ const nextConfig = {
       // Allow images from blob storage and https
       "img-src 'self' https: data: blob:",
       "font-src 'self'",
-      // Allow connections to Convex and Vercel Blob API domains
-      "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://blob.vercel-storage.com",
+      // Allow connections to Convex and Vercel Blob API domains (including public bucket subdomains)
+      "connect-src 'self' https://*.clerk.com https://*.clerk.dev https://*.clerk.accounts.dev https://*.convex.cloud wss://*.convex.cloud https://blob.vercel-storage.com https://*.blob.vercel-storage.com",
       "worker-src 'self' blob: https://cdnjs.cloudflare.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
