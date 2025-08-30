@@ -27,30 +27,42 @@ export const getActiveInteractive = query({
     const now = Date.now();
     const STALE_MS = 30 * 1000; // consider sessions stale if no heartbeat for 30s
 
-    // fetch all active sessions across types
-    const wordClouds = await ctx.db
-      .query("wordCloudSessions")
-      .filter((q) => q.and(
-        q.eq(q.field("closedAt"), undefined),
-        q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id)))
-      ))
-      .collect();
+    // fetch all active sessions across types using typed per-table loops
+    const wordClouds = await (async () => {
+      const all: Array<{ _id: Id<"wordCloudSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
+      for (const sid of sectionIds) {
+        const rows = await ctx.db
+          .query("wordCloudSessions")
+          .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
+          .collect();
+        all.push(...rows);
+      }
+      return all;
+    })();
 
-    const polls = await ctx.db
-      .query("pollSessions")
-      .filter((q) => q.and(
-        q.eq(q.field("closedAt"), undefined),
-        q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id)))
-      ))
-      .collect();
+    const polls = await (async () => {
+      const all: Array<{ _id: Id<"pollSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
+      for (const sid of sectionIds) {
+        const rows = await ctx.db
+          .query("pollSessions")
+          .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
+          .collect();
+        all.push(...rows);
+      }
+      return all;
+    })();
 
-    const slideshows = await ctx.db
-      .query("slideshowSessions")
-      .filter((q) => q.and(
-        q.eq(q.field("closedAt"), undefined),
-        q.or(...sectionIds.map(id => q.eq(q.field("sectionId"), id)))
-      ))
-      .collect();
+    const slideshows = await (async () => {
+      const all: Array<{ _id: Id<"slideshowSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
+      for (const sid of sectionIds) {
+        const rows = await ctx.db
+          .query("slideshowSessions")
+          .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
+          .collect();
+        all.push(...rows);
+      }
+      return all;
+    })();
 
     type SessionTable = "wordCloudSessions" | "pollSessions" | "slideshowSessions";
     type AnySession = { _id: Id<SessionTable>; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>;
