@@ -416,7 +416,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [slides.length, details?.currentSlide, gotoSlide]);
 
   const rawFileUrl = (details as any)?.filePath as string | undefined;
-  const isPdf = !!details && /pdf/i.test((details as any).mimeType);
+  const isPdf = !!details && (
+    /pdf/i.test(((details as any)?.mimeType || '').toString()) ||
+    /\.pdf(\?|#|$)/i.test(((details as any)?.filePath || '').toString())
+  );
   const proxiedFileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
     try {
