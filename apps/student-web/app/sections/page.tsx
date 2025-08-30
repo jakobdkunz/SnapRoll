@@ -328,8 +328,8 @@ export default function SectionsPage() {
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Word Cloud</div>
-              {interactive.showPromptToStudents && (
-                <div className="text-slate-500 text-sm">{interactive.prompt}</div>
+              {Boolean((interactive as unknown as { showPromptToStudents?: boolean }).showPromptToStudents) && (
+                <div className="text-slate-500 text-sm">{String((interactive as unknown as { prompt?: string }).prompt || '')}</div>
               )}
             </div>
             <div className="flex gap-2 items-center">
@@ -343,7 +343,7 @@ export default function SectionsPage() {
                 onClick={async () => {
                   if (!effectiveUserId || !answer.trim()) return;
                   try {
-                    await submitWordcloud({ sessionId: interactive.sessionId, text: answer.trim() });
+                    await submitWordcloud({ sessionId: (interactive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
                     setAnswer('');
                     setSubmitMsg('Answer submitted.');
                   } catch (e: unknown) {
@@ -359,7 +359,7 @@ export default function SectionsPage() {
           <div className="space-y-3">
             <div className="text-center">
               <div className="font-medium">Poll</div>
-              <div className="text-slate-500 text-sm">{interactive.prompt}</div>
+              <div className="text-slate-500 text-sm">{String((interactive as unknown as { prompt?: string }).prompt || '')}</div>
             </div>
             <div className="space-y-2">
               {submitMsg ? (
@@ -367,7 +367,7 @@ export default function SectionsPage() {
                   Thanks! Your response was received.
                 </div>
               ) : (
-                interactive.options.map((opt: string, i: number) => (
+                (interactive as unknown as { options: string[] }).options.map((opt: string, i: number) => (
                   <Button key={i} className="w-full justify-start"
                     onClick={async () => {
                       if (!effectiveUserId) return;
@@ -392,7 +392,7 @@ export default function SectionsPage() {
               <div className="font-medium">Activities</div>
               <div className="text-slate-500 text-sm">Your instructor is presenting a slideshow.</div>
             </div>
-            {interactive.showOnDevices ? (
+            {((interactive as unknown as { showOnDevices?: boolean }).showOnDevices ?? false) ? (
               <Button className="w-full" onClick={() => { window.location.href = `/slideshow/view/${interactive.sessionId}`; }}>View Slides Live →</Button>
             ) : (
               <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
