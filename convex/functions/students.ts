@@ -5,6 +5,7 @@ import type { Id } from "../_generated/dataModel";
 export const getActiveInteractive = query({
   args: { studentId: v.id("users"), tick: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    try {
     // Only allow the student themselves to query their active interactive.
     // Be defensive: on any auth mismatch, return null instead of throwing to avoid crashing the client UI.
     const identity = await ctx.auth.getUserIdentity();
@@ -122,5 +123,9 @@ export const getActiveInteractive = query({
       showOnDevices: top.session.showOnDevices,
       sectionId: top.session.sectionId,
     };
+    } catch (err) {
+      console.error('students.getActiveInteractive error', err);
+      return null;
+    }
   },
 });
