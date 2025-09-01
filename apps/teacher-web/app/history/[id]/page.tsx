@@ -5,7 +5,7 @@ import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
 import { convexApi, api } from '@snaproll/convex-client';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };
@@ -34,6 +34,7 @@ export default function HistoryPage() {
 
   // Convex hooks
   const history = useQuery(api.functions.history.getSectionHistory, params.id ? { sectionId: params.id as any, offset, limit } : "skip");
+  const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
@@ -172,11 +173,13 @@ export default function HistoryPage() {
   // (duplicate removed)
 
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
-    if (!teacherId) return;
-    
     try {
-      // TODO: Implement manual status update with Convex
-      console.log('Manual status update not yet implemented with Convex');
+      await updateManualStatus({
+        classDayId: classDayId as any,
+        studentId: studentId as any,
+        status: newStatus as any,
+      });
+      // Convex reactivity will refresh the history query automatically
     } catch (error) {
       console.error('Failed to update status:', error);
     }
