@@ -163,7 +163,7 @@ export default function MyAttendancePage() {
               }} 
               disabled={offset + grid.days.length >= data.totalDays}
             >
-              ← Previous
+              ← <span className="hidden sm:inline">Previous</span>
             </Button>
             {/* Newer page (moves window to more recent dates) */}
             <Button 
@@ -174,7 +174,7 @@ export default function MyAttendancePage() {
               }} 
               disabled={offset === 0}
             >
-              Next →
+              <span className="hidden sm:inline">Next</span> →
             </Button>
           </div>
         </div>
