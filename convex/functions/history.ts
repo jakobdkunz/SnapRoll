@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection, requireStudentEnrollment } from "./_auth";
+import type { Id, Doc } from "../_generated/dataModel";
+import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
 
 export const getSectionHistory = query({
   args: {
@@ -65,6 +65,14 @@ export const getSectionHistory = query({
       .query("manualStatusChanges")
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect() : [];
+    // Resolve instructor names for manual changes
+    const teacherIds = Array.from(new Set(manualChanges.map((mc) => mc.teacherId as Id<'users'>)));
+    const teacherDocs = await Promise.all(teacherIds.map((id) => ctx.db.get(id)));
+    const teacherNameById = new Map<Id<'users'>, string>(
+      teacherDocs
+        .filter((t): t is Doc<'users'> => Boolean(t))
+        .map((t) => [t._id as Id<'users'>, `${t.firstName} ${t.lastName}`])
+    );
     
     // Create lookup maps
     const attendanceMap = new Map();
@@ -105,7 +113,7 @@ export const getSectionHistory = query({
           originalStatus,
           manualChange: manualChange ? {
             status: manualChange.status,
-            teacherName: "Instructor", // We'll need to join with teacher data
+            teacherName: teacherNameById.get(manualChange.teacherId) || "Instructor",
             createdAt: manualChange.createdAt,
           } : undefined,
         };
@@ -152,7 +160,7 @@ export const getStudentHistory = query({
     if (!email) throw new Error("Unauthenticated");
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
+      .withIndex("by_email", (q) => q.eq("email", email))
       .first();
     if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
@@ -177,14 +185,14 @@ export const getStudentHistory = query({
     // Deduplicate by LOCAL calendar day across sections for the student's consolidated view
     // Prefer a classDay that has any attendance records for this student if multiple exist same-day
     const uniqueDays = (() => {
-      const map = new Map<number, any>();
+      const map = new Map<number, Doc<'classDays'>>();
       for (const cd of rawDays) {
         const d = new Date(cd.date);
         d.setHours(0, 0, 0, 0);
         const key = d.getTime();
         const existing = map.get(key);
         if (!existing) {
-          map.set(key, cd);
+          map.set(key, cd as Doc<'classDays'>);
         } else {
           // Check if either has a record for this student and prefer that one
           // Note: queries below will fetch records for the selected page; this is a heuristic early choice
@@ -214,16 +222,24 @@ export const getStudentHistory = query({
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect() : [];
+    // Resolve instructor names for manual changes
+    const teacherIds = Array.from(new Set(manualChanges.map((mc) => mc.teacherId as Id<'users'>)));
+    const teacherDocs = await Promise.all(teacherIds.map((id) => ctx.db.get(id)));
+    const teacherNameById = new Map<Id<'users'>, string>(
+      teacherDocs
+        .filter((t): t is Doc<'users'> => Boolean(t))
+        .map((t) => [t._id as Id<'users'>, `${t.firstName} ${t.lastName}`])
+    );
     
     // Create lookup maps
-    const attendanceMap = new Map();
-    attendanceRecords.forEach(ar => {
-      attendanceMap.set(ar.classDayId, ar);
+    const attendanceMap = new Map<Id<'classDays'>, Doc<'attendanceRecords'>>();
+    attendanceRecords.forEach((ar) => {
+      attendanceMap.set(ar.classDayId as Id<'classDays'>, ar as Doc<'attendanceRecords'>);
     });
     
-    const manualChangeMap = new Map();
-    manualChanges.forEach(mc => {
-      manualChangeMap.set(mc.classDayId, mc);
+    const manualChangeMap = new Map<Id<'classDays'>, Doc<'manualStatusChanges'>>();
+    manualChanges.forEach((mc) => {
+      manualChangeMap.set(mc.classDayId as Id<'classDays'>, mc as Doc<'manualStatusChanges'>);
     });
     
     // Build records by section
@@ -233,7 +249,12 @@ export const getStudentHistory = query({
     const records = sections.map(section => {
       if (!section) return null;
       
-      const byDate: Record<string, any> = {};
+      const byDate: Record<string, {
+        status: string;
+        originalStatus: string;
+        isManual: boolean;
+        manualChange: { status: string; teacherName: string; createdAt: number } | null;
+      }> = {};
       
       page.forEach(classDay => {
         if (classDay.sectionId !== section._id) return;
@@ -258,7 +279,7 @@ export const getStudentHistory = query({
           isManual,
           manualChange: manualChange ? {
             status: manualChange.status,
-            teacherName: "Instructor", // We'll need to join with teacher data
+            teacherName: teacherNameById.get(manualChange.teacherId) || "Instructor",
             createdAt: manualChange.createdAt,
           } : null,
         };
