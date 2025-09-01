@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+// import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
+import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 
 type HistoryResponse = {
@@ -26,7 +28,7 @@ function formatHeaderDateMD(date: Date) {
 }
 
 export default function MyAttendancePage() {
-  const pathname = usePathname();
+  // const pathname = usePathname();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
   const [data, setData] = useState<HistoryResponse | null>(null);
@@ -34,24 +36,64 @@ export default function MyAttendancePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [offset, setOffset] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(12);
-  const [isFetching, setIsFetching] = useState<boolean>(false);
-  const requestIdRef = useRef(0);
+  const [limit] = useState<number>(12);
+  const [isFetching] = useState<boolean>(false);
+  // const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  // const [initialized, setInitialized] = useState(false);
+  const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>({ visible: false, text: '', anchorX: 0, anchorY: 0 });
+
+  function showTooltip(text: string, rect: DOMRect) {
+    setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
+  }
+  function hideTooltip() {
+    setTooltip(t => ({ ...t, visible: false }));
+  }
+
+  function TooltipOverlay() {
+    const ref = useRef<HTMLDivElement | null>(null);
+    const [pos, setPos] = useState<{ left: number; top: number }>({ left: tooltip.anchorX, top: tooltip.anchorY });
+    useLayoutEffect(() => {
+      if (!tooltip.visible) return;
+      const el = ref.current;
+      if (!el) return;
+      const vw = window.innerWidth;
+      const margin = 8;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const left = Math.min(vw - margin - w, Math.max(margin, tooltip.anchorX - w / 2));
+      let top = tooltip.anchorY - margin - h;
+      if (top < margin) top = tooltip.anchorY + margin;
+      setPos({ left, top });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tooltip]);
+    if (!tooltip.visible) return null;
+    return createPortal(
+      <div
+        ref={ref}
+        style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 9999, maxWidth: 'calc(100vw - 16px)' }}
+        className="pointer-events-none px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg"
+      >
+        {tooltip.text}
+      </div>,
+      document.body
+    );
+  }
 
   // Convex hooks
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
-  const history = useQuery(api.functions.history.getStudentHistory, currentUser?._id ? { studentId: currentUser._id as any, offset, limit } : "skip");
+  const currentUser = useQuery(convexApi.auth.getCurrentUser);
+  const history = useQuery(
+    api.functions.history.getStudentHistory,
+    currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit } : "skip"
+  );
 
   // Column width calculations
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
-  const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
-  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  // const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
+  // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -67,7 +109,7 @@ export default function MyAttendancePage() {
   // Update data when Convex query returns
   useEffect(() => {
     if (history) {
-      setData(history as any);
+      setData(history as HistoryResponse);
       setLoading(false);
       setError(null);
     }
@@ -219,7 +261,7 @@ export default function MyAttendancePage() {
                         status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : '–';
                       const tooltipText = showManual && rec.manualChange
                         ? (() => {
-                            const createdAt = rec.manualChange!.createdAt as any;
+                            const createdAt = rec.manualChange!.createdAt;
                             const dateKey = typeof createdAt === 'number' 
                               ? new Date(createdAt).toISOString().slice(0,10)
                               : (createdAt || '').slice(0,10);
@@ -238,7 +280,14 @@ export default function MyAttendancePage() {
                           className="pl-1 pr-2 py-2 text-center"
                           style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                         >
-                          <div className="relative group inline-block">
+                          <div 
+                            className="relative group inline-block"
+                            onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                            onMouseLeave={hideTooltip}
+                            onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                            onTouchEnd={hideTooltip}
+                            title={tooltipText}
+                          >
                             {status === 'PRESENT' ? (
                               <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
                             ) : status === 'ABSENT' ? (
@@ -247,12 +296,6 @@ export default function MyAttendancePage() {
                               <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
                             ) : (
                               <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
-                            )}
-                            {tooltipText && (
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                                {tooltipText}
-                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
-                              </div>
                             )}
                           </div>
                         </td>
@@ -270,6 +313,7 @@ export default function MyAttendancePage() {
           )}
         </div>
         )}
+        <TooltipOverlay />
       </Card>
     </div>
   );
