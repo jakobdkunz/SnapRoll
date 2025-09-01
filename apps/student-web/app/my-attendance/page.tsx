@@ -265,7 +265,7 @@ export default function MyAttendancePage() {
                             const dateKey = typeof createdAt === 'number' 
                               ? new Date(createdAt).toISOString().slice(0,10)
                               : (createdAt || '').slice(0,10);
-                            return `${rec.manualChange!.teacherName} manually changed the status to ${status} on ${formatDateMDY(dateKey)}`;
+                            return `Instructor manually changed the status to ${status} on ${formatDateMDY(dateKey)}`;
                           })()
                         : (() => {
                             const name = studentName || 'Student';
