@@ -218,7 +218,7 @@ export default function HistoryPage() {
     // Generate tooltip text based on whether it's a manual change or original status
     let tooltipText = '';
     if (showManualIndicators && record.manualChange) {
-      tooltipText = `${record.manualChange.teacherName} manually changed the status to ${status} on ${formatDateMDY(new Date(record.manualChange.createdAt))}`;
+      tooltipText = `Instructor manually changed the status to ${status} on ${formatDateMDY(new Date(record.manualChange.createdAt))}`;
     } else {
       // Standard attendance tooltip
       switch (status) {

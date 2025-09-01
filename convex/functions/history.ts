@@ -105,7 +105,7 @@ export const getSectionHistory = query({
           originalStatus,
           manualChange: manualChange ? {
             status: manualChange.status,
-            teacherName: "Teacher", // We'll need to join with teacher data
+            teacherName: "Instructor", // We'll need to join with teacher data
             createdAt: manualChange.createdAt,
           } : undefined,
         };
@@ -258,7 +258,7 @@ export const getStudentHistory = query({
           isManual,
           manualChange: manualChange ? {
             status: manualChange.status,
-            teacherName: "Teacher", // We'll need to join with teacher data
+            teacherName: "Instructor", // We'll need to join with teacher data
             createdAt: manualChange.createdAt,
           } : null,
         };
