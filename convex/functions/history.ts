@@ -66,7 +66,13 @@ export const getSectionHistory = query({
       .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
       .collect() : [];
     // Resolve instructor names for manual changes
-    const teacherIds = Array.from(new Set(manualChanges.map((mc) => mc.teacherId as Id<'users'>)));
+    const teacherIds = Array.from(
+      new Set(
+        manualChanges
+          .map((mc) => mc.teacherId as Id<'users'>)
+          .filter((id): id is Id<'users'> => Boolean(id))
+      )
+    );
     const teacherDocs = await Promise.all(teacherIds.map((id) => ctx.db.get(id)));
     const teacherNameById = new Map<Id<'users'>, string>(
       teacherDocs
