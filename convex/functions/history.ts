@@ -54,17 +54,29 @@ export const getSectionHistory = query({
       studentIds.map(id => ctx.db.get(id))
     );
     
-    // Get attendance records for the paginated class days
-    const attendanceRecords = classDayIds.length > 0 ? await ctx.db
-      .query("attendanceRecords")
-      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect() : [];
+    // Get attendance records for the paginated class days via indexed lookups
+    const attendanceRecords = classDayIds.length > 0
+      ? (await Promise.all(
+          classDayIds.map((id) =>
+            ctx.db
+              .query("attendanceRecords")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
     
-    // Get manual status changes for the paginated class days
-    const manualChanges = classDayIds.length > 0 ? await ctx.db
-      .query("manualStatusChanges")
-      .filter((q) => q.or(...classDayIds.map(id => q.eq(q.field("classDayId"), id))))
-      .collect() : [];
+    // Get manual status changes for the paginated class days via indexed lookups
+    const manualChanges = classDayIds.length > 0
+      ? (await Promise.all(
+          classDayIds.map((id) =>
+            ctx.db
+              .query("manualStatusChanges")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
     // Resolve instructor names for manual changes
     const teacherIds = Array.from(
       new Set(
