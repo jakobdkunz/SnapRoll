@@ -8,7 +8,7 @@ import { useQuery } from 'convex/react';
 type HistoryResponse = {
   sections: { id: string; title: string }[];
   days: { date: string }[]; // YYYY-MM-DD
-  records: Array<{ sectionId: string; byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string } | null }> }>;
+  records: Array<{ sectionId: string; byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string | number } | null }> }>;
   totalDays: number;
   offset: number;
   limit: number;
@@ -218,7 +218,13 @@ export default function MyAttendancePage() {
                       const display =
                         status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : '–';
                       const tooltipText = showManual && rec.manualChange
-                        ? `${rec.manualChange.teacherName} manually changed the status to ${status} on ${formatDateMDY(rec.manualChange.createdAt.slice(0,10))}`
+                        ? (() => {
+                            const createdAt = rec.manualChange!.createdAt as any;
+                            const dateKey = typeof createdAt === 'number' 
+                              ? new Date(createdAt).toISOString().slice(0,10)
+                              : (createdAt || '').slice(0,10);
+                            return `${rec.manualChange!.teacherName} manually changed the status to ${status} on ${formatDateMDY(dateKey)}`;
+                          })()
                         : (() => {
                             const name = studentName || 'Student';
                             if (status === 'PRESENT') return `${name} was Present in class on ${formatDateMDY(d.date)}.`;
