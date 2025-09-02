@@ -144,7 +144,8 @@ export default function HistoryPage() {
   // Recompute how many day columns fit and update query limit
   const recomputeLimit = useCallback(() => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+    const rectW = containerRef.current?.getBoundingClientRect().width || 0;
+    const containerW = (rectW > 0 ? rectW : (containerRef.current?.clientWidth || 0)) || Math.max(320, vw - 64);
     // Measure actual left sticky header width if available
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
@@ -450,8 +451,8 @@ export default function HistoryPage() {
           </div>
         </div>
       ) : (
-      <div ref={containerRef} className="relative overflow-hidden">
-      <table className="min-w-full border-separate border-spacing-0 table-fixed">
+      <div ref={containerRef} className="relative overflow-hidden w-full">
+      <table className="min-w-full border-separate border-spacing-0 table-auto">
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>

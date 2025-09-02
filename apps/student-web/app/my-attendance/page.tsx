@@ -105,7 +105,8 @@ export default function MyAttendancePage() {
   // Recompute how many day columns fit and update query limit
   const recomputeLimit = useCallback(() => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+    const rectW = containerRef.current?.getBoundingClientRect().width || 0;
+    const containerW = (rectW > 0 ? rectW : (containerRef.current?.clientWidth || 0)) || Math.max(320, vw - 64);
     // Measure the actual rendered left column width including padding if possible
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : (COURSE_COL_BASE + 20); // add fallback padding estimate
@@ -293,8 +294,8 @@ export default function MyAttendancePage() {
             </div>
           </div>
         ) : (
-        <div ref={containerRef} className="relative overflow-hidden">
-          <table className="min-w-full border-separate border-spacing-0 table-fixed">
+        <div ref={containerRef} className="relative overflow-hidden w-full">
+          <table className="min-w-full border-separate border-spacing-0 table-auto">
             <thead>
               <tr>
                 <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
