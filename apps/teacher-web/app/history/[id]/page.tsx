@@ -141,6 +141,26 @@ export default function HistoryPage() {
     else measure();
   }, [isMobile]);
 
+  // Recompute how many day columns fit and update query limit
+  useEffect(() => {
+    const recompute = () => {
+      const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+      const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+      const leftCol = studentWidthEffective;
+      const availableForDays = Math.max(0, containerW - leftCol);
+      const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
+      const capped = Math.min(60, fitCols); // cap to avoid huge payloads
+      setLimit((prev) => (prev !== capped ? capped : prev));
+    };
+    // Compute on mount and on dependencies that affect widths
+    recompute();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', recompute);
+      return () => window.removeEventListener('resize', recompute);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, studentWidthEffective, initialized]);
+
   // Extract data from Convex query
   const students = history?.students || [];
   const days = history?.days || [];
