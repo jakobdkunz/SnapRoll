@@ -1,6 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
+import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
 
 type RateLimitBucket = {
@@ -204,17 +205,14 @@ export const getAttendanceStatus = query({
     const user = await requireCurrentUser(ctx);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const { startMs, nextStartMs } = getEasternDayBounds();
     
     const classDay = await ctx.db
       .query("classDays")
       .withIndex("by_section_date", (q) => 
         q.eq("sectionId", args.sectionId)
-         .gte("date", startOfDay.getTime())
-         .lt("date", endOfDay.getTime())
+         .gte("date", startMs)
+         .lt("date", nextStartMs)
       )
       .first();
     
@@ -299,9 +297,7 @@ export const updateManualStatus = mutation({
       // Do not allow reverting to BLANK for previous days (only same-day allowed)
       const classDay = await ctx.db.get(args.classDayId);
       if (!classDay) throw new Error("Not found");
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const startOfToday = today.getTime();
+      const startOfToday = getEasternStartOfDay();
       if ((classDay.date as number) < startOfToday) {
         throw new Error("Cannot change to BLANK after the day has passed");
       }
@@ -370,18 +366,15 @@ export const startAttendance = mutation({
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
     const now = Date.now();
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const { startMs, nextStartMs } = getEasternDayBounds(now);
     
     // Check if attendance already exists for today
     const existingClassDay = await ctx.db
       .query("classDays")
       .withIndex("by_section_date", (q) => 
         q.eq("sectionId", args.sectionId)
-         .gte("date", startOfDay.getTime())
-         .lt("date", endOfDay.getTime())
+         .gte("date", startMs)
+         .lt("date", nextStartMs)
       )
       .first();
     
@@ -402,7 +395,7 @@ export const startAttendance = mutation({
     
     return await ctx.db.insert("classDays", {
       sectionId: args.sectionId,
-      date: startOfDay.getTime(),
+      date: startMs,
       attendanceCode: newCode,
       attendanceCodeExpiresAt: newExpiresAt,
     });

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Id, Doc } from "../_generated/dataModel";
 import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import { getEasternDayBounds } from "./_tz";
 
 export const getSectionHistory = query({
   args: {
@@ -14,7 +15,6 @@ export const getSectionHistory = query({
     const teacher = await requireTeacher(ctx);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all class days for this section, ordered by date desc
     const rawDays = await ctx.db
       .query("classDays")
@@ -22,14 +22,13 @@ export const getSectionHistory = query({
       .order("desc")
       .collect();
 
-    // Deduplicate by LOCAL calendar day to avoid duplicate columns
-    // Use local midnight key to align with how classDays.date is stored (startOfDay local time)
+    // Deduplicate by Eastern Time calendar day to avoid duplicate columns
+    // Align with how classDays.date is stored (start of day in ET)
     const unique: typeof rawDays = [];
     const seen = new Set<number>();
     for (const cd of rawDays) {
-      const d = new Date(cd.date);
-      d.setHours(0, 0, 0, 0);
-      const key = d.getTime();
+      const { startMs } = getEasternDayBounds(cd.date as number);
+      const key = startMs;
       if (!seen.has(key)) {
         seen.add(key);
         unique.push(cd);
@@ -120,7 +119,8 @@ export const getSectionHistory = query({
         // - If enrolled by that day: ABSENT
         // - If not enrolled by that day: NOT_JOINED (aka Not Enrolled)
         if (!hasManual && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
-          const endOfDay = (classDay.date as number) + DAY_MS;
+          const { nextStartMs } = getEasternDayBounds(classDay.date as number);
+          const endOfDay = nextStartMs;
           const enroll = enrollmentByStudent.get(student._id);
           const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
           if (now >= endOfDay) {
@@ -157,8 +157,8 @@ export const getSectionHistory = query({
       })),
       days: page.map(cd => ({
         id: cd._id,
-        // Keep ISO for client parsing, but duplicates are avoided by local-day key above
-        date: new Date(cd.date).toISOString().split('T')[0],
+        // Keep ISO string of ET date (YYYY-MM-DD)
+        date: new Date(getEasternDayBounds(cd.date as number).startMs).toISOString().split('T')[0],
         attendanceCode: cd.attendanceCode,
       })),
       records: studentRecords,

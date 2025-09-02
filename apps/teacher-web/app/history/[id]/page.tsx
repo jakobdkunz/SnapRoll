@@ -199,11 +199,20 @@ export default function HistoryPage() {
     // Only show manual indicators if the status is actually different from original
     const showManualIndicators = isManual && status !== originalStatus;
     
-    // Disable selecting BLANK for previous days
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startOfToday = today.getTime();
-    const isPastDay = new Date(date).getTime() < startOfToday;
+    // Disable selecting BLANK for previous days using Eastern Time boundary
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const partsNow = fmt.formatToParts(now);
+    const y = Number(partsNow.find(p => p.type === 'year')!.value);
+    const m = Number(partsNow.find(p => p.type === 'month')!.value);
+    const d = Number(partsNow.find(p => p.type === 'day')!.value);
+    const guessUtc = Date.UTC(y, m - 1, d, 5, 0, 0, 0);
+    const hms = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(guessUtc);
+    const hh = Number(hms.find(p => p.type === 'hour')!.value);
+    const mm = Number(hms.find(p => p.type === 'minute')!.value);
+    const ss = Number(hms.find(p => p.type === 'second')!.value);
+    const startOfTodayEt = guessUtc - (((hh * 60 + mm) * 60 + ss) * 1000);
+    const isPastDay = new Date(date).getTime() < startOfTodayEt;
 
     const statusOptions: { value: Status; label: string; disabled?: boolean }[] = [
       { value: 'PRESENT', label: 'P' },
