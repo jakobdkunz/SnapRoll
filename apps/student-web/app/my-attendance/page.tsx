@@ -255,10 +255,10 @@ export default function MyAttendancePage() {
                     </td>
                     {[...grid.days].reverse().map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
-                      const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'BLANK';
+                      const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
                       const showManual = rec.isManual && rec.status !== rec.originalStatus;
                       const display =
-                        status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : '–';
+                        status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : status === 'NOT_JOINED' ? 'NE' : '–';
                       const tooltipText = showManual && rec.manualChange
                         ? (() => {
                             const createdAt = rec.manualChange!.createdAt;
@@ -272,6 +272,7 @@ export default function MyAttendancePage() {
                             if (status === 'PRESENT') return `${name} was Present in class on ${formatDateMDY(d.date)}.`;
                             if (status === 'ABSENT') return `${name} was Absent on ${formatDateMDY(d.date)}.`;
                             if (status === 'EXCUSED') return `${name} was Excused on ${formatDateMDY(d.date)}.`;
+                            if (status === 'NOT_JOINED') return `${name} was not enrolled in this course on ${formatDateMDY(d.date)}.`;
                             return '';
                           })();
                       return (
@@ -294,6 +295,8 @@ export default function MyAttendancePage() {
                               <Badge tone="red">{display}{showManual ? '*' : ''}</Badge>
                             ) : status === 'EXCUSED' ? (
                               <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
+                            ) : status === 'NOT_JOINED' ? (
+                              <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
                             ) : (
                               <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
                             )}
