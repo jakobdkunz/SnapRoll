@@ -36,7 +36,7 @@ export default function MyAttendancePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [offset, setOffset] = useState<number>(0);
-  const [limit] = useState<number>(12);
+  const [limit, setLimit] = useState<number>(12);
   const [isFetching] = useState<boolean>(false);
   // const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -92,8 +92,8 @@ export default function MyAttendancePage() {
   // Column width calculations
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
-  // const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
-  // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
+  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -101,6 +101,26 @@ export default function MyAttendancePage() {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Recompute how many day columns fit and update query limit
+  useEffect(() => {
+    const recompute = () => {
+      const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+      const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+      const leftCol = COURSE_COL_BASE;
+      const availableForDays = Math.max(0, containerW - leftCol);
+      const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
+      const capped = Math.min(60, fitCols); // hard cap to keep payloads sane
+      setLimit((prev) => (prev !== capped ? capped : prev));
+    };
+    // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
+    recompute();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', recompute);
+      return () => window.removeEventListener('resize', recompute);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile, data]);
 
   useEffect(() => {
     setIsClient(true);
