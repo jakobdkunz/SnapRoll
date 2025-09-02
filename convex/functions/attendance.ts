@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query, internalMutation } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
 async function requireCurrentUser(ctx: any) {
@@ -388,89 +388,5 @@ export const startAttendance = mutation({
       attendanceCode: newCode,
       attendanceCodeExpiresAt: newExpiresAt,
     });
-  },
-});
-
-// Marks any BLANK (i.e., missing) attendance as ABSENT for class days before today
-// This mutation is intended to be invoked by a daily cron. It computes effective ABSENT
-// only for students who were enrolled as of the end of a given class day and who have no
-// attendance record and no manual override for that day.
-export const finalizePastBlankToAbsent = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now();
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const cutoff = startOfToday.getTime();
-    const DAY_MS = 24 * 60 * 60 * 1000;
-
-    // Fetch all class days earlier than today
-    const pastClassDays = await ctx.db
-      .query("classDays")
-      .filter((q) => q.lt(q.field("date"), cutoff))
-      .collect();
-
-    if (pastClassDays.length === 0) return { updated: 0 };
-
-    // Group class days by section to batch enrollment lookups
-    const bySection = new Map();
-    for (const cd of pastClassDays) {
-      const list = bySection.get(cd.sectionId) || [];
-      list.push(cd);
-      bySection.set(cd.sectionId, list);
-    }
-
-    let updated = 0;
-
-    for (const [sectionId, classDays] of bySection) {
-      // Load enrollments for this section
-      const enrollments = await ctx.db
-        .query("enrollments")
-        .withIndex("by_section", (q) => q.eq("sectionId", sectionId))
-        .collect();
-      // enrollmentByStudent is not needed below; use filtered array directly
-
-      for (const classDay of classDays) {
-        const endOfDay = (classDay.date as number) + DAY_MS;
-        // Only finalize if that day is in the past relative to now
-        if (endOfDay > now) continue;
-
-        // Find students who were enrolled by end of that day
-        const eligibleStudents = enrollments
-          .filter((e) => e.createdAt <= endOfDay && (!e.removedAt || e.removedAt > endOfDay))
-          .map((e) => e.studentId);
-
-        if (eligibleStudents.length === 0) continue;
-
-        // Fetch any existing attendance records for this classDay
-        const existingRecords = await ctx.db
-          .query("attendanceRecords")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", classDay._id))
-          .collect();
-        const hadRecord = new Map(existingRecords.map((r) => [r.studentId, r]));
-
-        // Fetch any manual overrides for this classDay
-        const manualChanges = await ctx.db
-          .query("manualStatusChanges")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", classDay._id))
-          .collect();
-        const manualByStudent = new Map(manualChanges.map((m) => [m.studentId, m]));
-
-        // For every eligible student with no record and no manual change, insert ABSENT
-        for (const studentId of eligibleStudents) {
-          if (hadRecord.has(studentId)) continue;
-          if (manualByStudent.has(studentId)) continue;
-
-          await ctx.db.insert("attendanceRecords", {
-            classDayId: classDay._id,
-            studentId,
-            status: "ABSENT",
-          });
-          updated += 1;
-        }
-      }
-    }
-
-    return { updated };
   },
 });
