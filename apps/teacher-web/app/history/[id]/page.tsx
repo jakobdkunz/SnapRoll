@@ -149,11 +149,17 @@ export default function HistoryPage() {
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
     // Measure an actual day header column width if available
-    const dayTh = containerRef.current?.querySelector<HTMLTableCellElement>('thead th.sr-day-col');
-    const perColMeasured = dayTh?.offsetWidth;
+    let perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th.sr-day-col')?.offsetWidth;
+    if (!perColMeasured || perColMeasured <= 0) {
+      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th:not(:first-child)')?.offsetWidth;
+    }
+    if (!perColMeasured || perColMeasured <= 0) {
+      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
+    }
     const perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : PER_COL;
     const availableForDays = Math.max(0, containerW - leftCol);
-    const fitCols = Math.max(1, Math.floor(availableForDays / perCol));
+    const epsilon = 4; // tolerate minor rounding/scrollbar quirks
+    const fitCols = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fitCols); // cap to avoid huge payloads
     setLimit((prev) => (prev !== capped ? capped : prev));
   }, [studentWidthEffective, PER_COL]);
