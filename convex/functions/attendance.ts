@@ -1,27 +1,37 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import type { QueryCtx, MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
-async function requireCurrentUser(ctx: any) {
+type RateLimitBucket = {
+  _id: Id<'rateLimits'>;
+  userId: Id<'users'>;
+  key: string;
+  windowStart: number;
+  count: number;
+  blockedUntil?: number;
+};
+
+async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new ConvexError("Please sign in to continue.");
   const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
   if (!email) throw new ConvexError("Please sign in to continue.");
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q: any) => q.eq("email", email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .first();
   if (!user) throw new ConvexError("Account not provisioned. Try refreshing or contact your instructor.");
   return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
 }
 
-async function requireTeacherOwnsSection(ctx: any, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
+async function requireTeacherOwnsSection(ctx: QueryCtx | MutationCtx, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
   const section = await ctx.db.get(sectionId);
   if (!section || section.teacherId !== teacherUserId) throw new Error("Forbidden");
   return section;
 }
 
-async function requireTeacherOwnershipForClassDay(ctx: any, classDayId: Id<'classDays'>, teacherUserId: Id<'users'>) {
+async function requireTeacherOwnershipForClassDay(ctx: QueryCtx | MutationCtx, classDayId: Id<'classDays'>, teacherUserId: Id<'users'>) {
   const classDay = await ctx.db.get(classDayId);
   if (!classDay) throw new Error("Not found");
   await requireTeacherOwnsSection(ctx, classDay.sectionId as Id<'sections'>, teacherUserId);
@@ -84,18 +94,18 @@ export const checkIn = mutation({
       .query("rateLimits")
       .withIndex("by_user_key", (q) => q.eq("userId", studentId).eq("key", key))
       .order("desc")
-      .collect();
+      .collect() as RateLimitBucket[];
     // Choose the active bucket in the current window, if any
-    let bucket = buckets.find((b: any) => now - b.windowStart < WINDOW_MS) || null;
+    let bucket: RateLimitBucket | null = buckets.find((b) => now - b.windowStart < WINDOW_MS) || null;
     // If any bucket is blocked, enforce block
-    const blocked = buckets.find((b: any) => b.blockedUntil && b.blockedUntil > now);
+    const blocked = buckets.find((b) => b.blockedUntil && b.blockedUntil > now);
     if (blocked) {
       return { ok: false, error: "Too many attempts. Please wait 30 minutes and try again.", attemptsLeft: 0, blockedUntil: blocked.blockedUntil };
     }
     // Create a window bucket if none exists yet (count will be incremented only on failures)
     if (!bucket) {
       const id = await ctx.db.insert("rateLimits", { userId: studentId, key, windowStart: now, count: 0, blockedUntil: undefined });
-      bucket = await ctx.db.get(id);
+      bucket = await ctx.db.get(id) as RateLimitBucket;
     }
     
     // Find the class day with this attendance code
@@ -105,17 +115,17 @@ export const checkIn = mutation({
       .first();
     
     if (!classDay) {
-      const nextCount = (bucket as any).count + 1;
+      const nextCount = bucket!.count + 1;
       const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
-      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      await ctx.db.patch(bucket!._id, { count: nextCount, blockedUntil });
       const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
       return { ok: false, error: `Invalid code. Please check the code and try again. (${attemptsLeft} attempt${attemptsLeft === 1 ? '' : 's'} remaining)`, attemptsLeft, blockedUntil };
     }
     
     if (classDay.attendanceCodeExpiresAt && classDay.attendanceCodeExpiresAt < now) {
-      const nextCount = (bucket as any).count + 1;
+      const nextCount = bucket!.count + 1;
       const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
-      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      await ctx.db.patch(bucket!._id, { count: nextCount, blockedUntil });
       const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
       return { ok: false, error: "This code has expired. Ask your instructor for a new one.", attemptsLeft, blockedUntil };
     }
@@ -129,9 +139,9 @@ export const checkIn = mutation({
       .first();
     
     if (!enrollment) {
-      const nextCount = (bucket as any).count + 1;
+      const nextCount = bucket!.count + 1;
       const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
-      await ctx.db.patch((bucket as any)._id, { count: nextCount, blockedUntil });
+      await ctx.db.patch(bucket!._id, { count: nextCount, blockedUntil });
       const attemptsLeft = Math.max(0, MAX_ATTEMPTS - nextCount);
       return { ok: false, error: "You’re not enrolled in this course. Ask your instructor to add you.", attemptsLeft, blockedUntil };
     }
@@ -147,7 +157,7 @@ export const checkIn = mutation({
     if (existingRecord) {
       // If already present, do not count as failure, do not reset counter
       if (existingRecord.status === "PRESENT") {
-        return { ok: false, error: "You already checked in for this class.", attemptsLeft: Math.max(0, MAX_ATTEMPTS - (bucket as any).count) };
+        return { ok: false, error: "You already checked in for this class.", attemptsLeft: Math.max(0, MAX_ATTEMPTS - bucket!.count) };
       }
       // Update existing record from other status to PRESENT (success)
       await ctx.db.patch(existingRecord._id, { status: "PRESENT" });
@@ -162,7 +172,7 @@ export const checkIn = mutation({
         await ctx.db.delete(manual._id);
       }
       // Reset attempts on success
-      await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
+      await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: existingRecord._id };
     } else {
       // Create new record (success)
@@ -182,7 +192,7 @@ export const checkIn = mutation({
         await ctx.db.delete(manual._id);
       }
       // Reset attempts on success
-      await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
+      await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: id };
     }
   },
@@ -194,7 +204,6 @@ export const getAttendanceStatus = query({
     const user = await requireCurrentUser(ctx);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
-    const now = Date.now();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(startOfDay);
