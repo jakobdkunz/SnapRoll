@@ -106,9 +106,15 @@ export default function MyAttendancePage() {
   const recomputeLimit = useCallback(() => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
     const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
-    const leftCol = COURSE_COL_BASE;
+    // Measure the actual rendered left column width including padding if possible
+    const measuredLeft = firstThRef.current?.offsetWidth;
+    const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : (COURSE_COL_BASE + 20); // add fallback padding estimate
+    // Measure an actual day column if available (includes padding)
+    const dayTh = containerRef.current?.querySelector<HTMLTableCellElement>('thead th.sr-day-col');
+    const perColMeasured = dayTh?.offsetWidth;
+    const perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : PER_COL;
     const availableForDays = Math.max(0, containerW - leftCol);
-    const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
+    const fitCols = Math.max(1, Math.floor(availableForDays / perCol));
     const capped = Math.min(60, fitCols); // hard cap to keep payloads sane
     setLimit((prev) => (prev !== capped ? capped : prev));
   }, [COURSE_COL_BASE, PER_COL]);
@@ -272,7 +278,7 @@ export default function MyAttendancePage() {
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
-                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
                     {isMobile ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)}
