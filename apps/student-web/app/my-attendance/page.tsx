@@ -36,7 +36,9 @@ export default function MyAttendancePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [offset, setOffset] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(12);
+  // Fetch a generous window; we will render only what fits
+  const [limit] = useState<number>(60);
+  const [visibleCount, setVisibleCount] = useState<number>(8);
   const [isFetching] = useState<boolean>(false);
   // const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -102,14 +104,14 @@ export default function MyAttendancePage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Recompute how many day columns fit and update query limit
-  const recomputeLimit = useCallback(() => {
+  // Recompute how many day columns fit (rendered), independent of server limit
+  const recomputeVisible = useCallback(() => {
     const containerEl = containerRef.current;
     if (!containerEl) return;
     // Measure actual container width; avoid viewport fallbacks that over-estimate
     const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
     if (!rectW || rectW < 1) {
-      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeLimit());
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
     // Measure the actual rendered left column width including padding if possible
@@ -145,36 +147,36 @@ export default function MyAttendancePage() {
       fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     }
     const capped = Math.min(60, fit);
-    setLimit((prev) => (prev !== capped ? capped : prev));
+    setVisibleCount((prev) => (prev !== capped ? capped : prev));
   }, [COURSE_COL_BASE, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
   useEffect(() => {
     // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
-    recomputeLimit();
+    recomputeVisible();
     if (typeof window !== 'undefined') {
-      const onResize = () => recomputeLimit();
+      const onResize = () => recomputeVisible();
       window.addEventListener('resize', onResize);
       return () => window.removeEventListener('resize', onResize);
     }
-  }, [isMobile, data, recomputeLimit]);
+  }, [isMobile, data, recomputeVisible]);
 
   // Observe container size changes (not just window resizes)
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => {
-      recomputeLimit();
+      recomputeVisible();
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [recomputeLimit]);
+  }, [recomputeVisible]);
 
-  // Clamp offset so we never show more days than exist when limit shrinks
+  // Clamp offset so we never show more days than exist when visible count changes
   useEffect(() => {
     if (!data) return;
-    const maxOffset = Math.max(0, data.totalDays - Math.max(1, limit));
+    const maxOffset = Math.max(0, data.totalDays - Math.max(1, visibleCount));
     if (offset > maxOffset) setOffset(maxOffset);
-  }, [data, limit, offset]);
+  }, [data, visibleCount, offset]);
 
   useEffect(() => {
     setIsClient(true);
@@ -263,8 +265,9 @@ export default function MyAttendancePage() {
           <div className="text-sm text-slate-600 pl-4">
             {data.totalDays > 0
               ? (() => {
+                  const windowSize = Math.min(visibleCount, grid.days.length);
                   const end = Math.min(data.totalDays, Math.max(1, data.totalDays - offset));
-                  const start = Math.min(data.totalDays, Math.max(1, data.totalDays - offset - grid.days.length + 1));
+                  const start = Math.min(data.totalDays, Math.max(1, end - windowSize + 1));
                   return <>{start}–{end} of {data.totalDays} class days</>;
                 })()
               : '0 of 0 class days'}
@@ -274,12 +277,12 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const step = Math.max(1, limit);
+                const step = Math.max(1, visibleCount);
                 const maxOffset = Math.max(0, data.totalDays - step);
                 const next = Math.min(maxOffset, offset + step);
                 setOffset(next);
               }} 
-              disabled={offset + grid.days.length >= data.totalDays}
+              disabled={offset + Math.min(visibleCount, grid.days.length) >= data.totalDays}
             >
               ← <span className="hidden sm:inline">Previous</span>
             </Button>
@@ -287,7 +290,7 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const step = Math.max(1, limit);
+                const step = Math.max(1, visibleCount);
                 const next = Math.max(0, offset - step); 
                 setOffset(next); 
               }} 
@@ -311,7 +314,7 @@ export default function MyAttendancePage() {
             <thead>
               <tr>
                 <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
-                {[...grid.days].reverse().map((d) => (
+                {[...grid.days].reverse().slice(0, visibleCount).map((d) => (
                   <th 
                     key={d.date} 
                     className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
@@ -330,7 +333,7 @@ export default function MyAttendancePage() {
                     <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                     </td>
-                    {[...grid.days].reverse().map((d) => {
+                    {[...grid.days].reverse().slice(0, visibleCount).map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
                       const showManual = rec.isManual && rec.status !== rec.originalStatus;
