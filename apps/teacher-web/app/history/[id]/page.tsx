@@ -156,7 +156,9 @@ export default function HistoryPage() {
     if (!perColMeasured || perColMeasured <= 0) {
       perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
     }
-    const perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : PER_COL;
+    // If measured equals content width (56/96), add padding to get full footprint
+    let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
+    if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
     const availableForDays = Math.max(0, containerW - leftCol);
     const epsilon = 4; // tolerate minor rounding/scrollbar quirks
     const fitCols = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
