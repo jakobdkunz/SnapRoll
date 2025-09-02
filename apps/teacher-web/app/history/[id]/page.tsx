@@ -6,7 +6,7 @@ import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
 import { convexApi, api } from '@snaproll/convex-client';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };
@@ -67,6 +67,7 @@ export default function HistoryPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const convex = useConvex();
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -167,15 +168,7 @@ export default function HistoryPage() {
       setExportOpen(true);
       setExporting(true);
       if (!params.id) throw new Error('Missing section id');
-      const convex = (await import('convex/react')).useConvex as any;
-      // We cannot call a hook here. So use a fetch via window to an API route or use useMutation/useQuery pattern differently.
-      // Simpler: fetch data via a serverless call in the client using convex client available through useMutation? We'll use a direct fetcher via convex-react client in a tiny deferred promise in an effect.
-      // Workaround without hooks: call the query via a temporary function on window.
-      const { api } = await import('@snaproll/convex-client');
-      const { ConvexReactClient } = await import('convex/react');
-      const url = process.env.NEXT_PUBLIC_CONVEX_URL as string;
-      const client = new ConvexReactClient(url);
-      const data = await client.query((api as any).functions.history.exportSectionHistory, { sectionId: params.id as any });
+      const data = await convex.query((api as any).functions.history.exportSectionHistory, { sectionId: params.id as any });
       const { days, rows } = data as { days: string[]; rows: Array<{ firstName: string; lastName: string; email: string; statuses: string[] }>; };
       const header = ['First Name', 'Last Name', 'Email', ...days];
       const lines = [header];
