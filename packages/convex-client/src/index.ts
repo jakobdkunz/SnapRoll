@@ -116,4 +116,9 @@ export const convexApi = {
   students: {
     getActiveInteractive: api.functions.students.getActiveInteractive,
   },
+  
+  // Demo utilities (developer mode only)
+  demo: {
+    generateDemoData: (api as any).functions.demo.generateDemoData,
+  },
 };

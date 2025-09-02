@@ -4,6 +4,9 @@ const nextConfig = {
   // Mitigate occasional jest-worker crashes on Vercel
   // See: https://github.com/vercel/next.js/issues/48089
   swcMinify: true,
+  env: {
+    NEXT_PUBLIC_DEV_MODE: process.env.NEXT_PUBLIC_DEV_MODE,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
