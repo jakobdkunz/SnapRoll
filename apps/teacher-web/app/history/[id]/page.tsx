@@ -166,9 +166,42 @@ export default function HistoryPage() {
       setExportError(null);
       setExportOpen(true);
       setExporting(true);
-      // TODO: Implement CSV export with Convex data
-      // For now, just show an error
-      throw new Error('Export functionality not yet implemented with Convex');
+      if (!params.id) throw new Error('Missing section id');
+      const convex = (await import('convex/react')).useConvex as any;
+      // We cannot call a hook here. So use a fetch via window to an API route or use useMutation/useQuery pattern differently.
+      // Simpler: fetch data via a serverless call in the client using convex client available through useMutation? We'll use a direct fetcher via convex-react client in a tiny deferred promise in an effect.
+      // Workaround without hooks: call the query via a temporary function on window.
+      const { api } = await import('@snaproll/convex-client');
+      const { ConvexReactClient } = await import('convex/react');
+      const url = process.env.NEXT_PUBLIC_CONVEX_URL as string;
+      const client = new ConvexReactClient(url);
+      const data = await client.query((api as any).functions.history.exportSectionHistory, { sectionId: params.id as any });
+      const { days, rows } = data as { days: string[]; rows: Array<{ firstName: string; lastName: string; email: string; statuses: string[] }>; };
+      const header = ['First Name', 'Last Name', 'Email', ...days];
+      const lines = [header];
+      for (const r of rows) {
+        lines.push([r.firstName, r.lastName, r.email, ...r.statuses.map(s => s || 'BLANK')]);
+      }
+      const csv = lines.map(cols => cols.map((c) => {
+        const v = String(c ?? '');
+        // Escape quotes and wrap fields containing commas, quotes or newlines
+        if (/[",\n]/.test(v)) {
+          return '"' + v.replace(/"/g, '""') + '"';
+        }
+        return v;
+      }).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlObj;
+      const date = new Date().toISOString().slice(0,10);
+      a.download = `attendance_${params.id}_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(urlObj);
+      setExporting(false);
+      setExportOpen(false);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Unknown error';
       setExportError(message);

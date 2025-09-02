@@ -76,6 +76,7 @@ export const convexApi = {
   history: {
     getSectionHistory: api.functions.history.getSectionHistory,
     getStudentHistory: api.functions.history.getStudentHistory,
+    exportSectionHistory: (api as any).functions.history.exportSectionHistory,
   },
   
   // Poll functions
