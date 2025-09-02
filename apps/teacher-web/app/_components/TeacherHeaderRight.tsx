@@ -19,11 +19,23 @@ export function TeacherHeaderRight() {
   const [saving, setSaving] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Dev generator state
+  const [devOpen, setDevOpen] = useState(false);
+  const [sectionTitle, setSectionTitle] = useState("Demo Section");
+  const [studentCount, setStudentCount] = useState(25);
+  const [daysBack, setDaysBack] = useState(30);
+  const [pctPresent, setPctPresent] = useState(50);
+  const [pctPresentManual, setPctPresentManual] = useState(10);
+  const [pctAbsentManual, setPctAbsentManual] = useState(20);
+  const [pctBlank, setPctBlank] = useState(10);
+  const [pctNotEnrolledManual, setPctNotEnrolledManual] = useState(10);
+  const [generating, setGenerating] = useState(false);
 
   // Convex hooks
   const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
   const teacher = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
   const updateUser = useMutation(api.functions.users.update);
+  const generateDemo = useMutation((api as any).functions.demo.generateDemoData);
 
   useEffect(() => {
     setIsClient(true);
@@ -80,6 +92,35 @@ export function TeacherHeaderRight() {
       setProfileOpen(false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
+
+  async function onGenerateDemo() {
+    if (!devMode) return;
+    setGenerating(true);
+    try {
+      const total = pctPresent + pctPresentManual + pctAbsentManual + pctBlank + pctNotEnrolledManual;
+      if (total !== 100) {
+        alert("Percentages must add up to 100%");
+        return;
+      }
+      await generateDemo({
+        sectionTitle,
+        studentCount,
+        daysBack,
+        percentages: {
+          present: pctPresent,
+          presentManual: pctPresentManual,
+          absentManual: pctAbsentManual,
+          blank: pctBlank,
+          notEnrolledManual: pctNotEnrolledManual,
+        },
+      });
+      alert("Demo data generated");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -140,6 +181,61 @@ export function TeacherHeaderRight() {
             <TextInput value={teacher?.email || ''} disabled />
             <div className="text-xs text-slate-500">To change your email, please contact support.</div>
           </div>
+
+          {devMode && (
+            <div className="pt-4 border-t border-slate-200">
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold">Developer Tools</div>
+                <Button variant="secondary" onClick={() => setDevOpen(!devOpen)}>
+                  {devOpen ? 'Hide' : 'Show'}
+                </Button>
+              </div>
+              {devOpen && (
+                <div className="mt-3 space-y-3">
+                  <div className="space-y-1 text-left">
+                    <label className="text-sm text-slate-600">Demo section name</label>
+                    <TextInput value={sectionTitle} onChange={(e: any) => setSectionTitle(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">Students</label>
+                      <TextInput type="number" value={studentCount} onChange={(e: any) => setStudentCount(Number(e.target.value || 0))} />
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">Days (back from today)</label>
+                      <TextInput type="number" value={daysBack} onChange={(e: any) => setDaysBack(Number(e.target.value || 0))} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">% Present</label>
+                      <TextInput type="number" value={pctPresent} onChange={(e: any) => setPctPresent(Number(e.target.value || 0))} />
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">% Present (manual)</label>
+                      <TextInput type="number" value={pctPresentManual} onChange={(e: any) => setPctPresentManual(Number(e.target.value || 0))} />
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">% Absent (manual)</label>
+                      <TextInput type="number" value={pctAbsentManual} onChange={(e: any) => setPctAbsentManual(Number(e.target.value || 0))} />
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">% Blank (never manual)</label>
+                      <TextInput type="number" value={pctBlank} onChange={(e: any) => setPctBlank(Number(e.target.value || 0))} />
+                    </div>
+                    <div className="space-y-1 text-left">
+                      <label className="text-sm text-slate-600">% Not Enrolled (manual)</label>
+                      <TextInput type="number" value={pctNotEnrolledManual} onChange={(e: any) => setPctNotEnrolledManual(Number(e.target.value || 0))} />
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-500">Percentages must add to 100%.</div>
+                  <Button onClick={onGenerateDemo} disabled={generating}>
+                    {generating ? 'Generating…' : 'Generate demo data'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Cancel</Button>
             <Button onClick={saveProfile} disabled={saving || !firstName.trim() || !lastName.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
