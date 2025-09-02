@@ -152,37 +152,13 @@ export default function HistoryPage() {
       if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
-    // Measure actual left sticky header width if available
+    // Compute fit purely from constants to avoid DOM timing issues
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
     const availableForDays = Math.max(0, rectW - leftCol);
-    // Prefer summing actual header widths to determine how many fully fit
-    const headerCols = Array.from(containerEl.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
-    let fit = 0;
-    if (headerCols.length > 0) {
-      let acc = 0;
-      for (const th of headerCols) {
-        let w = th.offsetWidth || th.getBoundingClientRect().width || 0;
-        if (w > 0 && w <= DAY_COL_CONTENT + 1) {
-          w += DAY_COL_PADDING; // account for pl-1 pr-2 when offsetWidth is content-only
-        }
-        if (w <= 0) continue;
-        if (acc + w <= availableForDays) {
-          acc += w;
-          fit += 1;
-        } else {
-          break;
-        }
-      }
-    }
-    if (fit <= 0) {
-      // Fallback to computed footprint if headers not yet available
-      const perColMeasured = containerEl.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
-      let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
-      if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
-      const epsilon = 4;
-      fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
-    }
+    const perCol = DAY_COL_CONTENT + DAY_COL_PADDING;
+    const epsilon = 4;
+    const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setVisibleCount((prev) => (prev !== capped ? capped : prev));
   }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
