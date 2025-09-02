@@ -151,6 +151,16 @@ export const checkIn = mutation({
       }
       // Update existing record from other status to PRESENT (success)
       await ctx.db.patch(existingRecord._id, { status: "PRESENT" });
+      // Clear any manual BLANK override so effective status reflects PRESENT
+      const manual = await ctx.db
+        .query("manualStatusChanges")
+        .withIndex("by_classDay_student", (q) => 
+          q.eq("classDayId", classDay._id).eq("studentId", studentId)
+        )
+        .first();
+      if (manual && manual.status === "BLANK") {
+        await ctx.db.delete(manual._id);
+      }
       // Reset attempts on success
       await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: existingRecord._id };
@@ -161,6 +171,16 @@ export const checkIn = mutation({
         studentId,
         status: "PRESENT",
       });
+      // Clear any manual BLANK override so effective status reflects PRESENT
+      const manual = await ctx.db
+        .query("manualStatusChanges")
+        .withIndex("by_classDay_student", (q) => 
+          q.eq("classDayId", classDay._id).eq("studentId", studentId)
+        )
+        .first();
+      if (manual && manual.status === "BLANK") {
+        await ctx.db.delete(manual._id);
+      }
       // Reset attempts on success
       await ctx.db.patch((bucket as any)._id, { count: 0, windowStart: now, blockedUntil: undefined });
       return { ok: true, recordId: id };
@@ -255,18 +275,30 @@ export const updateManualStatus = mutation({
     const user = await requireCurrentUser(ctx);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
-    // Check if status is BLANK - only allow if original status was BLANK
+    // Setting BLANK should never create a manual change; treat as "revert"
     if (args.status === "BLANK") {
       const originalRecord = await ctx.db
         .query("attendanceRecords")
-        .withIndex("by_classDay_student", (q) => 
+        .withIndex("by_classDay_student", (q) =>
           q.eq("classDayId", args.classDayId).eq("studentId", args.studentId)
         )
         .first();
-      
+      // If there is a recorded status that isn't BLANK, do not allow reverting to BLANK
       if (originalRecord && originalRecord.status !== "BLANK") {
-        throw new Error("Cannot change to BLANK unless original status was BLANK");
+        throw new Error("Cannot change to BLANK once a non-blank status is recorded");
       }
+      // Remove any existing manual change so UI reflects unmodified BLANK
+      const existing = await ctx.db
+        .query("manualStatusChanges")
+        .withIndex("by_classDay_student", (q) =>
+          q.eq("classDayId", args.classDayId).eq("studentId", args.studentId)
+        )
+        .first();
+      if (existing) {
+        await ctx.db.delete(existing._id);
+        return existing._id;
+      }
+      return null;
     }
 
     // Check if manual change already exists
