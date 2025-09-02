@@ -199,12 +199,18 @@ export default function HistoryPage() {
     // Only show manual indicators if the status is actually different from original
     const showManualIndicators = isManual && status !== originalStatus;
     
+    // Disable selecting BLANK for previous days
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startOfToday = today.getTime();
+    const isPastDay = new Date(date).getTime() < startOfToday;
+
     const statusOptions: { value: Status; label: string; disabled?: boolean }[] = [
       { value: 'PRESENT', label: 'P' },
       { value: 'ABSENT', label: 'A' },
       { value: 'EXCUSED', label: 'E' },
       { value: 'NOT_JOINED', label: 'NE' },
-      { value: 'BLANK', label: '–', disabled: originalStatus !== 'BLANK' }
+      { value: 'BLANK', label: '–', disabled: originalStatus !== 'BLANK' || isPastDay }
     ];
 
     const statusDisplay = (() => {
