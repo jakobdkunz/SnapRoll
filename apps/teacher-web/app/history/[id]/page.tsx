@@ -444,7 +444,7 @@ export default function HistoryPage() {
         </div>
       ) : (
       <div ref={containerRef} className="relative overflow-hidden w-full">
-      <table className="min-w-full border-separate border-spacing-0 table-auto">
+      <table className="min-w-full border-separate border-spacing-0 table-fixed">
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
