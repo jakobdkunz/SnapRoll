@@ -143,20 +143,27 @@ export default function HistoryPage() {
 
   // Recompute how many day columns fit and update query limit
   const recomputeLimit = useCallback(() => {
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const rectW = containerRef.current?.getBoundingClientRect().width || 0;
-    const containerW = (rectW > 0 ? rectW : (containerRef.current?.clientWidth || 0)) || Math.max(320, vw - 64);
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
+    if (!rectW || rectW < 1) {
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeLimit());
+      return;
+    }
     // Measure actual left sticky header width if available
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
-    const availableForDays = Math.max(0, containerW - leftCol);
+    const availableForDays = Math.max(0, rectW - leftCol);
     // Prefer summing actual header widths to determine how many fully fit
-    const headerCols = Array.from(containerRef.current?.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
+    const headerCols = Array.from(containerEl.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
     let fit = 0;
     if (headerCols.length > 0) {
       let acc = 0;
       for (const th of headerCols) {
-        const w = th.offsetWidth || th.getBoundingClientRect().width || 0;
+        let w = th.offsetWidth || th.getBoundingClientRect().width || 0;
+        if (w > 0 && w <= DAY_COL_CONTENT + 1) {
+          w += DAY_COL_PADDING; // account for pl-1 pr-2 when offsetWidth is content-only
+        }
         if (w <= 0) continue;
         if (acc + w <= availableForDays) {
           acc += w;
@@ -168,7 +175,7 @@ export default function HistoryPage() {
     }
     if (fit <= 0) {
       // Fallback to computed footprint if headers not yet available
-      let perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
+      const perColMeasured = containerEl.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
       let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
       if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
       const epsilon = 4;
@@ -176,7 +183,7 @@ export default function HistoryPage() {
     }
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
-  }, [studentWidthEffective, PER_COL]);
+  }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
   useEffect(() => {
     // Compute on mount and on dependencies that affect widths
@@ -198,6 +205,12 @@ export default function HistoryPage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [recomputeLimit]);
+
+  // Clamp offset when limit shrinks so we don't overflow
+  useEffect(() => {
+    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, limit));
+    if (offset > maxOffset) setOffset(maxOffset);
+  }, [limit, offset, history?.totalDays]);
 
   // Extract data from Convex query
   const students = history?.students || [];
