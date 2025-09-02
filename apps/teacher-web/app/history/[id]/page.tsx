@@ -142,24 +142,36 @@ export default function HistoryPage() {
   }, [isMobile]);
 
   // Recompute how many day columns fit and update query limit
+  const recomputeLimit = useCallback(() => {
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+    const leftCol = studentWidthEffective;
+    const availableForDays = Math.max(0, containerW - leftCol);
+    const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
+    const capped = Math.min(60, fitCols); // cap to avoid huge payloads
+    setLimit((prev) => (prev !== capped ? capped : prev));
+  }, [studentWidthEffective, PER_COL]);
+
   useEffect(() => {
-    const recompute = () => {
-      const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-      const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
-      const leftCol = studentWidthEffective;
-      const availableForDays = Math.max(0, containerW - leftCol);
-      const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
-      const capped = Math.min(60, fitCols); // cap to avoid huge payloads
-      setLimit((prev) => (prev !== capped ? capped : prev));
-    };
     // Compute on mount and on dependencies that affect widths
-    recompute();
+    recomputeLimit();
     if (typeof window !== 'undefined') {
-      window.addEventListener('resize', recompute);
-      return () => window.removeEventListener('resize', recompute);
+      const onResize = () => recomputeLimit();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, studentWidthEffective, initialized]);
+  }, [isMobile, studentWidthEffective, initialized, recomputeLimit]);
+
+  // Observe container size changes (not just window resizes)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      recomputeLimit();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeLimit]);
 
   // Extract data from Convex query
   const students = history?.students || [];
@@ -395,11 +407,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); }} disabled={offset + days.length >= totalDays}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, days.length); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + days.length >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, days.length); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
