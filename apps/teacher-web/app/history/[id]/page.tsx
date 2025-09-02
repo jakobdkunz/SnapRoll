@@ -203,6 +203,7 @@ export default function HistoryPage() {
       { value: 'PRESENT', label: 'P' },
       { value: 'ABSENT', label: 'A' },
       { value: 'EXCUSED', label: 'E' },
+      { value: 'NOT_JOINED', label: 'NE' },
       { value: 'BLANK', label: '–', disabled: originalStatus !== 'BLANK' }
     ];
 
@@ -215,7 +216,7 @@ export default function HistoryPage() {
         case 'EXCUSED':
           return <Badge tone="yellow">E{showManualIndicators ? '*' : ''}</Badge>;
         case 'NOT_JOINED':
-          return <Badge tone="gray">NJ{showManualIndicators ? '*' : ''}</Badge>;
+          return <Badge tone="gray">NE{showManualIndicators ? '*' : ''}</Badge>;
         default:
           return <span className="text-slate-400">–{showManualIndicators ? '*' : ''}</span>;
       }
@@ -238,7 +239,7 @@ export default function HistoryPage() {
           tooltipText = `${studentName} was Excused on ${formatDateMDY(new Date(date))}.`;
           break;
         case 'NOT_JOINED':
-          tooltipText = `${studentName} did not join the section on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `${studentName} was not enrolled in this section on ${formatDateMDY(new Date(date))}.`;
           break;
         case 'BLANK':
           tooltipText = `No attendance recorded for ${studentName} on ${formatDateMDY(new Date(date))}.`;

@@ -115,12 +115,16 @@ export const getSectionHistory = query({
         const isManual = !!manualChange;
         let effectiveStatus = manualChange ? manualChange.status : originalStatus;
 
-        // Fallback: mark MISSING or BLANK as ABSENT after end-of-day if enrolled by that day
+        // Fallback: after end-of-day, if no override and record is missing/BLANK:
+        // - If enrolled by that day: ABSENT
+        // - If not enrolled by that day: NOT_JOINED (aka Not Enrolled)
         if (!manualChange && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
           const endOfDay = (classDay.date as number) + DAY_MS;
           const enroll = enrollmentByStudent.get(student._id);
           const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
-          if (now >= endOfDay && wasEnrolledByDay) effectiveStatus = "ABSENT";
+          if (now >= endOfDay) {
+            effectiveStatus = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
+          }
         }
         
         return {
@@ -296,7 +300,9 @@ export const getStudentHistory = query({
             const endOfDay = (classDay.date as number) + DAY_MS;
             const enroll = enrollmentBySection.get(section._id);
             const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
-            if (now >= endOfDay && wasEnrolledByDay) effectiveStatus = "ABSENT";
+            if (now >= endOfDay) {
+              effectiveStatus = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
+            }
           }
 
           byDate[isoDate] = {
