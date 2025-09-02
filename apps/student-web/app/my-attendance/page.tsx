@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 // import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
@@ -103,24 +103,36 @@ export default function MyAttendancePage() {
   }, []);
 
   // Recompute how many day columns fit and update query limit
+  const recomputeLimit = useCallback(() => {
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+    const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
+    const leftCol = COURSE_COL_BASE;
+    const availableForDays = Math.max(0, containerW - leftCol);
+    const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
+    const capped = Math.min(60, fitCols); // hard cap to keep payloads sane
+    setLimit((prev) => (prev !== capped ? capped : prev));
+  }, [COURSE_COL_BASE, PER_COL]);
+
   useEffect(() => {
-    const recompute = () => {
-      const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-      const containerW = containerRef.current?.clientWidth ?? Math.max(320, vw - 64);
-      const leftCol = COURSE_COL_BASE;
-      const availableForDays = Math.max(0, containerW - leftCol);
-      const fitCols = Math.max(1, Math.floor(availableForDays / PER_COL));
-      const capped = Math.min(60, fitCols); // hard cap to keep payloads sane
-      setLimit((prev) => (prev !== capped ? capped : prev));
-    };
     // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
-    recompute();
+    recomputeLimit();
     if (typeof window !== 'undefined') {
-      window.addEventListener('resize', recompute);
-      return () => window.removeEventListener('resize', recompute);
+      const onResize = () => recomputeLimit();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMobile, data]);
+  }, [isMobile, data, recomputeLimit]);
+
+  // Observe container size changes (not just window resizes)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      recomputeLimit();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeLimit]);
 
   useEffect(() => {
     setIsClient(true);
@@ -220,8 +232,10 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const next = Math.min(Math.max(0, data.totalDays - 1), offset + limit); 
-                setOffset(next); 
+                const step = Math.max(1, grid.days.length);
+                const maxOffset = Math.max(0, data.totalDays - step);
+                const next = Math.min(maxOffset, offset + step);
+                setOffset(next);
               }} 
               disabled={offset + grid.days.length >= data.totalDays}
             >
@@ -231,7 +245,8 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const next = Math.max(0, offset - limit); 
+                const step = Math.max(1, grid.days.length);
+                const next = Math.max(0, offset - step); 
                 setOffset(next); 
               }} 
               disabled={offset === 0}
