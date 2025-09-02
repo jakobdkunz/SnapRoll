@@ -33,7 +33,9 @@ export default function HistoryPage() {
   const isAuthReady = isLoaded && isSignedIn;
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
-  const [limit, setLimit] = useState<number>(12);
+  // Fetch a generous window; render only what fits
+  const [limit, setLimit] = useState<number>(60);
+  const [visibleCount, setVisibleCount] = useState<number>(8);
 
   // Convex hooks
   const history = useQuery(
@@ -142,12 +144,12 @@ export default function HistoryPage() {
   }, [isMobile]);
 
   // Recompute how many day columns fit and update query limit
-  const recomputeLimit = useCallback(() => {
+  const recomputeVisible = useCallback(() => {
     const containerEl = containerRef.current;
     if (!containerEl) return;
     const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
     if (!rectW || rectW < 1) {
-      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeLimit());
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
     // Measure actual left sticky header width if available
@@ -182,35 +184,35 @@ export default function HistoryPage() {
       fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     }
     const capped = Math.min(60, fit);
-    setLimit((prev) => (prev !== capped ? capped : prev));
+    setVisibleCount((prev) => (prev !== capped ? capped : prev));
   }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
   useEffect(() => {
     // Compute on mount and on dependencies that affect widths
-    recomputeLimit();
+    recomputeVisible();
     if (typeof window !== 'undefined') {
-      const onResize = () => recomputeLimit();
+      const onResize = () => recomputeVisible();
       window.addEventListener('resize', onResize);
       return () => window.removeEventListener('resize', onResize);
     }
-  }, [isMobile, studentWidthEffective, initialized, recomputeLimit]);
+  }, [isMobile, studentWidthEffective, initialized, recomputeVisible]);
 
   // Observe container size changes (not just window resizes)
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => {
-      recomputeLimit();
+      recomputeVisible();
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [recomputeLimit]);
+  }, [recomputeVisible]);
 
   // Clamp offset when limit shrinks so we don't overflow
   useEffect(() => {
-    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, limit));
+    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, visibleCount));
     if (offset > maxOffset) setOffset(maxOffset);
-  }, [limit, offset, history?.totalDays]);
+  }, [visibleCount, offset, history?.totalDays]);
 
   // Extract data from Convex query
   const students = history?.students || [];
@@ -434,8 +436,9 @@ export default function HistoryPage() {
         <div className="text-sm text-slate-600 pl-4">
           {totalDays > 0
             ? (() => {
+                const windowSize = Math.min(visibleCount, days.length);
                 const end = Math.min(totalDays, Math.max(1, totalDays - offset));
-                const start = Math.min(totalDays, Math.max(1, totalDays - offset - days.length + 1));
+                const start = Math.min(totalDays, Math.max(1, end - windowSize + 1));
                 return <>{start}–{end} of {totalDays} class days</>;
               })()
             : '0 of 0 class days'}
@@ -446,11 +449,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + days.length >= totalDays}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, visibleCount); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(visibleCount, days.length) >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, visibleCount); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
@@ -469,7 +472,7 @@ export default function HistoryPage() {
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
-            {[...days].reverse().map((day) => (
+            {[...days].reverse().slice(0, visibleCount).map((day) => (
               <th
                 key={day.id}
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
@@ -487,7 +490,7 @@ export default function HistoryPage() {
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
-              {[...days].reverse().map((day, j) => {
+              {[...days].reverse().slice(0, visibleCount).map((day, j) => {
                 const reversedIndex = days.length - 1 - j;
                 const record = studentRecords[i]?.records[reversedIndex];
                 return (
