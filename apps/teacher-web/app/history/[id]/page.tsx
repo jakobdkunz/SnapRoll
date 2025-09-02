@@ -148,21 +148,32 @@ export default function HistoryPage() {
     // Measure actual left sticky header width if available
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
-    // Measure an actual day header column width if available
-    let perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th.sr-day-col')?.offsetWidth;
-    if (!perColMeasured || perColMeasured <= 0) {
-      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th:not(:first-child)')?.offsetWidth;
-    }
-    if (!perColMeasured || perColMeasured <= 0) {
-      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
-    }
-    // If measured equals content width (56/96), add padding to get full footprint
-    let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
-    if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
     const availableForDays = Math.max(0, containerW - leftCol);
-    const epsilon = 4; // tolerate minor rounding/scrollbar quirks
-    const fitCols = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
-    const capped = Math.min(60, fitCols); // cap to avoid huge payloads
+    // Prefer summing actual header widths to determine how many fully fit
+    const headerCols = Array.from(containerRef.current?.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
+    let fit = 0;
+    if (headerCols.length > 0) {
+      let acc = 0;
+      for (const th of headerCols) {
+        const w = th.offsetWidth || th.getBoundingClientRect().width || 0;
+        if (w <= 0) continue;
+        if (acc + w <= availableForDays) {
+          acc += w;
+          fit += 1;
+        } else {
+          break;
+        }
+      }
+    }
+    if (fit <= 0) {
+      // Fallback to computed footprint if headers not yet available
+      let perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
+      let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
+      if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
+      const epsilon = 4;
+      fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
+    }
+    const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
   }, [studentWidthEffective, PER_COL]);
 
@@ -421,11 +432,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, days.length); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + days.length >= totalDays}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + days.length >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, days.length); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>

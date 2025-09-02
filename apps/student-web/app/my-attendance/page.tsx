@@ -93,7 +93,7 @@ export default function MyAttendancePage() {
   const COURSE_COL_BASE = 200; // desktop/base px width for course column
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
-  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -109,21 +109,36 @@ export default function MyAttendancePage() {
     // Measure the actual rendered left column width including padding if possible
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : (COURSE_COL_BASE + 20); // add fallback padding estimate
-    // Measure an actual day column if available (includes padding)
-    let perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th.sr-day-col')?.offsetWidth;
-    if (!perColMeasured || perColMeasured <= 0) {
-      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('thead th:not(:first-child)')?.offsetWidth;
-    }
-    if (!perColMeasured || perColMeasured <= 0) {
-      perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
-    }
-    // If measured equals content width (56/96), add padding to get full footprint
-    let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
-    if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
     const availableForDays = Math.max(0, containerW - leftCol);
-    const epsilon = 4; // tolerate minor rounding/scrollbar quirks
-    const fitCols = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
-    const capped = Math.min(60, fitCols); // hard cap to keep payloads sane
+    // Prefer summing actual header widths to determine how many fully fit
+    const headerCols = Array.from(containerRef.current?.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
+    let fit = 0;
+    if (headerCols.length > 0) {
+      let acc = 0;
+      for (const th of headerCols) {
+        const raw = th.offsetWidth || th.getBoundingClientRect().width || 0;
+        let w = raw;
+        if (w > 0 && w <= DAY_COL_CONTENT + 1) {
+          w += DAY_COL_PADDING; // account for pl-1 pr-2 when offsetWidth is content-only
+        }
+        if (w <= 0) continue;
+        if (acc + w <= availableForDays) {
+          acc += w;
+          fit += 1;
+        } else {
+          break;
+        }
+      }
+    }
+    if (fit <= 0) {
+      // Fallback to computed footprint if headers not yet available
+      const perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
+      let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
+      if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
+      const epsilon = 4;
+      fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
+    }
+    const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
   }, [COURSE_COL_BASE, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
@@ -246,7 +261,7 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const step = Math.max(1, grid.days.length);
+                const step = Math.max(1, limit);
                 const maxOffset = Math.max(0, data.totalDays - step);
                 const next = Math.min(maxOffset, offset + step);
                 setOffset(next);
@@ -259,7 +274,7 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const step = Math.max(1, grid.days.length);
+                const step = Math.max(1, limit);
                 const next = Math.max(0, offset - step); 
                 setOffset(next); 
               }} 
