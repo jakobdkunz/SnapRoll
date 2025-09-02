@@ -187,7 +187,6 @@ export const getStudentHistory = query({
       .first();
     if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
-    const DAY_MS = 24 * 60 * 60 * 1000;
     // Get all sections the student is enrolled in
     const enrollments = await ctx.db
       .query("enrollments")
@@ -299,7 +298,8 @@ export const getStudentHistory = query({
           const hasManual = !!manualChange && manualChange.status !== "BLANK";
           let effectiveStatus = hasManual ? manualChange!.status : originalStatus;
           if (!hasManual && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
-            const endOfDay = (classDay.date as number) + DAY_MS;
+            const { nextStartMs } = getEasternDayBounds(classDay.date as number);
+            const endOfDay = nextStartMs;
             const enroll = enrollmentBySection.get(section._id);
             const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
             if (now >= endOfDay) {
@@ -333,5 +333,102 @@ export const getStudentHistory = query({
       offset: args.offset,
       limit: args.limit,
     };
+  },
+});
+
+// Export all days and student statuses for a section as a flat matrix
+export const exportSectionHistory = query({
+  args: { sectionId: v.id("sections") },
+  handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
+    const now = Date.now();
+
+    // Get all class days for this section, ordered by date asc
+    const rawDays = await ctx.db
+      .query("classDays")
+      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .order("asc")
+      .collect();
+
+    // Deduplicate by ET calendar day
+    const unique: typeof rawDays = [];
+    const seen = new Set<number>();
+    for (const cd of rawDays) {
+      const { startMs } = getEasternDayBounds(cd.date as number);
+      if (!seen.has(startMs)) {
+        seen.add(startMs);
+        unique.push(cd);
+      }
+    }
+    const classDays = unique;
+    const classDayIds = classDays.map(cd => cd._id as Id<'classDays'>);
+
+    // Get enrollments and students
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .collect();
+    const studentIds = enrollments.map(e => e.studentId as Id<'users'>);
+    const enrollmentByStudent = new Map(enrollments.map(e => [e.studentId as Id<'users'>, e]));
+    const studentDocs = await Promise.all(studentIds.map(id => ctx.db.get(id)));
+    const students = studentDocs
+      .filter((s): s is Doc<'users'> => Boolean(s))
+      .map(s => ({ id: s._id as Id<'users'>, firstName: s.firstName, lastName: s.lastName, email: s.email }));
+
+    // Attendance and manual changes
+    const attendanceRecords = classDayIds.length > 0
+      ? (await Promise.all(
+          classDayIds.map((id) =>
+            ctx.db
+              .query("attendanceRecords")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const manualChanges = classDayIds.length > 0
+      ? (await Promise.all(
+          classDayIds.map((id) =>
+            ctx.db
+              .query("manualStatusChanges")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+
+    const attendanceMap = new Map<string, Doc<'attendanceRecords'>>();
+    for (const ar of attendanceRecords) attendanceMap.set(`${ar.classDayId}-${ar.studentId}`, ar as Doc<'attendanceRecords'>);
+    const manualMap = new Map<string, Doc<'manualStatusChanges'>>();
+    for (const mc of manualChanges) manualMap.set(`${mc.classDayId}-${mc.studentId}`, mc as Doc<'manualStatusChanges'>);
+
+    // Build day headers (ISO YYYY-MM-DD in ET)
+    const days = classDays.map(cd => new Date(getEasternDayBounds(cd.date as number).startMs).toISOString().split('T')[0]);
+
+    // Build rows per student with final status per day
+    const rows = students.map((s) => {
+      const statuses = classDays.map((classDay): "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK" => {
+        const k = `${classDay._id}-${s.id}`;
+        const ar = attendanceMap.get(k);
+        const mc = manualMap.get(k);
+        const original = ar?.status || "BLANK";
+        const hasManual = !!mc && mc.status !== "BLANK";
+        let effective: "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK" = hasManual ? (mc!.status as "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK") : (original as "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK");
+        if (!hasManual && (!ar || ar.status === "BLANK")) {
+          const { nextStartMs } = getEasternDayBounds(classDay.date as number);
+          const endOfDay = nextStartMs;
+          const enroll = enrollmentByStudent.get(s.id as Id<'users'>);
+          const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
+          if (now >= endOfDay) {
+            effective = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
+          }
+        }
+        return effective;
+      });
+      return { firstName: s.firstName, lastName: s.lastName, email: s.email, statuses };
+    });
+
+    return { days, rows };
   },
 });
