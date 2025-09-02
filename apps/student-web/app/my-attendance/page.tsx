@@ -104,15 +104,20 @@ export default function MyAttendancePage() {
 
   // Recompute how many day columns fit and update query limit
   const recomputeLimit = useCallback(() => {
-    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-    const rectW = containerRef.current?.getBoundingClientRect().width || 0;
-    const containerW = (rectW > 0 ? rectW : (containerRef.current?.clientWidth || 0)) || Math.max(320, vw - 64);
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    // Measure actual container width; avoid viewport fallbacks that over-estimate
+    const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
+    if (!rectW || rectW < 1) {
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeLimit());
+      return;
+    }
     // Measure the actual rendered left column width including padding if possible
     const measuredLeft = firstThRef.current?.offsetWidth;
     const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : (COURSE_COL_BASE + 20); // add fallback padding estimate
-    const availableForDays = Math.max(0, containerW - leftCol);
+    const availableForDays = Math.max(0, rectW - leftCol);
     // Prefer summing actual header widths to determine how many fully fit
-    const headerCols = Array.from(containerRef.current?.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
+    const headerCols = Array.from(containerEl.querySelectorAll<HTMLTableCellElement>('thead th:not(:first-child)') || []);
     let fit = 0;
     if (headerCols.length > 0) {
       let acc = 0;
@@ -133,7 +138,7 @@ export default function MyAttendancePage() {
     }
     if (fit <= 0) {
       // Fallback to computed footprint if headers not yet available
-      const perColMeasured = containerRef.current?.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
+      const perColMeasured = containerEl.querySelector<HTMLTableCellElement>('tbody tr:first-child td:not(:first-child)')?.offsetWidth;
       let perCol = perColMeasured && perColMeasured > 0 ? perColMeasured : DAY_COL_CONTENT;
       if (perCol <= DAY_COL_CONTENT) perCol += DAY_COL_PADDING;
       const epsilon = 4;
@@ -163,6 +168,13 @@ export default function MyAttendancePage() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [recomputeLimit]);
+
+  // Clamp offset so we never show more days than exist when limit shrinks
+  useEffect(() => {
+    if (!data) return;
+    const maxOffset = Math.max(0, data.totalDays - Math.max(1, limit));
+    if (offset > maxOffset) setOffset(maxOffset);
+  }, [data, limit, offset]);
 
   useEffect(() => {
     setIsClient(true);
