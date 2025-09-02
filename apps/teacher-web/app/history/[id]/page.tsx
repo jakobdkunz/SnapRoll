@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '@clerk/nextjs';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
@@ -28,12 +29,17 @@ type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
 export default function HistoryPage() {
   const params = useParams<{ id: string }>();
+  const { isLoaded, isSignedIn } = useAuth();
+  const isAuthReady = isLoaded && isSignedIn;
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
   const [limit, setLimit] = useState<number>(12);
 
   // Convex hooks
-  const history = useQuery(api.functions.history.getSectionHistory, params.id ? { sectionId: params.id as any, offset, limit } : "skip");
+  const history = useQuery(
+    api.functions.history.getSectionHistory,
+    isAuthReady && params.id ? { sectionId: params.id as any, offset, limit } : "skip"
+  );
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);

@@ -6,6 +6,7 @@ import React from 'react';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 
 type ClassDay = { id: string; attendanceCode: string };
 type AttendanceStatus = {
@@ -19,13 +20,21 @@ type AttendanceStatus = {
 export default function AttendancePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
+  const isAuthReady = isLoaded && isSignedIn;
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
 
   // Convex hooks
   const startAttendance = useMutation(api.functions.attendance.startAttendance);
-  const getAttendanceStatus = useQuery(api.functions.attendance.getAttendanceStatus, params.id ? { sectionId: params.id as any } : "skip");
-  const section = useQuery(api.functions.sections.get, params.id ? { id: params.id as any } : "skip");
+  const getAttendanceStatus = useQuery(
+    api.functions.attendance.getAttendanceStatus,
+    isAuthReady && params.id ? { sectionId: params.id as any } : "skip"
+  );
+  const section = useQuery(
+    api.functions.sections.get,
+    isAuthReady && params.id ? { id: params.id as any } : "skip"
+  );
 
   const [isStarting, setIsStarting] = useState(false);
   const isStartingRef = useRef(false);
