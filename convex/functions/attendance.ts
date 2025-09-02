@@ -296,6 +296,14 @@ export const updateManualStatus = mutation({
       if (originalRecord && originalRecord.status !== "BLANK") {
         throw new Error("Cannot change to BLANK once a non-blank status is recorded");
       }
+      // Do not allow reverting to BLANK after the class day has passed
+      const classDay = await ctx.db.get(args.classDayId);
+      if (!classDay) throw new Error("Not found");
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const endOfDay = (classDay.date as number) + DAY_MS;
+      if (Date.now() >= endOfDay) {
+        throw new Error("Cannot change to BLANK after the day has passed");
+      }
       // Remove any existing manual change so UI reflects unmodified BLANK
       const existing = await ctx.db
         .query("manualStatusChanges")
