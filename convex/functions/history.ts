@@ -112,13 +112,14 @@ export const getSectionHistory = query({
         const manualChange = manualChangeMap.get(`${classDay._id}-${student._id}`);
         
         const originalStatus = attendanceRecord?.status || "BLANK";
-        const isManual = !!manualChange;
-        let effectiveStatus = manualChange ? manualChange.status : originalStatus;
+        // Treat manual changes with BLANK as no-op (legacy rows shouldn't block fallback)
+        const hasManual = !!manualChange && manualChange.status !== "BLANK";
+        let effectiveStatus = hasManual ? manualChange!.status : originalStatus;
 
-        // Fallback: after end-of-day, if no override and record is missing/BLANK:
+        // Fallback: after end-of-day, if no effective manual override and record is missing/BLANK:
         // - If enrolled by that day: ABSENT
         // - If not enrolled by that day: NOT_JOINED (aka Not Enrolled)
-        if (!manualChange && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
+        if (!hasManual && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
           const endOfDay = (classDay.date as number) + DAY_MS;
           const enroll = enrollmentByStudent.get(student._id);
           const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
@@ -131,12 +132,12 @@ export const getSectionHistory = query({
           classDayId: classDay._id,
           studentId: student._id,
           status: effectiveStatus,
-          isManual,
+          isManual: hasManual,
           originalStatus,
-          manualChange: manualChange ? {
-            status: manualChange.status,
-            teacherName: teacherNameById.get(manualChange.teacherId) || "Instructor",
-            createdAt: manualChange.createdAt,
+          manualChange: hasManual ? {
+            status: manualChange!.status,
+            teacherName: teacherNameById.get(manualChange!.teacherId) || "Instructor",
+            createdAt: manualChange!.createdAt,
           } : undefined,
         };
       });
@@ -294,9 +295,10 @@ export const getStudentHistory = query({
           const manualChange = manualByClassDay.get(classDay._id as Id<'classDays'>);
 
           const originalStatus = attendanceRecord?.status || "BLANK";
-          const isManual = !!manualChange;
-          let effectiveStatus = manualChange ? manualChange.status : originalStatus;
-          if (!manualChange && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
+          // Treat manual BLANK as no-op so fallback can apply
+          const hasManual = !!manualChange && manualChange.status !== "BLANK";
+          let effectiveStatus = hasManual ? manualChange!.status : originalStatus;
+          if (!hasManual && (!attendanceRecord || attendanceRecord.status === "BLANK")) {
             const endOfDay = (classDay.date as number) + DAY_MS;
             const enroll = enrollmentBySection.get(section._id);
             const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
@@ -308,12 +310,12 @@ export const getStudentHistory = query({
           byDate[isoDate] = {
             status: effectiveStatus,
             originalStatus,
-            isManual,
-            manualChange: manualChange
+            isManual: hasManual,
+            manualChange: hasManual
               ? {
-                  status: manualChange.status,
-                  teacherName: teacherNameById.get(manualChange.teacherId) || "Instructor",
-                  createdAt: manualChange.createdAt,
+                  status: manualChange!.status,
+                  teacherName: teacherNameById.get(manualChange!.teacherId) || "Instructor",
+                  createdAt: manualChange!.createdAt,
                 }
               : null,
           };
