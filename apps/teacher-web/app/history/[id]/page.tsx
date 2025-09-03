@@ -60,6 +60,8 @@ export default function HistoryPage() {
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
   const [leftWidth, setLeftWidth] = useState<number>(STUDENT_COL_BASE);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [fillerWidth, setFillerWidth] = useState<number>(0);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
     { visible: false, text: '', anchorX: 0, anchorY: 0 }
@@ -135,8 +137,20 @@ export default function HistoryPage() {
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
     setLeftWidth(leftCol);
+    setContainerWidth(Math.round(rectW));
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [DAY_COL_PADDING, offset]);
+
+  // Recompute filler width to right-align day columns
+  useEffect(() => {
+    if (!containerWidth) return;
+    const leftCol = isCompact ? 120 : 220;
+    const perCol = (isCompact ? 56 : 96) + DAY_COL_PADDING;
+    const numCols = (history?.days?.length || 0);
+    const slack = Math.max(0, containerWidth - leftCol - perCol * numCols);
+    // Snap to integer pixels to avoid subpixel jitter
+    setFillerWidth(Math.round(slack));
+  }, [containerWidth, isCompact, DAY_COL_PADDING, history?.days?.length]);
 
   useEffect(() => {
     // Compute on mount and on dependencies that affect widths
@@ -414,8 +428,8 @@ export default function HistoryPage() {
           </Button>
         </div>
       </div>
-      {/* Blank-state when no history exists, only after data has initialized */}
-      {initialized && totalDays === 0 ? (
+      {/* Blank-state when no history exists, only after data has initialized and is not fetching */}
+      {initialized && !isFetching && totalDays === 0 ? (
         <div className="py-12 grid place-items-center">
           <div className="text-center max-w-md">
             <div className="text-lg font-semibold mb-1">No attendance history yet</div>
@@ -427,6 +441,7 @@ export default function HistoryPage() {
       <table className="border-separate border-spacing-0 table-fixed">
         <colgroup>
           <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+          <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
           {days.map((day) => (
             <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
           ))}
@@ -434,6 +449,7 @@ export default function HistoryPage() {
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+            <th className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
@@ -452,6 +468,7 @@ export default function HistoryPage() {
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
+              <td className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
               {[...days].reverse().map((day, j) => {
                 const reversedIndex = days.length - 1 - j;
                 const record = studentRecords[i]?.records[reversedIndex];
