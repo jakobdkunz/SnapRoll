@@ -23,7 +23,7 @@ export const getSectionHistory = query({
       .collect();
 
     // Deduplicate by Eastern Time calendar day to avoid duplicate columns
-    // Align with how classDays.date is stored (start of day in ET) 
+    // Align with how classDays.date is stored (start of day in ET)
     const unique: typeof rawDays = [];
     const seen = new Set<number>();
     for (const cd of rawDays) {

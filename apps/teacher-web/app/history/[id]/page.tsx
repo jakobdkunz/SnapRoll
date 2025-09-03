@@ -53,13 +53,13 @@ export default function HistoryPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const STUDENT_COL_BASE = 220; // desktop/base px width for student column
+  const STUDENT_COL_BASE = isMobile ? 140 : 220; // narrower student column on mobile
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
-  const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
+  const studentWidthEffective = isMobile ? Math.min(studentColW, 200) : STUDENT_COL_BASE;
   const hasMeasuredMobileRef = useRef(false);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
@@ -152,9 +152,8 @@ export default function HistoryPage() {
       if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
-    // Compute fit purely from constants to avoid DOM timing issues
-    const measuredLeft = firstThRef.current?.offsetWidth;
-    const leftCol = measuredLeft && measuredLeft > 0 ? measuredLeft : studentWidthEffective;
+    // Compute fit using configured left column width instead of measured (which can be inflated)
+    const leftCol = studentWidthEffective;
     const availableForDays = Math.max(0, rectW - leftCol);
     const perCol = DAY_COL_CONTENT + DAY_COL_PADDING;
     const epsilon = 4;
