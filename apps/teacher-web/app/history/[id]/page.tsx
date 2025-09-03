@@ -53,13 +53,13 @@ export default function HistoryPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const STUDENT_COL_BASE = isMobile ? 140 : 220; // narrower student column on mobile
+  const STUDENT_COL_BASE = isMobile ? 120 : 220; // narrower student column on mobile
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
-  const studentWidthEffective = isMobile ? Math.min(studentColW, 200) : STUDENT_COL_BASE;
+  const studentWidthEffective = isMobile ? STUDENT_COL_BASE : STUDENT_COL_BASE; // ignore measured name width on mobile
   const hasMeasuredMobileRef = useRef(false);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
