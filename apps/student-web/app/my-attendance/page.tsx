@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react';
+import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 // import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
@@ -36,14 +36,17 @@ export default function MyAttendancePage() {
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [offset, setOffset] = useState<number>(0);
-  const [limit] = useState<number>(12);
+  // Server-side window equals the number of columns that fit
+  const [limit, setLimit] = useState<number>(12);
   const [isFetching] = useState<boolean>(false);
   // const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false); // based on container width
   // const [initialized, setInitialized] = useState(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>({ visible: false, text: '', anchorX: 0, anchorY: 0 });
+  const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -90,9 +93,9 @@ export default function MyAttendancePage() {
   );
 
   // Column width calculations
-  const COURSE_COL_BASE = 200; // desktop/base px width for course column
-  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
-  // const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
+  const COURSE_COL_BASE = isCompact ? 120 : 200; // narrower when compact
+  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
+  const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
   useEffect(() => {
@@ -101,6 +104,68 @@ export default function MyAttendancePage() {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Recompute how many day columns fit using constant per-column width and set as server limit
+  const recomputeVisible = useCallback(() => {
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    // Measure actual container width; avoid viewport fallbacks that over-estimate
+    const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
+    if (!rectW || rectW < 1) {
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
+      return;
+    }
+    // Update compact mode from container width
+    const compact = rectW < 640;
+    setIsCompact(compact);
+    // Compute fit using configured left column width instead of measured (which can be inflated)
+    const leftCol = COURSE_COL_BASE; // use exact configured width
+    const availableForDays = Math.max(0, rectW - leftCol);
+    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
+    const epsilon = 4;
+    const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
+    const capped = Math.min(60, fit);
+    setLimit((prev) => (prev !== capped ? capped : prev));
+    setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
+  }, [COURSE_COL_BASE, DAY_COL_PADDING, offset]);
+
+  useEffect(() => {
+    // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
+    recomputeVisible();
+    if (typeof window !== 'undefined') {
+      const onResize = () => recomputeVisible();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, [isMobile, data, recomputeVisible]);
+
+  // Observe container size changes (not just window resizes)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      recomputeVisible();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeVisible, data]);
+
+  // After data renders the table, remeasure on next frame to pick up container width
+  useLayoutEffect(() => {
+    if (!data) return;
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => recomputeVisible());
+    } else {
+      recomputeVisible();
+    }
+  }, [data, isMobile, recomputeVisible]);
+
+  // Clamp offset so we never show more days than exist when limit changes
+  useEffect(() => {
+    if (!data) return;
+    const maxOffset = Math.max(0, data.totalDays - Math.max(1, limit));
+    if (offset > maxOffset) setOffset(maxOffset);
+  }, [data, limit, offset]);
 
   useEffect(() => {
     setIsClient(true);
@@ -185,12 +250,18 @@ export default function MyAttendancePage() {
   return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
+        {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
+          <div className="mb-2 text-xs text-slate-500 pl-4">
+            cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm text-slate-600 pl-4">
             {data.totalDays > 0
               ? (() => {
+                  const windowSize = Math.min(limit, grid.days.length);
                   const end = Math.min(data.totalDays, Math.max(1, data.totalDays - offset));
-                  const start = Math.min(data.totalDays, Math.max(1, data.totalDays - offset - grid.days.length + 1));
+                  const start = Math.min(data.totalDays, Math.max(1, end - windowSize + 1));
                   return <>{start}–{end} of {data.totalDays} class days</>;
                 })()
               : '0 of 0 class days'}
@@ -200,10 +271,12 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const next = Math.min(Math.max(0, data.totalDays - 1), offset + limit); 
-                setOffset(next); 
+                const step = Math.max(1, limit);
+                const maxOffset = Math.max(0, data.totalDays - step);
+                const next = Math.min(maxOffset, offset + step);
+                setOffset(next);
               }} 
-              disabled={offset + grid.days.length >= data.totalDays}
+              disabled={offset + Math.min(limit, grid.days.length) >= data.totalDays}
             >
               ← <span className="hidden sm:inline">Previous</span>
             </Button>
@@ -211,7 +284,8 @@ export default function MyAttendancePage() {
             <Button 
               variant="ghost" 
               onClick={() => { 
-                const next = Math.max(0, offset - limit); 
+                const step = Math.max(1, limit);
+                const next = Math.max(0, offset - step); 
                 setOffset(next); 
               }} 
               disabled={offset === 0}
@@ -229,18 +303,24 @@ export default function MyAttendancePage() {
             </div>
           </div>
         ) : (
-        <div ref={containerRef} className="relative overflow-hidden">
-          <table className="min-w-full border-separate border-spacing-0 table-fixed">
+        <div ref={containerRef} className="relative overflow-hidden w-full">
+          <table className="border-separate border-spacing-0 table-fixed">
+            <colgroup>
+              <col style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }} />
+              {grid.days.map((d) => (
+                <col key={`col-${d.date}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
-                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
-                    {isMobile ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)}
+                    {isCompact ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)}
                   </th>
                 ))}
               </tr>

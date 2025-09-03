@@ -33,6 +33,7 @@ export default function HistoryPage() {
   const isAuthReady = isLoaded && isSignedIn;
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
+  // Server-side window equals the number of columns that fit
   const [limit, setLimit] = useState<number>(12);
 
   // Convex hooks
@@ -45,6 +46,7 @@ export default function HistoryPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false); // based on container width, not viewport
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
     update();
@@ -52,14 +54,12 @@ export default function HistoryPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const STUDENT_COL_BASE = 220; // desktop/base px width for student column
-  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
+  const STUDENT_COL_BASE = isCompact ? 120 : 220; // narrower when compact
+  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
-  const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
-  const studentWidthEffective = isMobile ? studentColW : STUDENT_COL_BASE;
-  const hasMeasuredMobileRef = useRef(false);
+  const [leftWidth, setLeftWidth] = useState<number>(STUDENT_COL_BASE);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
     { visible: false, text: '', anchorX: 0, anchorY: 0 }
@@ -68,6 +68,7 @@ export default function HistoryPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const convex = useConvex();
+  const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -112,34 +113,57 @@ export default function HistoryPage() {
     return `${m}/${d}`;
   }
 
-  // Measure the width of the longest visible student name on mobile and set student column width.
-  // To avoid cumulative drift, measure only once per mobile session and only when entering mobile.
-  useEffect(() => {
-    if (!isMobile) {
-      hasMeasuredMobileRef.current = false;
-      setStudentColW(STUDENT_COL_BASE);
+  // Removed measurement-driven left column width to avoid drift across resizes
+
+  // Recompute how many day columns fit and update query limit
+  const recomputeVisible = useCallback(() => {
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
+    if (!rectW || rectW < 1) {
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
-    if (hasMeasuredMobileRef.current) return;
-    const measure = () => {
-      const container = containerRef.current;
-      if (!container) return;
-      const nodes = container.querySelectorAll<HTMLElement>('.sr-student-name');
-      let max = 0;
-      nodes.forEach((el) => {
-        const width = el.scrollWidth;
-        if (width > max) max = width;
-      });
-      // Add small padding so text isn't tight against the first day column
-      const computedRaw = Math.min(320, Math.max(120, max + 16));
-      // Snap to 4px grid to avoid subpixel rounding oscillations
-      const computed = Math.round(computedRaw / 4) * 4;
-      setStudentColW(computed);
-      hasMeasuredMobileRef.current = true;
-    };
-    if (typeof window !== 'undefined') requestAnimationFrame(measure);
-    else measure();
-  }, [isMobile]);
+    // Decide compact mode from container width and compute with local values
+    const compact = rectW < 640;
+    setIsCompact(compact);
+    const leftCol = compact ? 120 : 220;
+    const availableForDays = Math.max(0, rectW - leftCol);
+    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
+    const epsilon = 4;
+    const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
+    const capped = Math.min(60, fit);
+    setLimit((prev) => (prev !== capped ? capped : prev));
+    setLeftWidth(leftCol);
+    setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
+  }, [DAY_COL_PADDING, offset]);
+
+  useEffect(() => {
+    // Compute on mount and on dependencies that affect widths
+    recomputeVisible();
+    if (typeof window !== 'undefined') {
+      const onResize = () => recomputeVisible();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, [isMobile, initialized, recomputeVisible]);
+
+  // Observe container size changes (not just window resizes)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      recomputeVisible();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeVisible]);
+
+  // Clamp offset when limit shrinks so we don't overflow
+  useEffect(() => {
+    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, limit));
+    if (offset > maxOffset) setOffset(maxOffset);
+  }, [limit, offset, history?.totalDays]);
 
   // Extract data from Convex query
   const students = history?.students || [];
@@ -359,12 +383,18 @@ export default function HistoryPage() {
   // Render shell with loading overlay instead of blank screen
   return (
     <Card className="p-4">
+      {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
+        <div className="mb-2 text-xs text-slate-500 pl-4">
+          cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600 pl-4">
           {totalDays > 0
             ? (() => {
+                const windowSize = Math.min(limit, days.length);
                 const end = Math.min(totalDays, Math.max(1, totalDays - offset));
-                const start = Math.min(totalDays, Math.max(1, totalDays - offset - days.length + 1));
+                const start = Math.min(totalDays, Math.max(1, end - windowSize + 1));
                 return <>{start}–{end} of {totalDays} class days</>;
               })()
             : '0 of 0 class days'}
@@ -375,11 +405,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.min(Math.max(0, totalDays - 1), offset + limit); setOffset(next); }} disabled={offset + days.length >= totalDays}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const next = Math.max(0, offset - limit); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
@@ -393,18 +423,24 @@ export default function HistoryPage() {
           </div>
         </div>
       ) : (
-      <div ref={containerRef} className="relative overflow-hidden">
-      <table className="min-w-full border-separate border-spacing-0 table-fixed">
+      <div ref={containerRef} className="relative overflow-hidden w-full">
+      <table className="border-separate border-spacing-0 table-fixed">
+        <colgroup>
+          <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+          {days.map((day) => (
+            <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+          ))}
+        </colgroup>
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
-                className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap"
+                className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                 style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
               >
-                {isMobile ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
+                {isCompact ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
               </th>
             ))}
           </tr>
@@ -412,7 +448,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student: Student, i: number) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
+              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
