@@ -153,18 +153,18 @@ export default function HistoryPage() {
       if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
-    // Update compact mode based on container width
-    setIsCompact(rectW < 640);
-    // Compute fit using configured left column width instead of measured (which can be inflated)
-    const leftCol = studentWidthEffective;
+    // Decide compact mode from container width and compute with local values
+    const compact = rectW < 640;
+    setIsCompact(compact);
+    const leftCol = compact ? 120 : 220;
     const availableForDays = Math.max(0, rectW - leftCol);
-    const perCol = (rectW < 640 ? 56 : 96) + DAY_COL_PADDING;
+    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
-  }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
+  }, [DAY_COL_PADDING, offset]);
 
   useEffect(() => {
     // Compute on mount and on dependencies that affect widths
