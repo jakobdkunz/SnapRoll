@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@clerk/nextjs';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
@@ -186,10 +186,6 @@ export default function HistoryPage() {
   const studentRecords = history?.records || [];
   const totalDays = history?.totalDays || 0;
 
-  // Oldest -> Newest so newest appears at far right
-  const displayDays = useMemo(() => {
-    return [...days].reverse();
-  }, [days]);
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
@@ -448,7 +444,7 @@ export default function HistoryPage() {
         <colgroup>
           <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
           <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
-          {displayDays.map((day) => (
+          {days.map((day) => (
             <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
           ))}
         </colgroup>
@@ -456,7 +452,7 @@ export default function HistoryPage() {
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
-            {displayDays.map((day) => (
+            {[...days].reverse().map((day) => (
               <th
                 key={day.id}
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
@@ -475,7 +471,7 @@ export default function HistoryPage() {
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
               <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
-              {displayDays.map((day, j) => {
+              {[...days].reverse().map((day, j) => {
                 const reversedIndex = days.length - 1 - j;
                 const record = studentRecords[i]?.records[reversedIndex];
                 return (
