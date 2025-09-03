@@ -15,11 +15,11 @@ export const getSectionHistory = query({
     const teacher = await requireTeacher(ctx);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
-    // Get all class days for this section, ordered by date desc
+    // Get all class days for this section, ordered by date asc
     const rawDays = await ctx.db
       .query("classDays")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
-      .order("desc")
+      .order("asc")
       .collect();
 
     // Deduplicate by Eastern Time calendar day to avoid duplicate columns
@@ -36,7 +36,7 @@ export const getSectionHistory = query({
     }
     const allClassDays = unique;
     
-    // Apply pagination
+    // Apply pagination (oldest first overall; offset points to oldest page)
     const totalDays = allClassDays.length;
     const page = allClassDays.slice(args.offset, args.offset + args.limit);
     const classDayIds = page.map(cd => cd._id);
