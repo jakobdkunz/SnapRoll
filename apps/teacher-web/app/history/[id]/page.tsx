@@ -33,9 +33,8 @@ export default function HistoryPage() {
   const isAuthReady = isLoaded && isSignedIn;
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [offset, setOffset] = useState<number>(0);
-  // Fetch a generous window; render only what fits
-  const [limit, setLimit] = useState<number>(60);
-  const [visibleCount, setVisibleCount] = useState<number>(8);
+  // Server-side window equals the number of columns that fit
+  const [limit, setLimit] = useState<number>(12);
 
   // Convex hooks
   const history = useQuery(
@@ -160,7 +159,7 @@ export default function HistoryPage() {
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
-    setVisibleCount((prev) => (prev !== capped ? capped : prev));
+    setLimit((prev) => (prev !== capped ? capped : prev));
   }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
   useEffect(() => {
@@ -186,9 +185,9 @@ export default function HistoryPage() {
 
   // Clamp offset when limit shrinks so we don't overflow
   useEffect(() => {
-    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, visibleCount));
+    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, limit));
     if (offset > maxOffset) setOffset(maxOffset);
-  }, [visibleCount, offset, history?.totalDays]);
+  }, [limit, offset, history?.totalDays]);
 
   // Extract data from Convex query
   const students = history?.students || [];
@@ -412,7 +411,7 @@ export default function HistoryPage() {
         <div className="text-sm text-slate-600 pl-4">
           {totalDays > 0
             ? (() => {
-                const windowSize = Math.min(visibleCount, days.length);
+                const windowSize = Math.min(limit, days.length);
                 const end = Math.min(totalDays, Math.max(1, totalDays - offset));
                 const start = Math.min(totalDays, Math.max(1, end - windowSize + 1));
                 return <>{start}–{end} of {totalDays} class days</>;
@@ -425,11 +424,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, visibleCount); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(visibleCount, days.length) >= totalDays}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, visibleCount); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
@@ -448,7 +447,7 @@ export default function HistoryPage() {
         <thead>
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
-            {[...days].reverse().slice(0, visibleCount).map((day) => (
+            {[...days].reverse().map((day) => (
               <th
                 key={day.id}
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
@@ -466,7 +465,7 @@ export default function HistoryPage() {
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
-              {[...days].reverse().slice(0, visibleCount).map((day, j) => {
+              {[...days].reverse().map((day, j) => {
                 const reversedIndex = days.length - 1 - j;
                 const record = studentRecords[i]?.records[reversedIndex];
                 return (
