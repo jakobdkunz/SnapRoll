@@ -61,6 +61,7 @@ export default function HistoryPage() {
   const [initialized, setInitialized] = useState(false);
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
   const studentWidthEffective = STUDENT_COL_BASE; // fixed by compact mode
+  const [leftWidth, setLeftWidth] = useState<number>(studentWidthEffective);
   const hasMeasuredMobileRef = useRef(false);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
@@ -163,6 +164,7 @@ export default function HistoryPage() {
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
+    setLeftWidth(leftCol);
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [DAY_COL_PADDING, offset]);
 
@@ -454,14 +456,14 @@ export default function HistoryPage() {
       <div ref={containerRef} className="relative overflow-hidden w-full">
       <table className="border-separate border-spacing-0 table-fixed">
         <colgroup>
-          <col style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }} />
+          <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
           {days.map((day) => (
             <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
           ))}
         </colgroup>
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>Student</th>
+            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             {[...days].reverse().map((day) => (
               <th
                 key={day.id}
