@@ -92,7 +92,7 @@ export default function MyAttendancePage() {
   );
 
   // Column width calculations
-  const COURSE_COL_BASE = isMobile ? 160 : 200; // narrower course column on mobile
+  const COURSE_COL_BASE = isMobile ? 120 : 200; // narrower course column on mobile
   const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
@@ -115,7 +115,7 @@ export default function MyAttendancePage() {
       return;
     }
     // Compute fit using configured left column width instead of measured (which can be inflated)
-    const leftCol = COURSE_COL_BASE + 20; // small padding allowance
+    const leftCol = COURSE_COL_BASE; // use exact configured width
     const availableForDays = Math.max(0, rectW - leftCol);
     const perCol = DAY_COL_CONTENT + DAY_COL_PADDING;
     const epsilon = 4;
