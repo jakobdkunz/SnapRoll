@@ -46,6 +46,7 @@ export default function HistoryPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false); // based on container width, not viewport
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
     update();
@@ -53,13 +54,13 @@ export default function HistoryPage() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  const STUDENT_COL_BASE = isMobile ? 120 : 220; // narrower student column on mobile
-  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
+  const STUDENT_COL_BASE = isCompact ? 120 : 220; // narrower when compact
+  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
   const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
-  const studentWidthEffective = isMobile ? STUDENT_COL_BASE : STUDENT_COL_BASE; // ignore measured name width on mobile
+  const studentWidthEffective = STUDENT_COL_BASE; // fixed by compact mode
   const hasMeasuredMobileRef = useRef(false);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
@@ -152,10 +153,12 @@ export default function HistoryPage() {
       if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
+    // Update compact mode based on container width
+    setIsCompact(rectW < 640);
     // Compute fit using configured left column width instead of measured (which can be inflated)
     const leftCol = studentWidthEffective;
     const availableForDays = Math.max(0, rectW - leftCol);
-    const perCol = DAY_COL_CONTENT + DAY_COL_PADDING;
+    const perCol = (rectW < 640 ? 56 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
