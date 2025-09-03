@@ -328,7 +328,7 @@ export default function MyAttendancePage() {
             <thead>
               <tr>
                 <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
-                <th className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
@@ -348,7 +348,7 @@ export default function MyAttendancePage() {
                     <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                     </td>
-                    <td className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
