@@ -59,10 +59,7 @@ export default function HistoryPage() {
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [initialized, setInitialized] = useState(false);
-  const [studentColW, setStudentColW] = useState<number>(STUDENT_COL_BASE);
-  const studentWidthEffective = STUDENT_COL_BASE; // fixed by compact mode
-  const [leftWidth, setLeftWidth] = useState<number>(studentWidthEffective);
-  const hasMeasuredMobileRef = useRef(false);
+  const [leftWidth, setLeftWidth] = useState<number>(STUDENT_COL_BASE);
   const initializedRightmostRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
     { visible: false, text: '', anchorX: 0, anchorY: 0 }
@@ -116,34 +113,7 @@ export default function HistoryPage() {
     return `${m}/${d}`;
   }
 
-  // Measure the width of the longest visible student name on mobile and set student column width.
-  // To avoid cumulative drift, measure only once per mobile session and only when entering mobile.
-  useEffect(() => {
-    if (!isMobile) {
-      hasMeasuredMobileRef.current = false;
-      setStudentColW(STUDENT_COL_BASE);
-      return;
-    }
-    if (hasMeasuredMobileRef.current) return;
-    const measure = () => {
-      const container = containerRef.current;
-      if (!container) return;
-      const nodes = container.querySelectorAll<HTMLElement>('.sr-student-name');
-      let max = 0;
-      nodes.forEach((el) => {
-        const width = el.scrollWidth;
-        if (width > max) max = width;
-      });
-      // Add small padding so text isn't tight against the first day column
-      const computedRaw = Math.min(320, Math.max(120, max + 16));
-      // Snap to 4px grid to avoid subpixel rounding oscillations
-      const computed = Math.round(computedRaw / 4) * 4;
-      setStudentColW(computed);
-      hasMeasuredMobileRef.current = true;
-    };
-    if (typeof window !== 'undefined') requestAnimationFrame(measure);
-    else measure();
-  }, [isMobile]);
+  // Removed measurement-driven left column width to avoid drift across resizes
 
   // Recompute how many day columns fit and update query limit
   const recomputeVisible = useCallback(() => {
@@ -176,7 +146,7 @@ export default function HistoryPage() {
       window.addEventListener('resize', onResize);
       return () => window.removeEventListener('resize', onResize);
     }
-  }, [isMobile, studentWidthEffective, initialized, recomputeVisible]);
+  }, [isMobile, initialized, recomputeVisible]);
 
   // Observe container size changes (not just window resizes)
   useEffect(() => {
@@ -478,7 +448,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student: Student, i: number) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: studentWidthEffective, minWidth: studentWidthEffective, maxWidth: studentWidthEffective }}>
+              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
