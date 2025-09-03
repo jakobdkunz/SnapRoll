@@ -180,6 +180,18 @@ export default function HistoryPage() {
     if (offset > maxOffset) setOffset(maxOffset);
   }, [limit, offset, history]);
 
+  // On first data load, jump to the final page (newest dates on the right)
+  useEffect(() => {
+    if (!history) return;
+    if (initializedRightmostRef.current) return;
+    const total = history.totalDays || 0;
+    if (total <= 0) return;
+    const windowSize = Math.max(1, limit);
+    const maxOffset = Math.max(0, total - windowSize);
+    initializedRightmostRef.current = true;
+    setOffset(maxOffset);
+  }, [history?.totalDays, limit]);
+
   // Extract data from Convex query
   const students = history?.students || [];
   const days = history?.days || [];
