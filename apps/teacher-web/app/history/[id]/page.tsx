@@ -173,11 +173,12 @@ export default function HistoryPage() {
     return () => ro.disconnect();
   }, [recomputeVisible]);
 
-  // Clamp offset when limit shrinks so we don't overflow
+  // Clamp offset when limit shrinks so we don't overflow (skip while fetching)
   useEffect(() => {
-    const maxOffset = Math.max(0, (history?.totalDays || 0) - Math.max(1, limit));
+    if (!history) return;
+    const maxOffset = Math.max(0, history.totalDays - Math.max(1, limit));
     if (offset > maxOffset) setOffset(maxOffset);
-  }, [limit, offset, history?.totalDays]);
+  }, [limit, offset, history]);
 
   // Extract data from Convex query
   const students = history?.students || [];
