@@ -409,8 +409,8 @@ export default function HistoryPage() {
           {totalDays > 0
             ? (() => {
                 const windowSize = Math.min(limit, days.length);
-                const end = Math.min(totalDays, Math.max(1, totalDays - offset));
-                const start = Math.min(totalDays, Math.max(1, end - windowSize + 1));
+                const start = Math.min(totalDays, offset + 1);
+                const end = Math.min(totalDays, offset + windowSize);
                 return <>{start}–{end} of {totalDays} class days</>;
               })()
             : '0 of 0 class days'}
@@ -420,12 +420,12 @@ export default function HistoryPage() {
             <HiOutlineDocumentArrowDown className="h-5 w-5" />
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
-          {/* Older page (moves window to older dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
+          {/* Older page (older dates are at lower offsets; disable at 0) */}
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
-          {/* Newer page (moves window to more recent dates) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+          {/* Newer page (newer dates increase offset; disable at end) */}
+          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
@@ -452,7 +452,7 @@ export default function HistoryPage() {
           <tr>
             <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
-            {[...days].reverse().map((day) => (
+            {days.map((day) => (
               <th
                 key={day.id}
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
@@ -471,9 +471,8 @@ export default function HistoryPage() {
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
               <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
-              {[...days].reverse().map((day, j) => {
-                const reversedIndex = days.length - 1 - j;
-                const record = studentRecords[i]?.records[reversedIndex];
+              {days.map((day, j) => {
+                const record = studentRecords[i]?.records[j];
                 return (
                   <td
                     key={`${student.id}-${day.id}`}
