@@ -97,6 +97,8 @@ export default function MyAttendancePage() {
   const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [fillerWidth, setFillerWidth] = useState<number>(0);
 
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -126,8 +128,19 @@ export default function MyAttendancePage() {
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
+    setContainerWidth(Math.round(rectW));
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [COURSE_COL_BASE, DAY_COL_PADDING, offset]);
+
+  // Recompute filler width to right-align day columns
+  useEffect(() => {
+    if (!containerWidth) return;
+    const leftCol = COURSE_COL_BASE;
+    const perCol = (isCompact ? 56 : 96) + DAY_COL_PADDING;
+    const numCols = (data?.days?.length || 0);
+    const slack = Math.max(0, containerWidth - leftCol - perCol * numCols);
+    setFillerWidth(Math.round(slack));
+  }, [containerWidth, COURSE_COL_BASE, isCompact, DAY_COL_PADDING, data?.days?.length]);
 
   useEffect(() => {
     // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
@@ -307,6 +320,7 @@ export default function MyAttendancePage() {
           <table className="border-separate border-spacing-0 table-fixed">
             <colgroup>
               <col style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }} />
+              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
               {grid.days.map((d) => (
                 <col key={`col-${d.date}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
               ))}
@@ -314,6 +328,7 @@ export default function MyAttendancePage() {
             <thead>
               <tr>
                 <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
+                <th className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
@@ -333,6 +348,7 @@ export default function MyAttendancePage() {
                     <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                     </td>
+                    <td className="p-0" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
