@@ -440,7 +440,7 @@ export default function HistoryPage() {
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                 style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
               >
-                {isMobile ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
+                {isCompact ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
               </th>
             ))}
           </tr>
