@@ -45,6 +45,7 @@ export default function MyAttendancePage() {
   const [isMobile, setIsMobile] = useState(false);
   // const [initialized, setInitialized] = useState(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>({ visible: false, text: '', anchorX: 0, anchorY: 0 });
+  const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -122,7 +123,8 @@ export default function MyAttendancePage() {
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
-  }, [COURSE_COL_BASE, DAY_COL_CONTENT, DAY_COL_PADDING]);
+    setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
+  }, [COURSE_COL_BASE, DAY_COL_CONTENT, DAY_COL_PADDING, offset]);
 
   useEffect(() => {
     // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
@@ -245,6 +247,11 @@ export default function MyAttendancePage() {
   return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
+        {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
+          <div className="mb-2 text-xs text-slate-500 pl-4">
+            cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
+          </div>
+        )}
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm text-slate-600 pl-4">
             {data.totalDays > 0

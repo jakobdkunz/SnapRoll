@@ -69,6 +69,7 @@ export default function HistoryPage() {
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const convex = useConvex();
+  const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -160,6 +161,7 @@ export default function HistoryPage() {
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
+    setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [studentWidthEffective, DAY_COL_CONTENT, DAY_COL_PADDING]);
 
   useEffect(() => {
@@ -407,6 +409,11 @@ export default function HistoryPage() {
   // Render shell with loading overlay instead of blank screen
   return (
     <Card className="p-4">
+      {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
+        <div className="mb-2 text-xs text-slate-500 pl-4">
+          cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-3">
         <div className="text-sm text-slate-600 pl-4">
           {totalDays > 0
