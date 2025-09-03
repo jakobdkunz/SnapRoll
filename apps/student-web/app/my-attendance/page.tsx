@@ -43,6 +43,7 @@ export default function MyAttendancePage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false); // based on container width
   // const [initialized, setInitialized] = useState(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>({ visible: false, text: '', anchorX: 0, anchorY: 0 });
   const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
@@ -92,8 +93,8 @@ export default function MyAttendancePage() {
   );
 
   // Column width calculations
-  const COURSE_COL_BASE = isMobile ? 120 : 200; // narrower course column on mobile
-  const DAY_COL_CONTENT = isMobile ? 56 : 96; // thinner content on mobile: MM/DD vs MM/DD/YYYY
+  const COURSE_COL_BASE = isCompact ? 120 : 200; // narrower when compact
+  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
 
@@ -114,16 +115,19 @@ export default function MyAttendancePage() {
       if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
       return;
     }
+    // Update compact mode from container width
+    const compact = rectW < 640;
+    setIsCompact(compact);
     // Compute fit using configured left column width instead of measured (which can be inflated)
     const leftCol = COURSE_COL_BASE; // use exact configured width
     const availableForDays = Math.max(0, rectW - leftCol);
-    const perCol = DAY_COL_CONTENT + DAY_COL_PADDING;
+    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
     setLimit((prev) => (prev !== capped ? capped : prev));
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
-  }, [COURSE_COL_BASE, DAY_COL_CONTENT, DAY_COL_PADDING, offset]);
+  }, [COURSE_COL_BASE, DAY_COL_PADDING, offset]);
 
   useEffect(() => {
     // Recompute on mount, when viewport mode changes, and when data mounts (container size may change)
