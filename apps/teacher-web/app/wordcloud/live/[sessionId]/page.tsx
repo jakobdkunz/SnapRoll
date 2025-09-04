@@ -3,17 +3,26 @@ import { useEffect, useRef, useState } from 'react';
 
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import { useAuth } from '@clerk/nextjs';
 
 type Word = { word: string; count: number };
 type Session = { id: string; prompt: string; showPromptToStudents: boolean; allowMultipleAnswers: boolean };
 
 export default function WordCloudLivePage({ params }: { params: { sessionId: string } }) {
   const sessionId = params.sessionId;
+  const { isLoaded, isSignedIn } = useAuth();
+  const authReady = isLoaded && isSignedIn;
 
   // Convex hooks
-  const session = useQuery(api.functions.wordcloud.getActiveSession, { sessionId: params.sessionId as any });
+  const session = useQuery(
+    api.functions.wordcloud.getActiveSession,
+    authReady ? { sessionId: params.sessionId as any } : "skip"
+  );
   const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as any } : "skip");
-  const answers = useQuery(api.functions.wordcloud.getAnswers, { sessionId: params.sessionId as any });
+  const answers = useQuery(
+    api.functions.wordcloud.getAnswers,
+    authReady ? { sessionId: params.sessionId as any } : "skip"
+  );
   const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
   const closeSession = useMutation(api.functions.wordcloud.closeSession);
 
@@ -31,11 +40,12 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   // Heartbeat to keep session active (10s)
   useEffect(() => {
+    if (!authReady) return;
     const interval = window.setInterval(() => {
       void heartbeat({ sessionId: params.sessionId as any });
     }, 10000);
     return () => window.clearInterval(interval);
-  }, [sessionId, heartbeat]);
+  }, [sessionId, heartbeat, authReady]);
 
   const maxCount = Math.max(1, ...words.map((w: Word) => w.count));
 
