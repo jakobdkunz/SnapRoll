@@ -2,7 +2,7 @@
 import { Card } from '@snaproll/ui';
 import { SignedOut, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@snaproll/convex-client';
 
@@ -10,7 +10,7 @@ export default function TeacherWelcomePage() {
   const router = useRouter();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const { isLoaded, isSignedIn } = useAuth();
-  const didUpsertRef = { current: false };
+  const didUpsertRef = useRef(false);
 
   // Redirect guests to dedicated sign-in page
   useEffect(() => {
@@ -24,8 +24,9 @@ export default function TeacherWelcomePage() {
     try {
       const key = 'snaproll.teacher.upserted';
       const already = typeof window !== 'undefined' ? sessionStorage.getItem(key) : '1';
-      if (!already) {
+      if (!already && !didUpsertRef.current) {
         // Fire and forget; do not block navigation
+        didUpsertRef.current = true;
         upsertUser({ role: 'TEACHER' }).finally(() => {
           try { sessionStorage.setItem(key, '1'); } catch {}
         });
