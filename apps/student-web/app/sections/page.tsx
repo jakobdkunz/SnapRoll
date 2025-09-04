@@ -351,27 +351,36 @@ export default function SectionsPage() {
                 <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
               )}
             </div>
-            <div className="flex gap-2 items-center">
-              <TextInput
-                value={answer}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
-                placeholder="Your word or phrase"
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
-              />
-              <Button
-                onClick={async () => {
-                  if (!effectiveUserId || !answer.trim()) return;
-                  try {
-                    await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
-                    setAnswer('');
-                    setSubmitMsg('Answer submitted.');
-                  } catch (e: unknown) {
-                    const msg = e instanceof Error ? e.message : 'Failed to submit.';
-                    setSubmitMsg(/already|Multiple/i.test(msg) ? 'You already submitted' : 'Submission failed. Try again.');
-                  }
-                }}
-              >Submit</Button>
-            </div>
+            {(
+              // If multiple answers are NOT allowed and either server says submitted or we just submitted
+              ((renderInteractive as any).allowMultipleAnswers === false && ((renderInteractive as any).hasSubmitted || !!submitMsg))
+            ) ? (
+              <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
+                Thanks! Your response was received.
+              </div>
+            ) : (
+              <div className="flex gap-2 items-center">
+                <TextInput
+                  value={answer}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAnswer(e.target.value)}
+                  placeholder="Your word or phrase"
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); (e.currentTarget.nextSibling as HTMLButtonElement | null)?.click?.(); } }}
+                />
+                <Button
+                  onClick={async () => {
+                    if (!effectiveUserId || !answer.trim()) return;
+                    try {
+                      await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
+                      setAnswer('');
+                      setSubmitMsg('Answer submitted.');
+                    } catch (e: unknown) {
+                      const msg = e instanceof Error ? e.message : 'Failed to submit.';
+                      setSubmitMsg(/already|Multiple/i.test(msg) ? 'You already submitted' : 'Submission failed. Try again.');
+                    }
+                  }}
+                >Submit</Button>
+              </div>
+            )}
             {/* removed noisy green banner */}
           </div>
         ) : renderInteractive.kind === 'poll' ? (
@@ -381,7 +390,7 @@ export default function SectionsPage() {
               <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
             </div>
             <div className="space-y-2">
-              {submitMsg ? (
+              {((renderInteractive as any).hasSubmitted || !!submitMsg) ? (
                 <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
                   Thanks! Your response was received.
                 </div>

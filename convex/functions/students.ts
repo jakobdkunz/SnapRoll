@@ -110,6 +110,11 @@ export const getActiveInteractive = query({
 
     const top = candidates[0];
     if (top.kind === 'wordcloud') {
+      // Determine if the student already submitted for this session (any answer)
+      const existingWc = await ctx.db
+        .query("wordCloudAnswers")
+        .withIndex("by_session_student", (q) => q.eq("sessionId", top.session._id as Id<'wordCloudSessions'>).eq("studentId", args.studentId))
+        .first();
       return {
         kind: 'wordcloud' as const,
         sessionId: top.session._id,
@@ -117,7 +122,8 @@ export const getActiveInteractive = query({
         showPromptToStudents: top.session.showPromptToStudents,
         allowMultipleAnswers: top.session.allowMultipleAnswers,
         sectionId: top.session.sectionId,
-      };
+        hasSubmitted: Boolean(existingWc),
+      } as const;
     }
     if (top.kind === 'poll') {
       const pollSession = top.session as unknown as { prompt?: unknown; optionsJson?: unknown; showResults: boolean; sectionId: Id<'sections'>; _id: Id<'pollSessions'> };
@@ -127,6 +133,11 @@ export const getActiveInteractive = query({
       } catch {
         options = [];
       }
+      // Determine if the student already submitted for this poll session
+      const existingPoll = await ctx.db
+        .query("pollAnswers")
+        .withIndex("by_session_student", (q) => q.eq("sessionId", pollSession._id as Id<'pollSessions'>).eq("studentId", args.studentId))
+        .first();
       return {
         kind: 'poll' as const,
         sessionId: pollSession._id,
@@ -134,7 +145,8 @@ export const getActiveInteractive = query({
         options,
         showResults: pollSession.showResults,
         sectionId: pollSession.sectionId,
-      };
+        hasSubmitted: Boolean(existingPoll),
+      } as const;
     }
     return {
       kind: 'slideshow' as const,
