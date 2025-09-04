@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
+import { useAuth } from '@clerk/nextjs';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
@@ -17,9 +18,22 @@ export default function ModifyPage() {
   const [newLastName, setNewLastName] = useState('');
 
   // Convex hooks
-  const section = useQuery(api.functions.sections.get, params.id ? { id: params.id as any } : "skip");
-  const enrollments = useQuery(api.functions.enrollments.getBySection, params.id ? { sectionId: params.id as any } : "skip");
-  const allStudents = useQuery(api.functions.users.list, { role: "STUDENT" });
+  // Ensure the current Clerk user is provisioned in Convex before running protected queries
+  const { isLoaded, isSignedIn } = useAuth();
+  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    if (currentUser === undefined) return; // still loading
+    if (!currentUser) {
+      upsertUser({ role: 'TEACHER' }).catch(() => {});
+    }
+  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
+  const teacherReady = !!(currentUser && currentUser._id);
+
+  const section = useQuery(api.functions.sections.get, (params.id && teacherReady) ? { id: params.id as any } : "skip");
+  const enrollments = useQuery(api.functions.enrollments.getBySection, (params.id && teacherReady) ? { sectionId: params.id as any } : "skip");
+  const allStudents = useQuery(api.functions.users.list, teacherReady ? { role: "STUDENT" } : "skip");
   
   // Combine enrollments with student data
   const students = useMemo(() => {
