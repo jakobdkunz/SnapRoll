@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Card, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import { useAuth } from '@clerk/nextjs';
 
 type PollSession = { id: string; prompt: string; options: string[]; showResults: boolean };
 
@@ -10,12 +11,17 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const { sessionId } = params;
   const [toggling, setToggling] = useState(false);
   const [showLocal, setShowLocal] = useState<boolean | null>(null);
+  const { isLoaded, isSignedIn } = useAuth();
+  const authReady = isLoaded && isSignedIn;
 
   // Convex hooks
   // Using session details from getResults response; for header we can reuse prompt if available
   // sessionId here is the poll session; getActivePoll expects sectionId. We'll derive header from results.
   const session = null as any;
-  const results = useQuery(api.functions.polls.getResults, { sessionId: params.sessionId as any });
+  const results = useQuery(
+    api.functions.polls.getResults,
+    authReady ? { sessionId: params.sessionId as any } : "skip"
+  );
   const sectionId = (results as any)?.session?.sectionId;
   const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as any } : "skip");
   const toggleResults = useMutation(api.functions.polls.toggleResults);
@@ -30,11 +36,12 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
 
   // Heartbeat (10s to reduce DB writes)
   useEffect(() => {
-    const id = window.setInterval(() => { 
-      void heartbeat({ sessionId: params.sessionId as any }); 
+    if (!authReady) return;
+    const id = window.setInterval(() => {
+      void heartbeat({ sessionId: params.sessionId as any });
     }, 10000);
     return () => window.clearInterval(id);
-  }, [sessionId, heartbeat]);
+  }, [sessionId, heartbeat, authReady]);
 
   return (
     <div className="relative min-h-dvh px-4 py-6">
