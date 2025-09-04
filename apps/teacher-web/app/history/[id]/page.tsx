@@ -445,8 +445,8 @@ export default function HistoryPage() {
           </Button>
         </div>
       </div>
-      {/* Blank-state when no history exists, only after data has initialized and is not fetching */}
-      {initialized && !isFetching && totalDays === 0 ? (
+      {/* Blank-state when no history exists or when there are days but no students */}
+      {initialized && !isFetching && (totalDays === 0 || students.length === 0) ? (
         <div className="py-12 grid place-items-center">
           <div className="text-center max-w-md">
             <div className="text-lg font-semibold mb-1">No attendance history yet</div>
