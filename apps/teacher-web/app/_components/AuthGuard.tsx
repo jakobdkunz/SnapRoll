@@ -10,16 +10,8 @@ export function AuthGuard() {
   const { user } = useUser();
 
   useEffect(() => {
-    if (!isLoaded) return;
-    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
-    if (!isSignedIn && !isPublic) {
-      // Debounce redirect to avoid loops during initial hydration
-      const t = setTimeout(() => {
-        if (!isSignedIn) router.replace('/');
-      }, 50);
-      return () => clearTimeout(t);
-    }
-    // Do not persist PII in localStorage; rely on Clerk/Convex in-memory state
+    // Rely on middleware for redirect behavior; client doesn't redirect
+    // This avoids redirect flicker during hydrations and preserves target routes on refresh
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;
