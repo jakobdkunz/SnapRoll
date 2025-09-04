@@ -63,6 +63,7 @@ export default function HistoryPage() {
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [fillerWidth, setFillerWidth] = useState<number>(0);
   const initializedRightmostRef = useRef(false);
+  const hasInteractedRef = useRef(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
     { visible: false, text: '', anchorX: 0, anchorY: 0 }
   );
@@ -180,17 +181,19 @@ export default function HistoryPage() {
     if (offset > maxOffset) setOffset(maxOffset);
   }, [limit, offset, history]);
 
-  // On first data load, jump to the final page (newest dates on the right)
+  // On first data load and when layout recalculates limit, jump to final page
   useEffect(() => {
     if (!history) return;
-    if (initializedRightmostRef.current) return;
+    // if the user has paged manually, do not auto-jump anymore
+    if (hasInteractedRef.current) return;
     const total = history.totalDays || 0;
     if (total <= 0) return;
     const windowSize = Math.max(1, limit);
     const maxOffset = Math.max(0, total - windowSize);
+    // Only set if different to avoid unnecessary state churn
+    if (offset !== maxOffset) setOffset(maxOffset);
     initializedRightmostRef.current = true;
-    setOffset(maxOffset);
-  }, [history?.totalDays, limit]);
+  }, [history?.totalDays, limit, offset]);
 
   // Extract data from Convex query
   const students = history?.students || [];
@@ -433,11 +436,11 @@ export default function HistoryPage() {
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
           {/* Older page (older dates are at lower offsets; disable at 0) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+          <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
           {/* Newer page (newer dates increase offset; disable at end) */}
-          <Button variant="ghost" onClick={() => { const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
+          <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
