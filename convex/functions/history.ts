@@ -208,9 +208,8 @@ export const getStudentHistory = query({
     // Build mapping from local-day key -> per-section classDay
     const dateKeyToSectionDay = new Map<number, Map<Id<'sections'>, Doc<'classDays'>>>();
     for (const cd of rawDays) {
-      const d = new Date(cd.date);
-      d.setHours(0, 0, 0, 0);
-      const key = d.getTime();
+      const { startMs } = getEasternDayBounds(cd.date as number);
+      const key = startMs;
       let map = dateKeyToSectionDay.get(key);
       if (!map) {
         map = new Map();

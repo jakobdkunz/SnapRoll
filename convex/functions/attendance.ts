@@ -67,9 +67,28 @@ export const createClassDay = mutation({
     attendanceCodeExpiresAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { startMs, nextStartMs } = getEasternDayBounds(args.date);
+    // If a class day exists in this ET window for the section, reuse it by rotating code
+    const existing = await ctx.db
+      .query("classDays")
+      .withIndex("by_section_date", (q) =>
+        q
+          .eq("sectionId", args.sectionId)
+          .gte("date", startMs)
+          .lt("date", nextStartMs)
+      )
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        attendanceCode: args.attendanceCode,
+        attendanceCodeExpiresAt: args.attendanceCodeExpiresAt,
+      });
+      return existing._id;
+    }
+    // Otherwise insert a new day normalized to ET start
     return await ctx.db.insert("classDays", {
       sectionId: args.sectionId,
-      date: args.date,
+      date: startMs,
       attendanceCode: args.attendanceCode,
       attendanceCodeExpiresAt: args.attendanceCodeExpiresAt,
     });
