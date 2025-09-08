@@ -106,9 +106,6 @@ export function StudentHeaderRight() {
         <Card className="p-6 w-[90vw] max-w-md space-y-4">
           <div className="text-lg font-semibold">Your Profile</div>
           <div className="text-sm text-slate-600">These settings are managed by your organization.</div>
-          {studentId && (
-            <div className="text-xs text-slate-500">User ID: {studentId}</div>
-          )}
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">First name</label>
             <TextInput value={firstName} disabled />
@@ -121,6 +118,9 @@ export function StudentHeaderRight() {
             <label className="text-sm text-slate-600">Email</label>
             <TextInput value={student?.email || ''} disabled />
           </div>
+          {studentId && (
+            <div className="text-xs text-slate-500">User ID: {studentId}</div>
+          )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Close</Button>
           </div>
