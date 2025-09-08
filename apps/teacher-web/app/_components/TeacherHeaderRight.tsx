@@ -168,6 +168,9 @@ export function TeacherHeaderRight() {
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)}>
         <Card className="p-6 w-[90vw] max-w-md space-y-4">
           <div className="text-lg font-semibold">Your Profile</div>
+          {teacherId && (
+            <div className="text-xs text-slate-500">User ID: {teacherId}</div>
+          )}
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">First name</label>
             <TextInput value={firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)} />
