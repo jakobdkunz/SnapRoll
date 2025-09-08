@@ -36,9 +36,58 @@ export const getSectionHistory = query({
     }
     const allClassDays = unique;
     
+    // Filter out days that would render as all auto-ABSENT (no records and no non-BLANK manual changes)
+    const allIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
+    const recordsAll = allIds.length > 0
+      ? (await Promise.all(
+          allIds.map((id) =>
+            ctx.db
+              .query("attendanceRecords")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const manualAll = allIds.length > 0
+      ? (await Promise.all(
+          allIds.map((id) =>
+            ctx.db
+              .query("manualStatusChanges")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const keepByDay = new Set<Id<'classDays'>>();
+    {
+      const byDayRecs = new Map<Id<'classDays'>, Doc<'attendanceRecords'>[]>();
+      for (const r of recordsAll) {
+        const k = r.classDayId as Id<'classDays'>;
+        const arr = byDayRecs.get(k) || [];
+        arr.push(r as Doc<'attendanceRecords'>);
+        byDayRecs.set(k, arr);
+      }
+      const byDayManual = new Map<Id<'classDays'>, Doc<'manualStatusChanges'>[]>();
+      for (const m of manualAll) {
+        const k = m.classDayId as Id<'classDays'>;
+        const arr = byDayManual.get(k) || [];
+        arr.push(m as Doc<'manualStatusChanges'>);
+        byDayManual.set(k, arr);
+      }
+      for (const id of allIds) {
+        const recs = byDayRecs.get(id) || [];
+        const mans = byDayManual.get(id) || [];
+        const hasRecorded = recs.some((r) => r.status !== "BLANK");
+        const hasManual = mans.some((m) => m.status !== "BLANK");
+        if (hasRecorded || hasManual) keepByDay.add(id);
+      }
+    }
+
+    const filteredDays = allClassDays.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
+    
     // Apply pagination (oldest first overall; offset points to oldest page)
-    const totalDays = allClassDays.length;
-    const page = allClassDays.slice(args.offset, args.offset + args.limit);
+    const totalDays = filteredDays.length;
+    const page = filteredDays.slice(args.offset, args.offset + args.limit);
     const classDayIds = page.map(cd => cd._id);
     
     // Get all students enrolled in this section
@@ -223,9 +272,41 @@ export const getStudentHistory = query({
     // Unique date keys, newest first
     const allDateKeys = Array.from(dateKeyToSectionDay.keys()).sort((a, b) => b - a);
 
+    // Filter out date keys where every contributing section day would be all auto-ABSENT
+    const allClassDaysForFilter: Array<Doc<'classDays'>> = [];
+    for (const key of allDateKeys) {
+      const sectionMap = dateKeyToSectionDay.get(key)!;
+      for (const [, cd] of sectionMap) allClassDaysForFilter.push(cd as Doc<'classDays'>);
+    }
+    const allIds2 = allClassDaysForFilter.map(cd => cd._id as Id<'classDays'>);
+    const recordsAll2 = allIds2.length > 0
+      ? await ctx.db
+          .query("attendanceRecords")
+          .filter((q) => q.or(...allIds2.map((id) => q.eq(q.field("classDayId"), id))))
+          .collect()
+      : [];
+    const manualAll2 = allIds2.length > 0
+      ? await ctx.db
+          .query("manualStatusChanges")
+          .filter((q) => q.or(...allIds2.map((id) => q.eq(q.field("classDayId"), id))))
+          .collect()
+      : [];
+    const recordedOrManualByDay = new Map<Id<'classDays'>, boolean>();
+    for (const r of recordsAll2) recordedOrManualByDay.set(r.classDayId as Id<'classDays'>, ((recordedOrManualByDay.get(r.classDayId as Id<'classDays'>)) || false) || ((r.status || "") !== "BLANK"));
+    for (const m of manualAll2) recordedOrManualByDay.set(m.classDayId as Id<'classDays'>, ((recordedOrManualByDay.get(m.classDayId as Id<'classDays'>)) || false) || ((m.status || "") !== "BLANK"));
+
+    const filteredDateKeys = allDateKeys.filter((key) => {
+      const sectionMap = dateKeyToSectionDay.get(key)!;
+      for (const [, cd] of sectionMap) {
+        const id = cd._id as Id<'classDays'>;
+        if (recordedOrManualByDay.get(id)) return true; // keep if any section day has records/manual
+      }
+      return false; // drop this date (all section days would be auto-absent)
+    });
+
     // Apply pagination on date keys
-    const totalDays = allDateKeys.length;
-    const pageDateKeys = allDateKeys.slice(args.offset, args.offset + args.limit);
+    const totalDays = filteredDateKeys.length;
+    const pageDateKeys = filteredDateKeys.slice(args.offset, args.offset + args.limit);
 
     // Collect classDayIds for selected page (across sections) to fetch records/overrides for this student
     const pageClassDayIds: Id<'classDays'>[] = [] as unknown as Id<'classDays'>[];
@@ -360,7 +441,55 @@ export const exportSectionHistory = query({
         unique.push(cd);
       }
     }
-    const classDays = unique;
+    let classDays = unique;
+
+    // Filter out class days that would be all auto-ABSENT (no records and no non-BLANK manual changes)
+    const allIds3 = classDays.map(cd => cd._id as Id<'classDays'>);
+    const recordsAll3 = allIds3.length > 0
+      ? (await Promise.all(
+          allIds3.map((id) =>
+            ctx.db
+              .query("attendanceRecords")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const manualAll3 = allIds3.length > 0
+      ? (await Promise.all(
+          allIds3.map((id) =>
+            ctx.db
+              .query("manualStatusChanges")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const keepByDay3 = new Set<Id<'classDays'>>();
+    {
+      const byDayRecs = new Map<Id<'classDays'>, Doc<'attendanceRecords'>[]>();
+      for (const r of recordsAll3) {
+        const k = r.classDayId as Id<'classDays'>;
+        const arr = byDayRecs.get(k) || [];
+        arr.push(r as Doc<'attendanceRecords'>);
+        byDayRecs.set(k, arr);
+      }
+      const byDayManual = new Map<Id<'classDays'>, Doc<'manualStatusChanges'>[]>();
+      for (const m of manualAll3) {
+        const k = m.classDayId as Id<'classDays'>;
+        const arr = byDayManual.get(k) || [];
+        arr.push(m as Doc<'manualStatusChanges'>);
+        byDayManual.set(k, arr);
+      }
+      for (const id of allIds3) {
+        const recs = byDayRecs.get(id) || [];
+        const mans = byDayManual.get(id) || [];
+        const hasRecorded = recs.some((r) => r.status !== "BLANK");
+        const hasManual = mans.some((m) => m.status !== "BLANK");
+        if (hasRecorded || hasManual) keepByDay3.add(id);
+      }
+    }
+    classDays = classDays.filter(cd => keepByDay3.has(cd._id as Id<'classDays'>));
     const classDayIds = classDays.map(cd => cd._id as Id<'classDays'>);
 
     // Get enrollments and students
