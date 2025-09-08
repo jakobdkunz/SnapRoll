@@ -4,12 +4,13 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
+import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useAuth } from '@clerk/nextjs';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
 
-type Student = { id: string; email: string; firstName: string; lastName: string };
+type Student = { id: Id<'users'>; email: string; firstName: string; lastName: string };
 
 export default function ModifyPage() {
   const params = useParams<{ id: string }>();
@@ -20,7 +21,7 @@ export default function ModifyPage() {
   // Convex hooks
   // Ensure the current Clerk user is provisioned in Convex before running protected queries
   const { isLoaded, isSignedIn } = useAuth();
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser);
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -31,8 +32,8 @@ export default function ModifyPage() {
   }, [isLoaded, isSignedIn, currentUser, upsertUser]);
   const teacherReady = !!(currentUser && currentUser._id);
 
-  const section = useQuery(api.functions.sections.get, (params.id && teacherReady) ? { id: params.id as any } : "skip");
-  const enrollments = useQuery(api.functions.enrollments.getBySection, (params.id && teacherReady) ? { sectionId: params.id as any } : "skip");
+  const section = useQuery(api.functions.sections.get, (params.id && teacherReady) ? { id: params.id as Id<'sections'> } : "skip");
+  const enrollments = useQuery(api.functions.enrollments.getBySection, (params.id && teacherReady) ? { sectionId: params.id as Id<'sections'> } : "skip");
   const allStudents = useQuery(api.functions.users.list, teacherReady ? { role: "STUDENT" } : "skip");
   
   // Combine enrollments with student data
@@ -95,7 +96,7 @@ export default function ModifyPage() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmWorking, setConfirmWorking] = useState(false);
   const [sectionLoaded, setSectionLoaded] = useState(false);
-  const [loadingStudents, setLoadingStudents] = useState(false);
+  
   type LastAction =
     | { type: 'remove_one'; snapshot: Student[]; label: string }
     | { type: 'remove_all'; snapshot: Student[]; label: string }
@@ -153,7 +154,7 @@ export default function ModifyPage() {
         const existingStudent = allStudents?.find(s => s.email.toLowerCase() === newEmail.trim().toLowerCase());
         if (existingStudent) {
           // Student exists, just enroll them
-          await createEnrollment({ sectionId: params.id as any, studentId: existingStudent._id });
+          await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: existingStudent._id });
           setNewEmail('');
           setNewFirstName('');
           setNewLastName('');
@@ -170,7 +171,7 @@ export default function ModifyPage() {
           lastName: newLastName.trim(),
           role: "STUDENT"
         });
-        await createEnrollment({ sectionId: params.id as any, studentId });
+        await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId });
         setNewEmail('');
         setNewFirstName('');
         setNewLastName('');
@@ -196,13 +197,13 @@ export default function ModifyPage() {
     setEditLastName('');
   }
 
-  async function saveEdit(studentId: string) {
+  async function saveEdit(studentId: Id<'users'>) {
     if (!editEmail.trim() || !isValidEmail(editEmail.trim()) || !editFirstName.trim() || !editLastName.trim()) {
       alert('Please enter a valid email and name.');
       return;
     }
     try {
-      await updateUser({ id: studentId as any, firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      await updateUser({ id: studentId, firstName: editFirstName.trim(), lastName: editLastName.trim() });
       cancelEdit();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
@@ -367,7 +368,7 @@ export default function ModifyPage() {
           role: 'STUDENT'
         });
         await createEnrollment({ 
-          sectionId: params.id as any, 
+          sectionId: params.id as Id<'sections'>, 
           studentId: userId
         });
         added += 1;
@@ -476,7 +477,7 @@ export default function ModifyPage() {
                       setDeletingIds((prev) => new Set(prev).add(s.id));
                       try {
                         const snapshot = [...students];
-                        await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
+                        await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
                         setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
                         setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
                         setToastVisible(true);
@@ -700,7 +701,7 @@ export default function ModifyPage() {
                   setConfirmWorking(true);
                   const snapshot = [...students];
                   await runWithConcurrency(snapshot, 10, async (s) => {
-                    await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
+                    await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
                   });
                   setLastAction({ type: 'remove_all', snapshot, label: 'All students removed.' });
                   setToastMessage('All students removed.');
@@ -737,11 +738,11 @@ export default function ModifyPage() {
                   const toAdd = snapshot.filter((s) => !currentIds.has(s.id));
                   await Promise.all([
                     runWithConcurrency(toDelete, 10, async (s) => {
-                      await removeEnrollment({ sectionId: params.id as any, studentId: s.id as any });
+                      await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
                     }),
                     runWithConcurrency(toAdd, 8, async (s) => {
                       const userId = await createUser({ email: s.email, firstName: s.firstName, lastName: s.lastName, role: "STUDENT" });
-                      await createEnrollment({ sectionId: params.id as any, studentId: userId });
+                      await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: userId });
                     })
                   ]);
                   setToastVisible(false);
