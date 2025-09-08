@@ -74,12 +74,17 @@ export const getSectionHistory = query({
         arr.push(m as Doc<'manualStatusChanges'>);
         byDayManual.set(k, arr);
       }
+      const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
+      for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
       for (const id of allIds) {
         const recs = byDayRecs.get(id) || [];
         const mans = byDayManual.get(id) || [];
         const hasRecorded = recs.some((r) => r.status !== "BLANK");
         const hasManual = mans.some((m) => m.status !== "BLANK");
-        if (hasRecorded || hasManual) keepByDay.add(id);
+        const cd = dayById.get(id)!;
+        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
+        const isCurrentDay = now >= startMs && now < nextStartMs;
+        if (hasRecorded || hasManual || isCurrentDay) keepByDay.add(id);
       }
     }
 
@@ -300,6 +305,8 @@ export const getStudentHistory = query({
       for (const [, cd] of sectionMap) {
         const id = cd._id as Id<'classDays'>;
         if (recordedOrManualByDay.get(id)) return true; // keep if any section day has records/manual
+        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
+        if (now >= startMs && now < nextStartMs) return true; // keep current ET day
       }
       return false; // drop this date (all section days would be auto-absent)
     });
@@ -481,12 +488,17 @@ export const exportSectionHistory = query({
         arr.push(m as Doc<'manualStatusChanges'>);
         byDayManual.set(k, arr);
       }
+      const dayById3 = new Map<Id<'classDays'>, Doc<'classDays'>>();
+      for (const cd of classDays) dayById3.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
       for (const id of allIds3) {
         const recs = byDayRecs.get(id) || [];
         const mans = byDayManual.get(id) || [];
         const hasRecorded = recs.some((r) => r.status !== "BLANK");
         const hasManual = mans.some((m) => m.status !== "BLANK");
-        if (hasRecorded || hasManual) keepByDay3.add(id);
+        const cd = dayById3.get(id)!;
+        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
+        const isCurrentDay = now >= startMs && now < nextStartMs;
+        if (hasRecorded || hasManual || isCurrentDay) keepByDay3.add(id);
       }
     }
     classDays = classDays.filter(cd => keepByDay3.has(cd._id as Id<'classDays'>));
