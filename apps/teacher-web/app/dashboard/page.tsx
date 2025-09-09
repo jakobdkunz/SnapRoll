@@ -6,29 +6,43 @@ import { Button, Card, TextInput, Modal } from '@snaproll/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import type { Doc, Id } from '../../../../convex/_generated/dataModel';
 
-type Section = { id?: string; _id?: string; title: string; gradient: string };
+type SectionDoc = Doc<'sections'>;
+
+function hasId(record: unknown): record is { _id: string } {
+  if (typeof record !== 'object' || record === null) return false;
+  const obj = record as Record<string, unknown>;
+  return typeof obj._id === 'string';
+}
+
+function extractId(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (hasId(value)) return value._id;
+  return '';
+}
+type CurrentUser = { _id: string } | null | undefined;
 
 export default function DashboardPage() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: Section | null }>({ open: false, section: null });
+  const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: SectionDoc | null }>({ open: false, section: null });
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
-  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+  const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
-  const [wcSectionId, setWcSectionId] = useState<string | null>(null);
+  const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
   const [wcPrompt, setWcPrompt] = useState('One word to describe how you feel');
   const [wcShowPrompt, setWcShowPrompt] = useState(true);
   const [wcAllowMultiple, setWcAllowMultiple] = useState(false);
   const [wcWorking, setWcWorking] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
-  const [pollSectionId, setPollSectionId] = useState<string | null>(null);
+  const [pollSectionId, setPollSectionId] = useState<Id<'sections'> | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
-  const [slideSectionId, setSlideSectionId] = useState<string | null>(null);
-  const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<string | null>(null);
-  const [slideSelectedSessionId, setSlideSelectedSessionId] = useState<string | null>(null);
+  const [slideSectionId, setSlideSectionId] = useState<Id<'sections'> | null>(null);
+  const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);
+  const [slideSelectedSessionId, setSlideSelectedSessionId] = useState<Id<'slideshowSessions'> | null>(null);
   const [slideTitle, setSlideTitle] = useState('');
   const [slideShowOnDevices, setSlideShowOnDevices] = useState(true);
   const [slideAllowDownload, setSlideAllowDownload] = useState(true);
@@ -43,18 +57,17 @@ export default function DashboardPage() {
   const updateSection = useMutation(api.functions.sections.update);
   const deleteSection = useMutation(api.functions.sections.deleteSection);
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
-  const startPoll = useMutation(api.functions.polls.startPoll);
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
 
   // Current user via Clerk/Convex
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const teacherId = (currentUser?._id as any) || null;
+  const currentUser: CurrentUser = useQuery(convexApi.auth.getCurrentUser);
+  const teacherId: Id<'users'> | null = hasId(currentUser) ? (currentUser._id as Id<'users'>) : null;
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const { isLoaded, isSignedIn } = useAuth();
 
   // Data queries
   const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
-  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") || []) as any[];
+  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") || []) as SectionDoc[];
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -88,9 +101,9 @@ export default function DashboardPage() {
     try {
       setWcWorking(true);
       setWcError(null);
-      const sessionId = await startWordCloud({ sectionId: wcSectionId as any, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
+      const sessionId = await startWordCloud({ sectionId: wcSectionId as Id<'sections'>, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
       setWcOpen(false);
-      setTimeout(() => router.push(`/wordcloud/live/${(sessionId as any)._id || sessionId}`), 120);
+      setTimeout(() => router.push(`/wordcloud/live/${extractId(sessionId)}`), 120);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Failed to start word cloud. Please try again.';
       setWcError(message);
@@ -119,14 +132,14 @@ export default function DashboardPage() {
 
   async function saveCustomization(title: string, gradient: string) {
     if (!customizeModal.section || !title.trim()) return;
-    const sid = (customizeModal.section as any)._id || (customizeModal.section as any).id;
-    await updateSection({ id: sid as any, title: title.trim(), gradient });
+    const sid = customizeModal.section._id as Id<'sections'>;
+    await updateSection({ id: sid, title: title.trim(), gradient });
     handleCloseCustomize();
   }
 
   function handleCloseCustomize() {
     // First close (triggers modal exit animation), then clear after transition
-    setCustomizeModal((prev) => ({ ...prev, open: false }));
+    setCustomizeModal((prev: { open: boolean; section: SectionDoc | null }) => ({ ...prev, open: false }));
     window.setTimeout(() => {
     setCustomizeModal({ open: false, section: null });
     }, 180);
@@ -152,7 +165,7 @@ export default function DashboardPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 overflow-hidden">
-          {sections.map((s: any) => {
+          {sections.map((s: SectionDoc) => {
             const gradientClass = s.gradient;
             
             return (
@@ -194,14 +207,14 @@ export default function DashboardPage() {
                           className="inline-flex items-center gap-2 w-full"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenMenuFor((prev) => (prev === s._id ? null : s._id));
+                            setOpenMenuFor((prev: Id<'sections'> | null) => (prev === s._id ? null : s._id));
                           }}
                           aria-haspopup="menu"
                           aria-expanded={openMenuFor === s._id}
                           data-activities-trigger={s._id}
                         >
                           <HiOutlineSparkles className="h-5 w-5" /> Activities
-                          <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s.id ? 'rotate-180' : ''}`} />
+                          <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s._id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s._id && (
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuFor(null)} aria-hidden>
@@ -304,7 +317,7 @@ export default function DashboardPage() {
               onSave={saveCustomization}
               onCancel={handleCloseCustomize}
               onDelete={async (id: string) => {
-                await deleteSection({ id: id as any });
+                await deleteSection({ id: id as Id<'sections'> });
                 handleCloseCustomize();
               }}
             />
@@ -405,7 +418,7 @@ export default function DashboardPage() {
                     No recent slideshows
                   </div>
                 ) : (
-                  getAssetsByTeacher.map((asset: any) => (
+                  (getAssetsByTeacher as Array<{ _id: Id<'slideshowAssets'>; title: string; createdAt: number }>).map((asset) => (
                     <div key={asset._id} className="group relative">
                       <button 
                         onClick={() => { 
@@ -604,14 +617,14 @@ export default function DashboardPage() {
                 setSlideError(null);
                 try {
                   if (slideSelectedAssetId) {
-                    const sessionId = await startSlideshow({ sectionId: slideSectionId as any, assetId: slideSelectedAssetId as any, 
+                    const sessionId = await startSlideshow({ sectionId: slideSectionId as Id<'sections'>, assetId: slideSelectedAssetId as Id<'slideshowAssets'>, 
                       showOnDevices: slideShowOnDevices,
                       allowDownload: slideAllowDownload,
                       requireStay: slideRequireStay,
                       preventJump: slidePreventJump,
-                    } as any);
+                    });
                     setSlideOpen(false);
-                    setTimeout(() => router.push(`/slideshow/live/${(sessionId as any)._id || sessionId}`), 120);
+                    setTimeout(() => router.push(`/slideshow/live/${extractId(sessionId)}`), 120);
                   } else if (slideUploadFile) {
                     const fd = new FormData();
                     fd.append('file', slideUploadFile);
@@ -622,16 +635,16 @@ export default function DashboardPage() {
                       throw new Error(j.error || 'Failed to upload file');
                     }
                     const j = await res.json();
-                    const newAssetId = j.assetId || j.id || j._id;
+                    const newAssetId: string | undefined = j.assetId || j.id || j._id;
                     if (!newAssetId) throw new Error('Upload succeeded but no assetId returned');
-                    const sessionId = await startSlideshow({ sectionId: slideSectionId as any, assetId: newAssetId as any, 
+                    const sessionId = await startSlideshow({ sectionId: slideSectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, 
                       showOnDevices: slideShowOnDevices,
                       allowDownload: slideAllowDownload,
                       requireStay: slideRequireStay,
                       preventJump: slidePreventJump,
-                    } as any);
+                    });
                     setSlideOpen(false);
-                    setTimeout(() => router.push(`/slideshow/live/${(sessionId as any)._id || sessionId}`), 120);
+                    setTimeout(() => router.push(`/slideshow/live/${extractId(sessionId)}`), 120);
                   } else {
                     setSlideError('Please select an asset to present');
                   }
@@ -659,14 +672,14 @@ function CustomizeModal({
   onCancel,
   onDelete,
 }: { 
-  section: Section; 
+  section: SectionDoc; 
   gradients: Array<{ id: string; name: string; class: string }>;
   onSave: (title: string, gradient: string) => void;
   onCancel: () => void;
   onDelete: (id: string) => Promise<void> | void;
 }) {
-  const [title, setTitle] = useState(section.title);
-  const [gradient, setGradient] = useState(section.gradient);
+  const [title, setTitle] = useState<string>(section.title ?? "");
+  const [gradient, setGradient] = useState<string>(section.gradient ?? "gradient-1");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -730,7 +743,7 @@ function CustomizeModal({
               <Button className="!bg-rose-600" disabled={deleting} onClick={async () => {
                 try {
                   setDeleting(true);
-                  const sid = (section as any)._id || (section as any).id;
+                  const sid = section._id as Id<'sections'>;
                   await onDelete(sid);
                 } finally {
                   setDeleting(false);
@@ -744,17 +757,17 @@ function CustomizeModal({
   );
 }
 
-function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: string | null }) {
+function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [working, setWorking] = useState(false);
   const startPollMutation = useMutation(api.functions.polls.startPoll);
   function setOptionAt(i: number, val: string) {
-    setOptions((prev) => prev.map((v, idx) => (idx === i ? val : v)));
+    setOptions((prev: string[]) => prev.map((v, idx) => (idx === i ? val : v)));
   }
   function addOption() {
-    setOptions((prev) => [...prev, '']);
+    setOptions((prev: string[]) => [...prev, '']);
   }
   const visible = open && !!sectionId;
   return (
@@ -782,7 +795,7 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
                   if (val.length === 0) return;
                   addOption();
                   // set the newly created last option value
-                  setOptions((prev) => {
+                  setOptions((prev: string[]) => {
                     const copy = [...prev];
                     copy[copy.length - 1] = val;
                     return copy;
@@ -799,9 +812,9 @@ function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: 
               try {
                 setWorking(true);
                 const opts = options.map((o) => o.trim()).filter(Boolean);
-                const sessionId = await startPollMutation({ sectionId: sectionId as any, prompt: prompt.trim(), options: opts });
+                const sessionId = await startPollMutation({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts });
                 onClose();
-                setTimeout(() => router.push(`/poll/live/${(sessionId as any)._id || sessionId}`), 120);
+                setTimeout(() => router.push(`/poll/live/${extractId(sessionId)}`), 120);
               } finally {
                 setWorking(false);
               }
