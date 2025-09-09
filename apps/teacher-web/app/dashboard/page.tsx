@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
-import { Button, Card, TextInput, Modal } from '@snaproll/ui';
+import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { convexApi, api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
@@ -67,7 +67,9 @@ export default function DashboardPage() {
 
   // Data queries
   const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
-  const sections = (useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") || []) as SectionDoc[];
+  const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
+  const isSectionsLoading = !!teacherId && sectionsResult === undefined;
+  const sections = (sectionsResult ?? []) as SectionDoc[];
 
   const gradients = [
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
@@ -146,7 +148,31 @@ export default function DashboardPage() {
   }
 
   if (!mounted) return null;
-  if (!teacherId) return <div className="text-center text-slate-600">Loading your dashboard…</div>;
+  if (!teacherId || isSectionsLoading) {
+    return (
+      <div className="relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="p-3 sm:p-4 flex flex-col overflow-visible">
+              <Skeleton className="aspect-[3/2] rounded-lg mb-3 sm:mb-4" />
+              <Skeleton className="h-5 w-2/3 mb-2" />
+              <div className="mt-auto space-y-2">
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 flex-1" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 flex-1" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+        <div className="h-40" aria-hidden="true" />
+      </div>
+    );
+  }
 
   const hasSections = sections.length > 0;
 
