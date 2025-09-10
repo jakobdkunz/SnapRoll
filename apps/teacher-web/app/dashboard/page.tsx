@@ -199,7 +199,7 @@ export default function DashboardPage() {
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
-                    <div className="font-futuristic font-bold text-lg leading-tight px-2">
+                    <div className="font-bold text-lg leading-tight px-2">
                       {s.title}
                     </div>
                   </div>
