@@ -3,6 +3,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
 import { RosterRow } from './_components/RosterRow';
+import { SectionHeader } from './_components/SectionHeader';
 import { ImportCsvModal } from './_components/ImportCsvModal';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
@@ -398,18 +399,7 @@ export default function ModifyPage() {
 
   return (
     <div className="space-y-6">
-      {sectionLoaded ? (
-        <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}>
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="relative grid place-items-center text-white py-8 sm:py-10">
-            <div className="font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
-          </div>
-        </div>
-      ) : (
-        <div className="rounded-xl overflow-hidden bg-slate-200">
-          <div className="py-8 sm:py-10" />
-        </div>
-      )}
+      <SectionHeader loaded={sectionLoaded} title={sectionTitle} gradient={sectionGradient} />
 
       <Card className="p-4 sm:p-6">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
