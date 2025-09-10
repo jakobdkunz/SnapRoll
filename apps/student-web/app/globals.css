@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,7 +7,7 @@
 body { @apply bg-slate-50 text-slate-900; }
 
 @layer utilities {
-  .font-futuristic { font-family: 'Orbitron', monospace; }
+  .font-futuristic { font-family: var(--font-orbitron), monospace; }
 
   .gradient-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
   .gradient-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
