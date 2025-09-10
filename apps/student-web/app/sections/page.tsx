@@ -157,7 +157,13 @@ export default function SectionsPage() {
   );
 
   // Smooth flicker: preserve last non-undefined value; delay clearing null briefly
-  const [renderInteractive, setRenderInteractive] = useState<any>(undefined);
+  const [renderInteractive, setRenderInteractive] = useState<
+    | null
+    | undefined
+    | { kind: 'wordcloud'; sessionId: string; sectionId?: string; prompt?: string; showPromptToStudents?: boolean; allowMultipleAnswers?: boolean; hasSubmitted?: boolean }
+    | { kind: 'poll'; sessionId: string; sectionId?: string; prompt?: string; options: string[]; hasSubmitted?: boolean }
+    | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean }
+  >(undefined);
   useEffect(() => {
     // Keep current UI while refetching
     if (interactive === undefined) return;
@@ -166,7 +172,44 @@ export default function SectionsPage() {
       const id = window.setTimeout(() => setRenderInteractive(null), 2000);
       return () => window.clearTimeout(id);
     }
-    setRenderInteractive(interactive);
+    // Coerce Convex payload to local UI type
+    const anyInt = interactive as any;
+    if (anyInt && typeof anyInt === 'object') {
+      if (anyInt.kind === 'wordcloud') {
+        setRenderInteractive({
+          kind: 'wordcloud',
+          sessionId: String(anyInt.sessionId),
+          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
+          prompt: typeof anyInt.prompt === 'string' ? anyInt.prompt : undefined,
+          showPromptToStudents: typeof anyInt.showPromptToStudents === 'boolean' ? anyInt.showPromptToStudents : undefined,
+          allowMultipleAnswers: typeof anyInt.allowMultipleAnswers === 'boolean' ? anyInt.allowMultipleAnswers : undefined,
+          hasSubmitted: typeof anyInt.hasSubmitted === 'boolean' ? anyInt.hasSubmitted : undefined,
+        });
+        return;
+      }
+      if (anyInt.kind === 'poll') {
+        setRenderInteractive({
+          kind: 'poll',
+          sessionId: String(anyInt.sessionId),
+          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
+          prompt: typeof anyInt.prompt === 'string' ? anyInt.prompt : undefined,
+          options: Array.isArray(anyInt.options) ? anyInt.options.map((o: unknown) => String(o)) : [],
+          hasSubmitted: typeof anyInt.hasSubmitted === 'boolean' ? anyInt.hasSubmitted : undefined,
+        });
+        return;
+      }
+      if (anyInt.kind === 'slideshow') {
+        setRenderInteractive({
+          kind: 'slideshow',
+          sessionId: String(anyInt.sessionId),
+          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
+          showOnDevices: typeof anyInt.showOnDevices === 'boolean' ? anyInt.showOnDevices : undefined,
+        });
+        return;
+      }
+    }
+    // Unknown shape
+    setRenderInteractive(undefined);
   }, [interactive]);
 
   // Reset local single-submit state when a new session starts
@@ -400,7 +443,7 @@ export default function SectionsPage() {
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: renderInteractive.sessionId, optionIdx: i });
+                        await submitPoll({ sessionId: renderInteractive.sessionId as unknown as Id<'pollSessions'>, optionIdx: i });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');

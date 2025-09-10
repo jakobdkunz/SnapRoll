@@ -197,38 +197,38 @@ export function TeacherHeaderRight() {
                 <div className="mt-3 space-y-3">
                   <div className="space-y-1 text-left">
                     <label className="text-sm text-slate-600">Demo section name</label>
-                    <TextInput value={sectionTitle} onChange={(e: any) => setSectionTitle(e.target.value)} />
+                    <TextInput value={sectionTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSectionTitle(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">Students</label>
-                      <TextInput type="number" value={studentCount} onChange={(e: any) => setStudentCount(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={studentCount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentCount(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">Days (back from today)</label>
-                      <TextInput type="number" value={daysBack} onChange={(e: any) => setDaysBack(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={daysBack} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDaysBack(Number(e.target.value || 0))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">% Present</label>
-                      <TextInput type="number" value={pctPresent} onChange={(e: any) => setPctPresent(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={pctPresent} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctPresent(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">% Present (manual)</label>
-                      <TextInput type="number" value={pctPresentManual} onChange={(e: any) => setPctPresentManual(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={pctPresentManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctPresentManual(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">% Absent (manual)</label>
-                      <TextInput type="number" value={pctAbsentManual} onChange={(e: any) => setPctAbsentManual(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={pctAbsentManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctAbsentManual(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">% Blank (never manual)</label>
-                      <TextInput type="number" value={pctBlank} onChange={(e: any) => setPctBlank(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={pctBlank} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctBlank(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
                       <label className="text-sm text-slate-600">% Not Enrolled (manual)</label>
-                      <TextInput type="number" value={pctNotEnrolledManual} onChange={(e: any) => setPctNotEnrolledManual(Number(e.target.value || 0))} />
+                      <TextInput type="number" value={pctNotEnrolledManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctNotEnrolledManual(Number(e.target.value || 0))} />
                     </div>
                   </div>
                   <div className="text-xs text-slate-500">Percentages must add to 100%.</div>

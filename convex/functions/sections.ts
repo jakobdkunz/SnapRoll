@@ -1,15 +1,15 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 
-async function requireCurrentUser(ctx: any) {
+async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
   const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
   if (!email) throw new Error("Unauthenticated");
   const user = await ctx.db
     .query("users")
-    .withIndex("by_email", (q: any) => q.eq("email", email))
+    .withIndex("by_email", (q) => q.eq("email", email))
     .first();
   if (!user) throw new Error("User not provisioned");
   return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
@@ -87,7 +87,7 @@ export const update = mutation({
     const { id, ...updates } = args;
     const section = await ctx.db.get(id);
     if (!section || section.teacherId !== user._id) throw new Error("Forbidden");
-    const safe: any = {};
+    const safe: { title?: string; gradient?: string } = {};
     if (updates.title !== undefined) {
       const t = (updates.title || "").trim();
       if (t.length === 0 || t.length > 200) throw new Error("Title must be 1-200 chars");

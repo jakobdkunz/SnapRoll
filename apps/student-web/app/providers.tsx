@@ -13,14 +13,23 @@ function AuthDebug() {
       try {
         const token = await getToken({ template: 'convex' });
         if (!token) {
-          console.log('[auth-debug] No Convex token from Clerk.');
+          if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
+            // eslint-disable-next-line no-console
+            console.log('[auth-debug] No Convex token from Clerk.');
+          }
           return;
         }
         const payloadPart = token.split('.')[1] || '';
         const payload = (payloadPart ? JSON.parse(atob(payloadPart)) : {}) as { aud?: string; iss?: string };
-        console.log('[auth-debug] Convex JWT aud:', payload.aud, 'iss:', payload.iss);
+        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
+          // eslint-disable-next-line no-console
+          console.log('[auth-debug] Convex JWT aud:', payload.aud, 'iss:', payload.iss);
+        }
       } catch (e) {
-        console.log('[auth-debug] Error fetching Convex token', e);
+        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
+          // eslint-disable-next-line no-console
+          console.log('[auth-debug] Error fetching Convex token', e);
+        }
       }
     })();
   }, [isLoaded, isSignedIn, getToken]);
