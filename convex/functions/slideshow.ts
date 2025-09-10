@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireTeacher, requireTeacherOwnsSection, requireCurrentUser } from "./_auth";
 import { checkAndIncrementRateLimit } from "./_rateLimit";
@@ -95,7 +95,7 @@ export const getActiveSlideshow = query({
       if (!email) throw new Error("Forbidden");
       const currentUser = await ctx.db
         .query("users")
-        .withIndex("by_email", (q: any) => q.eq("email", email))
+        .withIndex("by_email", (q) => q.eq("email", email))
         .first();
       if (!currentUser) throw new Error("Forbidden");
       const enrollment = await ctx.db
@@ -214,7 +214,7 @@ export const getSlides = query({
         if (!email) return [];
         const currentUser = await ctx.db
           .query("users")
-          .withIndex("by_email", (q: any) => q.eq("email", email))
+          .withIndex("by_email", (q) => q.eq("email", email))
           .first();
         if (!currentUser) return [];
         const enrollment = await ctx.db
@@ -278,7 +278,7 @@ export const getActiveSession = query({
       if (!email) return null;
       const currentUser = await ctx.db
         .query("users")
-        .withIndex("by_email", (q: any) => q.eq("email", email))
+        .withIndex("by_email", (q) => q.eq("email", email))
         .first();
       if (!currentUser) return null;
       const enrollment = await ctx.db
