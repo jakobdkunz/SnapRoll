@@ -17,11 +17,7 @@ function hasId(record: unknown): record is { _id: string } {
   return typeof obj._id === 'string';
 }
 
-function extractId(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (hasId(value)) return value._id;
-  return '';
-}
+// extractId no longer used after moving to dynamic modals
 type CurrentUser = { _id: string } | null | undefined;
 
 export default function DashboardPage() {
@@ -34,32 +30,15 @@ export default function DashboardPage() {
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
-  const [wcPrompt, setWcPrompt] = useState('One word to describe how you feel');
-  const [wcShowPrompt, setWcShowPrompt] = useState(true);
-  const [wcAllowMultiple, setWcAllowMultiple] = useState(false);
-  const [wcWorking, setWcWorking] = useState(false);
-  const [wcError, setWcError] = useState<string | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [pollSectionId, setPollSectionId] = useState<Id<'sections'> | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<Id<'sections'> | null>(null);
-  const [slideSelectedAssetId, setSlideSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);
-  const [slideSelectedSessionId, setSlideSelectedSessionId] = useState<Id<'slideshowSessions'> | null>(null);
-  const [slideTitle, setSlideTitle] = useState('');
-  const [slideShowOnDevices, setSlideShowOnDevices] = useState(true);
-  const [slideAllowDownload, setSlideAllowDownload] = useState(true);
-  const [slideRequireStay, setSlideRequireStay] = useState(false);
-  const [slidePreventJump, setSlidePreventJump] = useState(false);
-  const [slideUploadFile, setSlideUploadFile] = useState<File | null>(null);
-  const [slideWorking, setSlideWorking] = useState(false);
-  const [slideError, setSlideError] = useState<string | null>(null);
 
   // Convex mutations
   const createSection = useMutation(api.functions.sections.create);
   const updateSection = useMutation(api.functions.sections.update);
   const deleteSection = useMutation(api.functions.sections.deleteSection);
-  const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
-  const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
 
   // Current user via Clerk/Convex
   const currentUser: CurrentUser = useQuery(convexApi.auth.getCurrentUser);
@@ -68,7 +47,6 @@ export default function DashboardPage() {
   const { isLoaded, isSignedIn } = useAuth();
 
   // Data queries
-  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : "skip");
   const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
   const isSectionsLoading = !!teacherId && sectionsResult === undefined;
   const sections = (sectionsResult ?? []) as SectionDoc[];
@@ -103,25 +81,7 @@ export default function DashboardPage() {
     }
   }, [isLoaded, isSignedIn, currentUser, upsertUser]);
 
-  async function handleStartWordCloud() {
-    if (!wcSectionId) return;
-    if (!wcPrompt.trim()) {
-      alert('Please enter a prompt.');
-      return;
-    }
-    try {
-      setWcWorking(true);
-      setWcError(null);
-      const sessionId = await startWordCloud({ sectionId: wcSectionId as Id<'sections'>, prompt: wcPrompt, showPromptToStudents: wcShowPrompt, allowMultipleAnswers: wcAllowMultiple });
-      setWcOpen(false);
-      setTimeout(() => router.push(`/wordcloud/live/${extractId(sessionId)}`), 120);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Failed to start word cloud. Please try again.';
-      setWcError(message);
-    } finally {
-      setWcWorking(false);
-    }
-  }
+  // Word cloud start handled by dynamic modal
 
   // close any open Interact menu when clicking outside
   useEffect(() => {
@@ -399,37 +359,11 @@ export default function DashboardPage() {
         </div>
       </Modal>
 
-      {/* Start Word Cloud Modal (inline on dashboard) */}
-      <Modal open={wcOpen} onClose={() => setWcOpen(false)}>
-        <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md mx-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="inline-flex items-center gap-2 text-lg font-semibold"><HiOutlineCloud className="h-6 w-6" /> Start Word Cloud</div>
-            <button onClick={() => setWcOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
-              <TextInput value={wcPrompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWcPrompt(e.target.value)} placeholder="Enter prompt" />
-            </div>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={wcShowPrompt} onChange={(e) => setWcShowPrompt(e.target.checked)} />
-              <span>Show prompt on student devices</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={wcAllowMultiple} onChange={(e) => setWcAllowMultiple(e.target.checked)} />
-              <span>Allow multiple answers</span>
-            </label>
-            {wcError && (
-              <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{wcError}</div>
-            )}
-            <div className="pt-2">
-              <Button onClick={handleStartWordCloud} className="w-full inline-flex items-center justify-center gap-2" disabled={wcWorking}>
-                {wcWorking ? 'Starting…' : 'Continue'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </Modal>
+      {/* Start Word Cloud Modal (code-split) */}
+      {(() => {
+        const LazyWordCloudStartModal = dynamic(() => import('./_components/WordCloudStartModal'), { ssr: false });
+        return <LazyWordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId} />;
+      })()}
 
       {/* Start Poll Modal (code-split) */}
       {(() => {
@@ -437,287 +371,11 @@ export default function DashboardPage() {
         return <LazyPollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />;
       })()}
 
-      {/* Present Slideshow Modal */}
-      <Modal open={slideOpen && !!slideSectionId} onClose={() => setSlideOpen(false)}>
-        <div className="bg-white rounded-xl p-8 w-[95vw] max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <HiOutlinePlayCircle className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">Present Slideshow</h2>
-                <p className="text-sm text-slate-600">Broadcast your slideshow to student devices in real-time</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setSlideOpen(false)} 
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Recents Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Recents</h3>
-                <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">72h retention</span>
-              </div>
-              
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {!getAssetsByTeacher || getAssetsByTeacher.length === 0 ? (
-                  <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
-                    No recent slideshows
-                  </div>
-                ) : (
-                  (getAssetsByTeacher as Array<{ _id: Id<'slideshowAssets'>; title: string; createdAt: number }>).map((asset) => (
-                    <div key={asset._id} className="group relative">
-                      <button 
-                        onClick={() => { 
-                          setSlideSelectedAssetId(asset._id); 
-                          setSlideSelectedSessionId(null); 
-                          setSlideUploadFile(null);
-                          setSlideTitle(asset.title);
-                        }} 
-                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                          slideSelectedAssetId === asset._id 
-                            ? 'border-blue-500 bg-blue-50 shadow-md' 
-                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-16 h-12 bg-slate-100 rounded-lg border border-slate-200 flex-shrink-0 flex items-center justify-center">
-                            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-slate-900 truncate">{asset.title}</div>
-                            <div className="text-xs text-slate-400 mt-1">
-                              {new Date(asset.createdAt).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            // Note: Asset deletion would need to be implemented in Convex
-                            console.log('Delete asset:', asset._id);
-                          } catch (e) {
-                            console.error('Failed to delete asset:', e);
-                          }
-                        }}
-                        className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                        title="Delete slideshow"
-                      >
-                        <HiOutlineTrash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Upload Section */}
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Upload New File</h3>
-              
-              {/* File Upload */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Select File (PDF only)</label>
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-slate-400 transition-colors">
-                  <input 
-                    type="file" 
-                    accept=".pdf,application/pdf"
-                    onChange={(e) => { 
-                      const f = e.target.files?.[0] || null; 
-                      setSlideUploadFile(f); 
-                      setSlideSelectedAssetId(null); 
-                      setSlideSelectedSessionId(null);
-                      if (f) setSlideTitle(f.name.replace(/\.pdf$/i, '')); 
-                    }}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <div className="mx-auto w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                    </div>
-                    <div className="text-sm text-slate-600">
-                      <span className="font-medium text-blue-600 hover:text-blue-500">Click to upload</span> or drag and drop
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">PDF files only</div>
-                  </label>
-                </div>
-                {slideUploadFile && (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-sm font-medium text-green-800">{slideUploadFile.name}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Title Input */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Slideshow Title</label>
-                <TextInput 
-                  value={slideTitle} 
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSlideTitle(e.target.value)} 
-                  placeholder="Enter a title for your slideshow" 
-                  className="w-full"
-                />
-              </div>
-
-              {/* Settings */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium text-slate-700">Presentation Settings</h4>
-                
-                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={slideShowOnDevices} 
-                    onChange={(e) => setSlideShowOnDevices(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <div>
-                    <div className="font-medium text-slate-900">Show on Student Devices</div>
-                    <div className="text-sm text-slate-600">Students can view the slideshow on their devices</div>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={slideAllowDownload} 
-                    onChange={(e) => setSlideAllowDownload(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <div>
-                    <div className="font-medium text-slate-900">Allow Students to Download</div>
-                    <div className="text-sm text-slate-600">Students can download the slideshow files</div>
-                  </div>
-                </label>
-
-                <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={slideRequireStay} 
-                    onChange={(e) => { 
-                      const v = e.target.checked; 
-                      setSlideRequireStay(v); 
-                      if (v) setSlidePreventJump(false); 
-                    }}
-                    className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
-                  />
-                  <div>
-                    <div className="font-medium text-slate-900">Require Students to Stay on Current Slide</div>
-                    <div className="text-sm text-slate-600">Students cannot navigate away from the current slide</div>
-                  </div>
-                </label>
-
-                {!slideRequireStay && (
-                  <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={slidePreventJump} 
-                      onChange={(e) => setSlidePreventJump(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2"
-                    />
-                    <div>
-                      <div className="font-medium text-slate-900">Prevent Students from Jumping Ahead</div>
-                      <div className="text-sm text-slate-600">Students cannot navigate to future slides</div>
-                    </div>
-                  </label>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {slideError && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium text-red-800">{slideError}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="mt-8 flex justify-end gap-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => setSlideOpen(false)}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button 
-              disabled={slideWorking || !slideSectionId || (!slideSelectedAssetId && !slideSelectedSessionId && !slideUploadFile)} 
-              onClick={async () => {
-                if (!slideSectionId) return;
-                setSlideWorking(true);
-                setSlideError(null);
-                try {
-                  if (slideSelectedAssetId) {
-                    const sessionId = await startSlideshow({ sectionId: slideSectionId as Id<'sections'>, assetId: slideSelectedAssetId as Id<'slideshowAssets'>, 
-                      showOnDevices: slideShowOnDevices,
-                      allowDownload: slideAllowDownload,
-                      requireStay: slideRequireStay,
-                      preventJump: slidePreventJump,
-                    });
-                    setSlideOpen(false);
-                    setTimeout(() => router.push(`/slideshow/live/${extractId(sessionId)}`), 120);
-                  } else if (slideUploadFile) {
-                    const fd = new FormData();
-                    fd.append('file', slideUploadFile);
-                    if (slideTitle) fd.append('title', slideTitle);
-                    const res = await fetch('/api/slideshow/assets', { method: 'POST', body: fd, credentials: 'include' });
-                    if (!res.ok) {
-                      const j = await res.json().catch(() => ({}));
-                      throw new Error(j.error || 'Failed to upload file');
-                    }
-                    const j = await res.json();
-                    const newAssetId: string | undefined = j.assetId || j.id || j._id;
-                    if (!newAssetId) throw new Error('Upload succeeded but no assetId returned');
-                    const sessionId = await startSlideshow({ sectionId: slideSectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, 
-                      showOnDevices: slideShowOnDevices,
-                      allowDownload: slideAllowDownload,
-                      requireStay: slideRequireStay,
-                      preventJump: slidePreventJump,
-                    });
-                    setSlideOpen(false);
-                    setTimeout(() => router.push(`/slideshow/live/${extractId(sessionId)}`), 120);
-                  } else {
-                    setSlideError('Please select an asset to present');
-                  }
-                } catch (e: unknown) {
-                  setSlideError(e instanceof Error ? e.message : 'Failed to start slideshow');
-                } finally {
-                  setSlideWorking(false);
-                }
-              }}
-              className="px-8"
-            >
-              {slideWorking ? 'Starting...' : 'Start Slideshow'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Present Slideshow Modal (code-split) */}
+      {(() => {
+        const LazySlideshowPresentModal = dynamic(() => import('./_components/SlideshowPresentModal'), { ssr: false });
+        return <LazySlideshowPresentModal open={slideOpen && !!slideSectionId} onClose={() => setSlideOpen(false)} sectionId={slideSectionId} />;
+      })()}
     </div>
   );
 }
