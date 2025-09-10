@@ -86,11 +86,12 @@ export const getActiveInteractive = query({
       if (!firstSlide) continue; // no slides yet
       const totalSlides = (asset as any)?.totalSlides as number | undefined;
       if (typeof totalSlides === 'number' && totalSlides > 0) {
-        const allSlides = await ctx.db
+        // Check existence of the last expected slide via compound index instead of collecting all
+        const lastSlide = await ctx.db
           .query('slideshowSlides')
-          .withIndex('by_session', (q) => q.eq('sessionId', ss._id as unknown as Id<'slideshowSessions'>))
-          .collect();
-        if (allSlides.length < totalSlides) continue;
+          .withIndex('by_session_index', (q) => q.eq('sessionId', ss._id as unknown as Id<'slideshowSessions'>).eq('index', totalSlides))
+          .first();
+        if (!lastSlide) continue;
       }
       candidates.push({ kind: 'slideshow', session: ss as AnySession });
     }
