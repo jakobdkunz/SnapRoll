@@ -4,6 +4,7 @@ const nextConfig = {
   // Mitigate occasional jest-worker crashes on Vercel
   // See: https://github.com/vercel/next.js/issues/48089
   swcMinify: true,
+  poweredByHeader: false,
   env: {
     NEXT_PUBLIC_DEV_MODE: process.env.NEXT_PUBLIC_DEV_MODE,
   },
@@ -45,6 +46,13 @@ const nextConfig = {
       "form-action 'self'",
     ].join('; ');
     return [
+      // Long cache for static vendor assets in public/vendor
+      {
+        source: '/vendor/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       {
         source: '/:path*',
         headers: [
