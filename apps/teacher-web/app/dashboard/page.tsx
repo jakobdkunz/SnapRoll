@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: SectionDoc | null }>({ open: false, section: null });
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
@@ -369,11 +370,29 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Section Title</label>
-              <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
+              <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCreateTitle(e.target.value); if (createError) setCreateError(null); }} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
+              {createError && (
+                <div className="mt-2 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{createError}</div>
+              )}
             </div>
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; const gradient = pickAutoGradient(); await createSection({ title: createTitle.trim(), gradient }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+              <Button id="create-section-submit" onClick={async () => {
+                if (!teacherId) return;
+                const t = createTitle.trim();
+                if (!t) { setCreateError('Please enter a section title.'); return; }
+                if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
+                try {
+                  const gradient = pickAutoGradient();
+                  await createSection({ title: t, gradient });
+                  setCreateModalOpen(false);
+                  setCreateTitle('');
+                  setCreateError(null);
+                } catch (e: unknown) {
+                  const msg = e instanceof Error ? e.message : 'Failed to create section.';
+                  setCreateError(msg);
+                }
+              }}>Create</Button>
             </div>
           </div>
         </div>
