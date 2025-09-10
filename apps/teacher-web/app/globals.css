@@ -25,7 +25,8 @@ html, body {
   }
   
   .gradient-1 {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Brighter purple/indigo */
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
   }
   
   .gradient-2 {
