@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Orbitron } from 'next/font/google';
 import { AuthGuard } from './_components/AuthGuard';
 import { StudentHeaderRight } from './_components/StudentHeaderRight';
 import { WordmarkLink } from './_components/WordmarkLink';
@@ -11,9 +12,16 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
+const orbitron = Orbitron({
+  subsets: ['latin'],
+  weight: ['400', '700', '900'],
+  display: 'swap',
+  variable: '--font-orbitron',
+});
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={orbitron.variable}>
       <body>
         <Providers>
           <div className="min-h-dvh bg-slate-50">
