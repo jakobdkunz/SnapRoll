@@ -141,14 +141,14 @@ export default function AttendancePage() {
   return (
     <div ref={containerRef} className="relative" style={{ height: 'calc(100vh - 120px - 80px)' }}>
       {/* Animated, washed-out section gradient background */}
-      <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.5 }} />
-      <div className="pointer-events-none fixed inset-0 bg-white/20" />
+      <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.45 }} />
+      <div className="pointer-events-none fixed inset-0 bg-white/12" />
       <div
         className="pointer-events-none fixed -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]"
         style={{
           background:
             sectionGradient === 'gradient-1'
-              ? 'radial-gradient(40% 60% at 30% 30%, rgba(124,58,237,0.30), transparent), radial-gradient(50% 40% at 70% 60%, rgba(79,70,229,0.28), transparent)'
+              ? 'radial-gradient(40% 60% at 30% 30%, rgba(59,130,246,0.28), transparent), radial-gradient(50% 40% at 70% 60%, rgba(79,70,229,0.22), transparent)'
               : 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)'
         }}
       />
