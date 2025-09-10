@@ -3,6 +3,7 @@ import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { convexApi, api } from '@snaproll/convex-client';
+import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
@@ -11,7 +12,7 @@ type TeacherProfile = { teacher: { id: string; email: string; firstName: string;
 
 export function TeacherHeaderRight() {
   const router = useRouter();
-  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [teacherId, setTeacherId] = useState<Id<'users'> | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -32,10 +33,10 @@ export function TeacherHeaderRight() {
   const [generating, setGenerating] = useState(false);
 
   // Convex hooks
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const teacher = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
+  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const teacher = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id } : "skip");
   const updateUser = useMutation(api.functions.users.update);
-  const generateDemo = useMutation((api as any).functions.demo.generateDemoData);
+  const generateDemo = useMutation(api.functions.demo.generateDemoData);
 
   useEffect(() => {
     setIsClient(true);
@@ -44,7 +45,7 @@ export function TeacherHeaderRight() {
   // When Convex resolves the current user, cache identifiers
   useEffect(() => {
     if (currentUser) {
-      const newId = (currentUser._id as unknown as string) || null;
+      const newId = (currentUser._id as Id<'users'>) || null;
       setTeacherId(newId);
       // Avoid persisting PII to localStorage
     }
@@ -88,7 +89,7 @@ export function TeacherHeaderRight() {
     if (!id || !firstName.trim() || !lastName.trim()) return;
     setSaving(true);
     try {
-      await updateUser({ id: id as any, firstName: firstName.trim(), lastName: lastName.trim() });
+      await updateUser({ id, firstName: firstName.trim(), lastName: lastName.trim() });
       setProfileOpen(false);
     } finally {
       setSaving(false);
