@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
-type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
+// type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 export function StudentHeaderRight() {
   const router = useRouter();
