@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, TextInput, Skeleton } from '@snaproll/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
@@ -75,11 +75,15 @@ export default function SectionsPage() {
 
   const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
+  const [digits, setDigits] = useState<string[]>(['', '', '', '']);
+  const [checking, setChecking] = useState(false);
+  const [checkinError, setCheckinError] = useState<string | null>(null);
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
+
   // Submit when 4 digits are present
-  const onCheckin = async () => {
+  const onCheckin = useCallback(async (code: string) => {
     setConfirmMsg(null);
     setCheckinError(null);
-    const code = digits.join('');
     if (!/^[0-9]{4}$/.test(code) || !effectiveUserId || checking) return;
     try {
       setChecking(true);
@@ -137,7 +141,7 @@ export default function SectionsPage() {
     } finally {
       setChecking(false);
     }
-  };
+  }, [effectiveUserId, checking, checkInMutation]);
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -218,10 +222,7 @@ export default function SectionsPage() {
     setAnswer('');
   }, [renderInteractive?.sessionId]);
 
-  const [digits, setDigits] = useState<string[]>(['', '', '', '']);
-  const [checking, setChecking] = useState(false);
-  const [checkinError, setCheckinError] = useState<string | null>(null);
-  const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
+  
 
   useEffect(() => {
     setMounted(true);
@@ -242,9 +243,8 @@ export default function SectionsPage() {
   // Autosubmit when all 4 digits are present
   useEffect(() => {
     const allFilled = digits.every((d) => /\d/.test(d) && d.length === 1);
-    if (allFilled) void onCheckin();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [digits]);
+    if (allFilled) void onCheckin(digits.join(''));
+  }, [digits, onCheckin]);
 
   if (!mounted) return null;
 
