@@ -103,13 +103,19 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (!canvas || !ctx || !frameSize) {
-      console.log('Canvas not ready for redraw:', { canvas: !!canvas, ctx: !!ctx, frameSize });
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Canvas not ready for redraw:', { canvas: !!canvas, ctx: !!ctx, frameSize });
+      }
       return;
     }
     
     const currentSlideIndex = details?.currentSlide || 1;
     const currentSlideDrawings = slideDrawings[currentSlideIndex] || [];
-    console.log('Redrawing canvas with', currentSlideDrawings.length, 'strokes, showDrawings:', showDrawings);
+    if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+      // eslint-disable-next-line no-console
+      console.log('Redrawing canvas with', currentSlideDrawings.length, 'strokes, showDrawings:', showDrawings);
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (!showDrawings) return;
@@ -117,7 +123,10 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     currentSlideDrawings.forEach((stroke: DrawingStroke, index: number) => {
       if (stroke.points.length < 2) return;
       
-      console.log(`Drawing stroke ${index}:`, stroke);
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log(`Drawing stroke ${index}:`, stroke);
+      }
       ctx.strokeStyle = stroke.mode === 'eraser' ? '#ffffff' : stroke.color;
       ctx.lineWidth = stroke.mode === 'eraser' ? 20 : 3;
       ctx.beginPath();

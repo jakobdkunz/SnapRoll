@@ -13,4 +13,11 @@ declare module 'pdfjs-dist/legacy/build/pdf.js' {
   export default value;
 }
 
+declare global {
+  interface Window {
+    pdfjsLib?: unknown;
+  }
+}
+
+export {};
 
