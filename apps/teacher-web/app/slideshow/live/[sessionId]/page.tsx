@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+// import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
