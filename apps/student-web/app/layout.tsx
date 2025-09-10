@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
 };
 
+export const dynamic = 'force-dynamic';
+
 const orbitron = Orbitron({
   subsets: ['latin'],
   weight: ['400', '700', '900'],
