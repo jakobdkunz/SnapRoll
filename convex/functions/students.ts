@@ -32,11 +32,11 @@ export const getActiveInteractive = query({
     const wordClouds = await (async () => {
       const all: Array<{ _id: Id<"wordCloudSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
       for (const sid of sectionIds) {
-        const rows = await ctx.db
+        const row = await ctx.db
           .query("wordCloudSessions")
           .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
-          .collect();
-        all.push(...rows);
+          .first();
+        if (row) all.push(row as any);
       }
       return all;
     })();
@@ -44,11 +44,11 @@ export const getActiveInteractive = query({
     const polls = await (async () => {
       const all: Array<{ _id: Id<"pollSessions">; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
       for (const sid of sectionIds) {
-        const rows = await ctx.db
+        const row = await ctx.db
           .query("pollSessions")
           .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
-          .collect();
-        all.push(...rows);
+          .first();
+        if (row) all.push(row as any);
       }
       return all;
     })();
@@ -56,11 +56,11 @@ export const getActiveInteractive = query({
     const slideshows = await (async () => {
       const all: Array<{ _id: Id<"slideshowSessions">; sectionId: Id<"sections">; assetId: Id<"slideshowAssets">; showOnDevices: boolean; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
       for (const sid of sectionIds) {
-        const rows = await ctx.db
+        const row = await ctx.db
           .query("slideshowSessions")
           .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
-          .collect();
-        all.push(...rows as any);
+          .first();
+        if (row) all.push(row as any);
       }
       return all;
     })();
