@@ -1,12 +1,13 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 
 export function WordmarkLink() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   function onClick() {
-    const id = typeof window !== 'undefined' ? localStorage.getItem('snaproll.teacherId') : null;
-    if (id) router.push('/dashboard');
-    else router.push('/');
+    if (isSignedIn) router.push('/dashboard');
+    else router.push('/sign-in');
   }
   return (
     <button onClick={onClick} className="flex items-baseline gap-2 hover:opacity-80 transition" aria-label="SnapRoll home">
