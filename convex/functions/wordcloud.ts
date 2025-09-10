@@ -18,6 +18,14 @@ export const startWordCloud = mutation({
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `wc:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
     if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
 
+    // If an active word cloud exists for this section, close it to prevent duplicates
+    const existing = await ctx.db
+      .query("wordCloudSessions")
+      .withIndex("by_section_active", (q) => q.eq("sectionId", args.sectionId).eq("closedAt", undefined))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { closedAt: Date.now() });
+    }
     return await ctx.db.insert("wordCloudSessions", {
       sectionId: args.sectionId,
       prompt: args.prompt,
@@ -187,9 +195,11 @@ export const heartbeat = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("WordCloud session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
-    await ctx.db.patch(args.sessionId, {
-      instructorLastSeenAt: Date.now(),
-    });
+    const now = Date.now();
+    const last = (session.instructorLastSeenAt as number | undefined) ?? 0;
+    if (now - last > 5000) {
+      await ctx.db.patch(args.sessionId, { instructorLastSeenAt: now });
+    }
   },
 });
 
