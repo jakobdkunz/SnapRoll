@@ -363,9 +363,9 @@ export default function DashboardPage() {
               <label className="block text-sm font-medium text-slate-700 mb-2">Section Title</label>
               <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateTitle(e.target.value)} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim() }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+            <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim() }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
             </div>
           </div>
         </div>
