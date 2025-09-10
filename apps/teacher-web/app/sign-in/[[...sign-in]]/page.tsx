@@ -1,7 +1,7 @@
 "use client";
 import { SignIn } from '@clerk/nextjs';
 
-export default function TeacherSignInCatchAll() {
+export default function InstructorSignInCatchAll() {
   return (
     <div className="w-full flex justify-center py-10 overflow-visible">
       <div className="w-full max-w-sm sm:max-w-md">

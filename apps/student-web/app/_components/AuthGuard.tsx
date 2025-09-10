@@ -21,7 +21,7 @@ export function AuthGuard() {
     // Set a non-PII cookie to indicate auth state for the service worker
     try {
       document.cookie = `snaproll_auth=${isSignedIn ? '1' : '0'}; Path=/; SameSite=Lax`;
-    } catch {}
+    } catch (e) { void e; }
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;
