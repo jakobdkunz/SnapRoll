@@ -95,7 +95,6 @@ export default function HistoryPage() {
       let top = tooltip.anchorY - margin - h;
       if (top < margin) top = tooltip.anchorY + margin;
       setPos({ left, top });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tooltip]);
     if (!tooltip.visible) return null;
     return createPortal(
