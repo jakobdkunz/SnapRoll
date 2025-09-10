@@ -28,8 +28,7 @@ export const convexApi = {
     authenticateStudent: api.functions.auth.authenticateStudent,
     getUser: api.functions.auth.getUser,
     getUserByEmail: api.functions.auth.getUserByEmail,
-    // Note: getCurrentUser is available at runtime; types may require regeneration
-    getCurrentUser: (api as any).functions.auth.getCurrentUser,
+    getCurrentUser: api.functions.auth.getCurrentUser,
     upsertCurrentUser: api.functions.auth.upsertCurrentUser,
   },
 
@@ -76,7 +75,7 @@ export const convexApi = {
   history: {
     getSectionHistory: api.functions.history.getSectionHistory,
     getStudentHistory: api.functions.history.getStudentHistory,
-    exportSectionHistory: (api as any).functions.history.exportSectionHistory,
+    exportSectionHistory: api.functions.history.exportSectionHistory,
   },
   
   // Poll functions
@@ -120,6 +119,6 @@ export const convexApi = {
   
   // Demo utilities (developer mode only)
   demo: {
-    generateDemoData: (api as any).functions.demo.generateDemoData,
+    generateDemoData: api.functions.demo.generateDemoData,
   },
 };
