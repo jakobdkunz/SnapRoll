@@ -13,12 +13,14 @@ export default async function StudentRoot() {
   const { userId, getToken } = await auth();
   if (!userId) redirect('/sign-in');
   try {
-    const token = await getToken({ template: 'convex' } as any);
+    const token = await getToken({ template: 'convex' });
     if (token) {
       const convex = new ConvexHttpClient(getConvexUrl());
       convex.setAuth(token);
-      await convex.mutation(api.functions.auth.upsertCurrentUser, { role: 'STUDENT' } as any);
+      await convex.mutation(api.functions.auth.upsertCurrentUser, { role: 'STUDENT' });
     }
-  } catch {}
+  } catch (e) {
+    // best-effort upsert; ignore errors
+  }
   redirect('/sections');
 }
