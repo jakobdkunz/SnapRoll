@@ -38,55 +38,27 @@ export const getSectionHistory = query({
     
     // Filter out days that would render as all auto-ABSENT (no records and no non-BLANK manual changes)
     const allIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
-    const recordsAll = allIds.length > 0
-      ? (await Promise.all(
-          allIds.map((id) =>
-            ctx.db
-              .query("attendanceRecords")
-              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-              .collect()
-          )
-        )).flat()
-      : [];
-    const manualAll = allIds.length > 0
-      ? (await Promise.all(
-          allIds.map((id) =>
-            ctx.db
-              .query("manualStatusChanges")
-              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-              .collect()
-          )
-        )).flat()
-      : [];
-    const keepByDay = new Set<Id<'classDays'>>();
-    {
-      const byDayRecs = new Map<Id<'classDays'>, Doc<'attendanceRecords'>[]>();
-      for (const r of recordsAll) {
-        const k = r.classDayId as Id<'classDays'>;
-        const arr = byDayRecs.get(k) || [];
-        arr.push(r as Doc<'attendanceRecords'>);
-        byDayRecs.set(k, arr);
-      }
-      const byDayManual = new Map<Id<'classDays'>, Doc<'manualStatusChanges'>[]>();
-      for (const m of manualAll) {
-        const k = m.classDayId as Id<'classDays'>;
-        const arr = byDayManual.get(k) || [];
-        arr.push(m as Doc<'manualStatusChanges'>);
-        byDayManual.set(k, arr);
-      }
-      const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
-      for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-      for (const id of allIds) {
-        const recs = byDayRecs.get(id) || [];
-        const mans = byDayManual.get(id) || [];
-        const hasRecorded = recs.some((r) => r.status !== "BLANK");
-        const hasManual = mans.some((m) => m.status !== "BLANK");
+    const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
+    for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
+    const existenceChecks = await Promise.all(
+      allIds.map(async (id) => {
+        const hasNonBlankRecord = await ctx.db
+          .query("attendanceRecords")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
+        const hasNonBlankManual = await ctx.db
+          .query("manualStatusChanges")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
         const cd = dayById.get(id)!;
         const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
         const isCurrentDay = now >= startMs && now < nextStartMs;
-        if (hasRecorded || hasManual || isCurrentDay) keepByDay.add(id);
-      }
-    }
+        return { id, keep: Boolean(hasNonBlankRecord || hasNonBlankManual || isCurrentDay) };
+      })
+    );
+    const keepByDay = new Set<Id<'classDays'>>(existenceChecks.filter((r) => r.keep).map((r) => r.id));
 
     const filteredDays = allClassDays.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
     
@@ -252,11 +224,15 @@ export const getStudentHistory = query({
 
     // Get all class days across these sections
     const rawDays = sectionIds.length > 0
-      ? await ctx.db
-          .query("classDays")
-          .filter((q) => q.or(...sectionIds.map((id) => q.eq(q.field("sectionId"), id))))
-          .order("desc")
-          .collect()
+      ? (await Promise.all(
+          sectionIds.map((id) =>
+            ctx.db
+              .query("classDays")
+              .withIndex("by_section", (q) => q.eq("sectionId", id))
+              .order("desc")
+              .collect()
+          )
+        )).flat()
       : [];
 
     // Build mapping from local-day key -> per-section classDay
@@ -284,21 +260,25 @@ export const getStudentHistory = query({
       for (const [, cd] of sectionMap) allClassDaysForFilter.push(cd as Doc<'classDays'>);
     }
     const allIds2 = allClassDaysForFilter.map(cd => cd._id as Id<'classDays'>);
-    const recordsAll2 = allIds2.length > 0
-      ? await ctx.db
-          .query("attendanceRecords")
-          .filter((q) => q.or(...allIds2.map((id) => q.eq(q.field("classDayId"), id))))
-          .collect()
-      : [];
-    const manualAll2 = allIds2.length > 0
-      ? await ctx.db
-          .query("manualStatusChanges")
-          .filter((q) => q.or(...allIds2.map((id) => q.eq(q.field("classDayId"), id))))
-          .collect()
-      : [];
     const recordedOrManualByDay = new Map<Id<'classDays'>, boolean>();
-    for (const r of recordsAll2) recordedOrManualByDay.set(r.classDayId as Id<'classDays'>, ((recordedOrManualByDay.get(r.classDayId as Id<'classDays'>)) || false) || ((r.status || "") !== "BLANK"));
-    for (const m of manualAll2) recordedOrManualByDay.set(m.classDayId as Id<'classDays'>, ((recordedOrManualByDay.get(m.classDayId as Id<'classDays'>)) || false) || ((m.status || "") !== "BLANK"));
+    if (allIds2.length > 0) {
+      const existence2 = await Promise.all(
+        allIds2.map(async (id) => {
+          const rec = await ctx.db
+            .query("attendanceRecords")
+            .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+            .filter((q) => q.neq(q.field("status"), "BLANK"))
+            .first();
+          const man = await ctx.db
+            .query("manualStatusChanges")
+            .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+            .filter((q) => q.neq(q.field("status"), "BLANK"))
+            .first();
+          return { id, keep: Boolean(rec || man) };
+        })
+      );
+      for (const { id, keep } of existence2) recordedOrManualByDay.set(id, keep);
+    }
 
     const filteredDateKeys = allDateKeys.filter((key) => {
       const sectionMap = dateKeyToSectionDay.get(key)!;
@@ -452,55 +432,27 @@ export const exportSectionHistory = query({
 
     // Filter out class days that would be all auto-ABSENT (no records and no non-BLANK manual changes)
     const allIds3 = classDays.map(cd => cd._id as Id<'classDays'>);
-    const recordsAll3 = allIds3.length > 0
-      ? (await Promise.all(
-          allIds3.map((id) =>
-            ctx.db
-              .query("attendanceRecords")
-              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-              .collect()
-          )
-        )).flat()
-      : [];
-    const manualAll3 = allIds3.length > 0
-      ? (await Promise.all(
-          allIds3.map((id) =>
-            ctx.db
-              .query("manualStatusChanges")
-              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-              .collect()
-          )
-        )).flat()
-      : [];
-    const keepByDay3 = new Set<Id<'classDays'>>();
-    {
-      const byDayRecs = new Map<Id<'classDays'>, Doc<'attendanceRecords'>[]>();
-      for (const r of recordsAll3) {
-        const k = r.classDayId as Id<'classDays'>;
-        const arr = byDayRecs.get(k) || [];
-        arr.push(r as Doc<'attendanceRecords'>);
-        byDayRecs.set(k, arr);
-      }
-      const byDayManual = new Map<Id<'classDays'>, Doc<'manualStatusChanges'>[]>();
-      for (const m of manualAll3) {
-        const k = m.classDayId as Id<'classDays'>;
-        const arr = byDayManual.get(k) || [];
-        arr.push(m as Doc<'manualStatusChanges'>);
-        byDayManual.set(k, arr);
-      }
-      const dayById3 = new Map<Id<'classDays'>, Doc<'classDays'>>();
-      for (const cd of classDays) dayById3.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-      for (const id of allIds3) {
-        const recs = byDayRecs.get(id) || [];
-        const mans = byDayManual.get(id) || [];
-        const hasRecorded = recs.some((r) => r.status !== "BLANK");
-        const hasManual = mans.some((m) => m.status !== "BLANK");
+    const dayById3 = new Map<Id<'classDays'>, Doc<'classDays'>>();
+    for (const cd of classDays) dayById3.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
+    const checks3 = await Promise.all(
+      allIds3.map(async (id) => {
+        const rec = await ctx.db
+          .query("attendanceRecords")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
+        const man = await ctx.db
+          .query("manualStatusChanges")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
         const cd = dayById3.get(id)!;
         const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
         const isCurrentDay = now >= startMs && now < nextStartMs;
-        if (hasRecorded || hasManual || isCurrentDay) keepByDay3.add(id);
-      }
-    }
+        return { id, keep: Boolean(rec || man || isCurrentDay) };
+      })
+    );
+    const keepByDay3 = new Set<Id<'classDays'>>(checks3.filter((c) => c.keep).map((c) => c.id));
     classDays = classDays.filter(cd => keepByDay3.has(cd._id as Id<'classDays'>));
     const classDayIds = classDays.map(cd => cd._id as Id<'classDays'>);
 

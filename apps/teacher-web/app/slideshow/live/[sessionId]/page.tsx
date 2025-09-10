@@ -342,14 +342,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => { cancelled = true; };
   }, [sessionId]);
 
-  // Load current slides list
-  useEffect(() => {
-    let cancelled = false;
-    async function loadSlides() { /* using Convex query instead */ }
-    loadSlides();
-    const id = window.setInterval(loadSlides, 5000);
-    return () => { cancelled = true; window.clearInterval(id); };
-  }, [sessionId]);
+  // Remove redundant polling; `slidesQuery` already subscribes via Convex useQuery
+  // (left intentionally blank)
 
   // Heartbeat (10s) to keep session fresh for students
   useEffect(() => {
