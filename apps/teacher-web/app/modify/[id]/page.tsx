@@ -2,6 +2,7 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
+import { RosterRow } from './_components/RosterRow';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '../../../../../convex/_generated/dataModel';
@@ -197,13 +198,13 @@ export default function ModifyPage() {
     setEditLastName('');
   }
 
-  async function saveEdit(studentId: Id<'users'>) {
+  async function saveEdit(studentId: string) {
     if (!editEmail.trim() || !isValidEmail(editEmail.trim()) || !editFirstName.trim() || !editLastName.trim()) {
       alert('Please enter a valid email and name.');
       return;
     }
     try {
-      await updateUser({ id: studentId, firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      await updateUser({ id: studentId as unknown as Id<'users'>, firstName: editFirstName.trim(), lastName: editLastName.trim() });
       cancelEdit();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
@@ -452,49 +453,37 @@ export default function ModifyPage() {
           ) : students.length === 0 ? (
             <div className="text-sm text-slate-500 p-3 border rounded-lg bg-white/50">No students yet. Add one below.</div>
           ) : students.map((s) => (
-            <div key={s.id} className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
-              {editId === s.id ? (
-                <>
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <TextInput placeholder="Email" value={editEmail} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditEmail(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
-                    <TextInput placeholder="First name" value={editFirstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditFirstName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
-                    <TextInput placeholder="Last name" value={editLastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditLastName(e.target.value)} onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(s.id); } }} />
-                  </div>
-                  <div className="sm:ml-auto flex gap-2 flex-wrap">
-                    <Button variant="ghost" onClick={cancelEdit}>Cancel</Button>
-                    <Button onClick={() => saveEdit(s.id)}>Save</Button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{s.firstName} {s.lastName}</div>
-                    <div className="text-sm text-slate-500 truncate">{s.email}</div>
-                  </div>
-                  <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
-                    <Button variant="ghost" onClick={() => beginEdit(s)} className="inline-flex items-center justify-center gap-2"><HiOutlinePencilSquare className="h-5 w-5" /> Edit</Button>
-                    <Button variant="ghost" onClick={async () => {
-                      setDeletingIds((prev) => new Set(prev).add(s.id));
-                      try {
-                        const snapshot = [...students];
-                        await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
-                        setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
-                        setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
-                        setToastVisible(true);
-                        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-                        toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
-                      } catch {
-                        alert('Failed to remove student');
-                      } finally {
-                        setDeletingIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
-                      }
-                    }} className="inline-flex items-center justify-center gap-2" disabled={deletingIds.has(s.id)}>
-                      <HiOutlineTrash className="h-5 w-5" /> {deletingIds.has(s.id) ? 'Removing…' : 'Remove'}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
+            <RosterRow
+              key={String(s.id)}
+              student={{ id: String(s.id), email: s.email, firstName: s.firstName, lastName: s.lastName }}
+              isEditing={editId === s.id}
+              editEmail={editEmail}
+              editFirstName={editFirstName}
+              editLastName={editLastName}
+              onChangeEmail={setEditEmail}
+              onChangeFirst={setEditFirstName}
+              onChangeLast={setEditLastName}
+              onBeginEdit={() => beginEdit(s)}
+              onCancelEdit={cancelEdit}
+              onSaveEdit={(id) => saveEdit(id)}
+              deleting={deletingIds.has(s.id)}
+              onRemove={async () => {
+                setDeletingIds((prev) => new Set(prev).add(s.id));
+                try {
+                  const snapshot = [...students];
+                  await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
+                  setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
+                  setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
+                  setToastVisible(true);
+                  if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                  toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
+                } catch {
+                  alert('Failed to remove student');
+                } finally {
+                  setDeletingIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
+                }
+              }}
+            />
           ))}
         </div>
         <div className="mt-6 space-y-3">
