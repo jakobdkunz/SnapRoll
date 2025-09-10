@@ -62,7 +62,10 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
     const convex = new ConvexHttpClient(getConvexUrl());
     convex.setAuth(token);
     const slides = await convex.query(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any } as any);
-    return NextResponse.json({ slides });
+    const res = NextResponse.json({ slides });
+    // Allow brief caching at the edge to reduce hot GET costs; revalidate quickly
+    res.headers.set('Cache-Control', 'public, max-age=5, s-maxage=15, stale-while-revalidate=30');
+    return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to fetch slides';
     return NextResponse.json({ error: message }, { status: 500 });
