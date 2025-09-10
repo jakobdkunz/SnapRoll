@@ -450,7 +450,7 @@ export default function SectionsPage() {
                 <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 text-white relative overflow-hidden grid place-items-center`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
-                    <div className="font-futuristic font-bold text-lg leading-tight px-2">{s.title}</div>
+                    <div className="font-bold text-lg leading-tight px-2">{s.title}</div>
                   </div>
                   <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
                   <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>

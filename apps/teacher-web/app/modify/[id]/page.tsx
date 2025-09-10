@@ -400,7 +400,7 @@ export default function ModifyPage() {
         <div className={`rounded-xl overflow-hidden ${sectionGradient} relative`}>
           <div className="absolute inset-0 bg-black/10" />
           <div className="relative grid place-items-center text-white py-8 sm:py-10">
-            <div className="font-futuristic font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
+            <div className="font-bold text-xl sm:text-2xl text-center px-3 leading-tight">{sectionTitle}</div>
           </div>
         </div>
       ) : (
