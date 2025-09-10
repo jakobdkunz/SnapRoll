@@ -60,6 +60,12 @@ export const startSlideshow = mutation({
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
     if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
+    // Idempotency: if an active session already exists for this section, reuse it
+    const existing = await ctx.db
+      .query("slideshowSessions")
+      .withIndex("by_section_active", (q) => q.eq("sectionId", args.sectionId).eq("closedAt", undefined))
+      .first();
+    if (existing) return existing._id;
     // Default: do not show on devices until rendering finishes
     return await ctx.db.insert("slideshowSessions", {
       sectionId: args.sectionId,
@@ -134,9 +140,10 @@ export const gotoSlide = mutation({
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:goto:${args.sessionId}` as any, 5 * 60 * 1000, 300);
     if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
-    await ctx.db.patch(args.sessionId, {
-      currentSlide: args.slideNumber,
-    });
+    // Avoid redundant writes
+    if ((session.currentSlide as number | undefined) !== args.slideNumber) {
+      await ctx.db.patch(args.sessionId, { currentSlide: args.slideNumber });
+    }
   },
 });
 
@@ -147,9 +154,11 @@ export const heartbeat = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
-    await ctx.db.patch(args.sessionId, {
-      instructorLastSeenAt: Date.now(),
-    });
+    const now = Date.now();
+    const last = (session.instructorLastSeenAt as number | undefined) ?? 0;
+    if (now - last > 5000) {
+      await ctx.db.patch(args.sessionId, { instructorLastSeenAt: now });
+    }
   },
 });
 

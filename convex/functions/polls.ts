@@ -28,6 +28,14 @@ export const startPoll = mutation({
       if (o.length === 0 || o.length > 100) throw new Error("Option text must be 1-100 chars");
     }
 
+    // If another active poll exists for this section, close it first to avoid duplicates
+    const existing = await ctx.db
+      .query("pollSessions")
+      .withIndex("by_section_active", (q) => q.eq("sectionId", args.sectionId).eq("closedAt", undefined))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { closedAt: Date.now() });
+    }
     return await ctx.db.insert("pollSessions", {
       sectionId: args.sectionId,
       prompt,
@@ -184,9 +192,10 @@ export const heartbeat = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Poll session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
-
-    await ctx.db.patch(args.sessionId, {
-      instructorLastSeenAt: Date.now(),
-    });
+    const now = Date.now();
+    const last = (session.instructorLastSeenAt as number | undefined) ?? 0;
+    if (now - last > 5000) {
+      await ctx.db.patch(args.sessionId, { instructorLastSeenAt: now });
+    }
   },
 });
