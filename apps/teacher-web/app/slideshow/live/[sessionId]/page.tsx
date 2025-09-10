@@ -99,7 +99,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const getCanvasCoordinates = useCallback((e: React.MouseEvent | MouseEvent): DrawingPoint | null => {
     const canvas = canvasRef.current;
     if (!canvas || !frameSize) {
-      console.log('Canvas or frameSize not available:', { canvas: !!canvas, frameSize });
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Canvas or frameSize not available:', { canvas: !!canvas, frameSize });
+      }
       return null;
     }
     
@@ -112,7 +115,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const percentY = y / rect.height;
     
     const result = { x: percentX, y: percentY };
-    console.log('Percentage coordinates:', { clientX: e.clientX, clientY: e.clientY, rect, x, y, percentX, percentY, result });
+    if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+      // eslint-disable-next-line no-console
+      console.log('Percentage coordinates:', { clientX: (e as MouseEvent).clientX, clientY: (e as MouseEvent).clientY, rect, x, y, percentX, percentY, result });
+    }
     return result;
   }, [frameSize]);
 
@@ -123,7 +129,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     const point = getCanvasCoordinates(e);
     if (!point) return;
     
-    console.log('Start drawing at:', point);
+    if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+      // eslint-disable-next-line no-console
+      console.log('Start drawing at:', point);
+    }
     setIsDrawing(true);
     
     if (drawingMode === 'eraser') {
@@ -241,7 +250,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (drawingMode === 'eraser') {
       // For eraser, we don't need to save anything since we already updated the drawings state
       // Just save the current state to server
-      console.log('Saving drawings after eraser use:', drawings);
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Saving drawings after eraser use:', drawings);
+      }
       // Persist via Convex if implemented in future
     } else if (currentStroke) {
       // Pen mode: save the completed stroke
@@ -276,11 +288,17 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !frameSize) {
-      console.log('Canvas init skipped:', { canvas: !!canvas, frameSize });
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Canvas init skipped:', { canvas: !!canvas, frameSize });
+      }
       return;
     }
     
-    console.log('Initializing canvas with size:', frameSize);
+    if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+      // eslint-disable-next-line no-console
+      console.log('Initializing canvas with size:', frameSize);
+    }
     canvas.width = frameSize.w;
     canvas.height = frameSize.h;
     
@@ -289,7 +307,10 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       ctxRef.current = ctx;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      console.log('Canvas context initialized');
+      if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') {
+        // eslint-disable-next-line no-console
+        console.log('Canvas context initialized');
+      }
     } else {
       console.error('Failed to get canvas context');
     }
