@@ -34,13 +34,20 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     if (sr && showLocal === null) setShowLocal(!!sr.showResults);
   }, [results, showLocal]);
 
-  // Heartbeat (10s to reduce DB writes)
+  // Heartbeat (10s), paused while tab hidden; immediate on visible
   useEffect(() => {
     if (!authReady) return;
-    const id = window.setInterval(() => {
-      void heartbeat({ sessionId: params.sessionId as any });
-    }, 10000);
-    return () => window.clearInterval(id);
+    let id: number | null = null;
+    const start = () => {
+      if (id !== null) return;
+      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as any }); } catch {} }, 10000);
+    };
+    const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
+    const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
+    document.addEventListener('visibilitychange', onVis);
+    onVis();
+    return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
   }, [sessionId, heartbeat, authReady]);
 
   return (
