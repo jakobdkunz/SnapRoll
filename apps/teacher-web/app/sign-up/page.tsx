@@ -1,7 +1,7 @@
 "use client";
 import { SignUp } from '@clerk/nextjs';
 
-export default function TeacherSignUpPage() {
+export default function InstructorSignUpPage() {
   return (
     <div className="w-full flex justify-center py-10 overflow-visible">
       <div className="w-full max-w-sm sm:max-w-md">
