@@ -38,13 +38,23 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     return Array.from(map.entries()).map(([word, count]) => ({ word, count }));
   })();
 
-  // Heartbeat to keep session active (10s)
+  // Heartbeat to keep session active (10s), paused when tab hidden
   useEffect(() => {
     if (!authReady) return;
-    const interval = window.setInterval(() => {
-      void heartbeat({ sessionId: params.sessionId as any });
-    }, 10000);
-    return () => window.clearInterval(interval);
+    let intervalId: number | null = null;
+    const start = () => {
+      if (intervalId !== null) return;
+      // send one immediately when visible
+      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+      intervalId = window.setInterval(() => {
+        try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+      }, 10000);
+    };
+    const stop = () => { if (intervalId !== null) { window.clearInterval(intervalId); intervalId = null; } };
+    const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
+    document.addEventListener('visibilitychange', onVis);
+    onVis();
+    return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
   }, [sessionId, heartbeat, authReady]);
 
   const maxCount = Math.max(1, ...words.map((w: Word) => w.count));

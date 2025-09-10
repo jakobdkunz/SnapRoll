@@ -345,14 +345,19 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   // Remove redundant polling; `slidesQuery` already subscribes via Convex useQuery
   // (left intentionally blank)
 
-  // Heartbeat (10s) to keep session fresh for students
+  // Heartbeat (10s) to keep session fresh; pause when hidden, immediate on visible
   useEffect(() => {
-    // send an immediate heartbeat on mount to mark session as active right away
-    try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
-    const id = window.setInterval(() => { 
+    let id: number | null = null;
+    const start = () => {
+      if (id !== null) return;
       try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
-    }, 10000);
-    return () => window.clearInterval(id);
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as any }); } catch {} }, 10000);
+    };
+    const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
+    const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
+    document.addEventListener('visibilitychange', onVis);
+    onVis();
+    return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
   }, [sessionId, heartbeat]);
 
   // Recompute frame on resize
