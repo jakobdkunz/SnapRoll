@@ -83,6 +83,13 @@ export default function DashboardPage() {
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
   ];
 
+  function pickAutoGradient(): string {
+    const available = gradients.map((g) => g.id);
+    const used = new Set((sections || []).map((s) => s.gradient || ''));
+    const next = available.find((id) => !used.has(id));
+    return next || 'gradient-1';
+  }
+
   useEffect(() => { setMounted(true); }, []);
 
   // Fallback: if signed in but no Convex user yet, upsert as TEACHER
@@ -185,7 +192,8 @@ export default function DashboardPage() {
           <Button variant="primary" className="mt-4 inline-flex items-center gap-2" onClick={async () => {
             const title = prompt('Section title?');
             if (!title || !teacherId) return;
-            await createSection({ title });
+            const gradient = pickAutoGradient();
+            await createSection({ title, gradient });
           }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
@@ -365,7 +373,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; await createSection({ title: createTitle.trim() }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
+              <Button id="create-section-submit" onClick={async () => { if (!teacherId || !createTitle.trim()) return; const gradient = pickAutoGradient(); await createSection({ title: createTitle.trim(), gradient }); setCreateModalOpen(false); setCreateTitle(''); }}>Create</Button>
             </div>
           </div>
         </div>

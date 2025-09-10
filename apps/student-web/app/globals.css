@@ -9,7 +9,7 @@ body { @apply bg-slate-50 text-slate-900; }
 @layer utilities {
   .font-futuristic { font-family: var(--font-orbitron), monospace; }
 
-  .gradient-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+  .gradient-1 { background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%); }
   .gradient-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
   .gradient-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
   .gradient-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
