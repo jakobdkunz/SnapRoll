@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Modal, Button, TextInput } from '@snaproll/ui';
 import { useMutation } from 'convex/react';
 import { api } from '@snaproll/convex-client';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
 
 export default function WordCloudStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
   const router = useRouter();

@@ -13,7 +13,6 @@ type DrawingMode = 'mouse' | 'pen' | 'eraser';
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
 type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: DrawingMode };
-type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
 // (removed unused SessionDetails and Slide type declarations)
 
@@ -29,11 +28,16 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   // Convex hooks
   const sessionIdTyped = params.sessionId as Id<'slideshowSessions'>;
   const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionIdTyped });
-  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as Id<'sections'> } : "skip");
-  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionIdTyped }) as any[];
-  const [slides, setSlides] = useState<any[]>([]);
+  const sectionIdMaybe = (details && (details as unknown as { sectionId?: string }).sectionId) as Id<'sections'> | undefined;
+  const section = useQuery(api.functions.sections.get, sectionIdMaybe ? { id: sectionIdMaybe } : "skip");
+  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionIdTyped });
+  const [slides, setSlides] = useState<Array<{ index: number; imageUrl: string }>>([]);
   const drawingsRaw = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionIdTyped });
-  const drawings = useMemo(() => (drawingsRaw as any) || {}, [drawingsRaw]);
+  const drawings = useMemo<Record<number, DrawingStroke[]>>(() => {
+    const d = drawingsRaw as unknown;
+    if (d && typeof d === 'object') return d as Record<number, DrawingStroke[]>;
+    return {} as Record<number, DrawingStroke[]>;
+  }, [drawingsRaw]);
   const heartbeat = useMutation(api.functions.slideshow.heartbeat);
   const closeSession = useMutation(api.functions.slideshow.closeSession);
   const gotoSlideMutation = useMutation(api.functions.slideshow.gotoSlide);
@@ -49,7 +53,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [drawingColor, setDrawingColor] = useState<DrawingColor>('red');
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
-  const [localDrawings, setLocalDrawings] = useState<SlideDrawings>({});
+  // removed unused localDrawings state
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -58,7 +62,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   // Sync local slides state from Convex query
   useEffect(() => {
     if (Array.isArray(slidesQuery)) {
-      setSlides(slidesQuery as any[]);
+      setSlides(slidesQuery as Array<{ index: number; imageUrl: string }>);
     }
   }, [slidesQuery]);
 
@@ -161,9 +165,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (drawingMode === 'eraser') {
       // Eraser mode: remove strokes that intersect with the eraser
               const currentSlideIndex = details?.currentSlide || 1;
-        const currentSlideDrawings = (drawings as any)[currentSlideIndex] || [];
+        const currentSlideDrawings = drawings[currentSlideIndex] || [];
         
-        const newSlideDrawings = (currentSlideDrawings as any[]).filter((stroke: DrawingStroke) => {
+        const newSlideDrawings = currentSlideDrawings.filter((stroke: DrawingStroke) => {
         // Check if any point in the stroke is within eraser radius
         return !stroke.points.some((strokePoint: DrawingPoint) => {
           const distance = Math.sqrt(
@@ -178,8 +182,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
           return distance < percentageRadius;
         });
       });
-      
-      const newDrawings = { ...(drawings as any), [currentSlideIndex]: newSlideDrawings };
       
       // Redraw canvas immediately
       const canvas = canvasRef.current;
@@ -248,10 +250,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     } else if (currentStroke) {
       // Pen mode: save the completed stroke
       const currentSlideIndex = details?.currentSlide || 1;
-      const currentSlideDrawings = (drawings as any)[currentSlideIndex] || [];
-      const newSlideDrawings = [...currentSlideDrawings, currentStroke];
-      const newDrawings = { ...(drawings as any), [currentSlideIndex]: newSlideDrawings };
-      setLocalDrawings(newDrawings);
+      // const currentSlideDrawings = drawings[currentSlideIndex] || [];
+      // Persist drawings to server in a future enhancement
       setCurrentStroke(null);
       
       // Save drawings to server
@@ -260,19 +260,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   }, [isDrawing, currentStroke, drawings, sessionIdTyped, details?.currentSlide, drawingMode]);
 
   const clearDrawings = useCallback(() => {
-    const currentSlideIndex = details?.currentSlide || 1;
-    const newDrawings = { ...(drawings as any) };
-    delete newDrawings[currentSlideIndex];
-    setLocalDrawings(newDrawings);
-    
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (canvas && ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
-    
-    // Persist via Convex if implemented
-  }, [sessionIdTyped, drawings, details?.currentSlide]);
+  }, []);
 
   // Initialize canvas when frame size changes
   useEffect(() => {
@@ -315,7 +308,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     const currentSlideIndex = details?.currentSlide || 1;
-    const currentSlideDrawings = (drawings as any)[currentSlideIndex] || [];
+    const currentSlideDrawings = drawings[currentSlideIndex] || [];
     
     currentSlideDrawings.forEach((stroke: DrawingStroke) => {
       if (stroke.points.length < 2) return;
@@ -361,8 +354,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: sessionIdTyped }); } catch {}
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdTyped }); } catch {} }, 10000);
+      try { void heartbeat({ sessionId: sessionIdTyped }); } catch { /* ignore */ }
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdTyped }); } catch { /* ignore */ } }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
@@ -390,7 +383,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     } finally {
       setWorking(false);
     }
-  }, [working, details, sessionIdTyped, gotoSlideMutation]);
+  }, [working, details, gotoSlideMutation]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -418,16 +411,17 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [slides.length, details?.currentSlide, gotoSlide]);
 
-  const rawFileUrl = (details as any)?.filePath as string | undefined;
+  const rawFileUrl = (details && (details as unknown as { filePath?: string }).filePath) || undefined;
   const isPdf = !!details && (
-    /pdf/i.test(((details as any)?.mimeType || '').toString()) ||
-    /\.pdf(\?|#|$)/i.test(((details as any)?.filePath || '').toString())
+    /pdf/i.test(String((details as unknown as { mimeType?: string }).mimeType || '')) ||
+    /\.pdf(\?|#|$)/i.test(String((details as unknown as { filePath?: string }).filePath || ''))
   );
   const proxiedFileUrl = useMemo(() => {
     if (!rawFileUrl) return '';
     try {
-      const u = new URL(rawFileUrl);
-      const host = u.hostname.toLowerCase();
+      // Validates URL; if invalid, fall back to raw string
+      // eslint-disable-next-line no-new
+      new URL(rawFileUrl);
       return rawFileUrl;
     } catch {
       return rawFileUrl;
@@ -516,8 +510,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const res = await fetch(`/api/slideshow/${sessionId}/slides`, { credentials: 'include' });
         const json = await res.json();
         setRenderMsg('');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setSlides(((json as any)?.slides || []) as any[]);
+        const parsed = (json as unknown as { slides?: Array<{ index: number; imageUrl: string }> }).slides || [];
+        setSlides(parsed);
       } catch {
         // ignore
       }
@@ -584,7 +578,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
             <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
             Back
           </Button>
-          <div className="text-lg font-semibold truncate">{(details as any).title}</div>
+          <div className="text-lg font-semibold truncate">{String((details as unknown as { title?: string })?.title || '')}</div>
           
           {/* Drawing controls - centered */}
           <div className="flex items-center gap-2 mx-auto">
@@ -662,6 +656,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
                 className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center relative"
                 style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}
