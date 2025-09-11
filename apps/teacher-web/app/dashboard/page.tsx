@@ -7,7 +7,8 @@ import dynamic from 'next/dynamic';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
 import { api } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import type { Doc, Id } from '../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
+import type { Doc } from '../../../../convex/_generated/dataModel';
 
 type SectionDoc = Doc<'sections'>;
 

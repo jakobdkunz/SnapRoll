@@ -7,7 +7,7 @@ import { SectionHeader } from './_components/SectionHeader';
 import { ImportCsvModal } from './_components/ImportCsvModal';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
 import { useAuth } from '@clerk/nextjs';
 import { isValidEmail } from '@snaproll/lib';
 import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
