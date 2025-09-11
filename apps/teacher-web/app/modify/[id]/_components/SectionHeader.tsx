@@ -1,4 +1,3 @@
-"use client";
 import * as React from 'react';
 
 export function SectionHeader({ loaded, title, gradient }: { loaded: boolean; title: string; gradient: string }) {
