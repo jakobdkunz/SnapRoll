@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       title,
       filePath: uploaded.url,
       mimeType: contentType,
-    } as any);
+    });
 
     return NextResponse.json({ assetId, url: uploaded.url });
   } catch (err) {

@@ -3,6 +3,7 @@ import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@snaproll/convex-client/server';
 import { auth } from '@clerk/nextjs/server';
+import type { Id } from '@snaproll/convex-client';
 
 function getConvexUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -40,12 +41,12 @@ export async function POST(_req: Request, { params }: { params: { sessionId: str
     const convex = new ConvexHttpClient(getConvexUrl());
     convex.setAuth(token);
     await convex.mutation(api.functions.slideshow.addSlide, {
-      sessionId: params.sessionId as any,
+      sessionId: params.sessionId as Id<'slideshowSessions'>,
       index,
       imageUrl: uploaded.url,
       width,
       height,
-    } as any);
+    });
 
     return NextResponse.json({ ok: true, url: uploaded.url });
   } catch (err) {
@@ -61,7 +62,7 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const convex = new ConvexHttpClient(getConvexUrl());
     convex.setAuth(token);
-    const slides = await convex.query(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any } as any);
+    const slides = await convex.query(api.functions.slideshow.getSlides, { sessionId: params.sessionId as Id<'slideshowSessions'> });
     const res = NextResponse.json({ slides });
     // Allow brief caching at the edge to reduce hot GET costs; revalidate quickly
     res.headers.set('Cache-Control', 'public, max-age=5, s-maxage=15, stale-while-revalidate=30');

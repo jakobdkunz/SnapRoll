@@ -4,6 +4,7 @@ import { Card, Button, Skeleton } from '@snaproll/ui';
 import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
 import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
@@ -27,13 +28,14 @@ export default function AttendancePage() {
 
   // Convex hooks
   const startAttendance = useMutation(api.functions.attendance.startAttendance);
+  const sectionId = (params.id as unknown) as Id<'sections'>;
   const getAttendanceStatus = useQuery(
     api.functions.attendance.getAttendanceStatus,
-    isAuthReady && params.id ? { sectionId: params.id as any } : "skip"
+    isAuthReady && params.id ? { sectionId } : "skip"
   );
   const section = useQuery(
     api.functions.sections.get,
-    isAuthReady && params.id ? { id: params.id as any } : "skip"
+    isAuthReady && params.id ? { id: sectionId } : "skip"
   );
 
   const [isStarting, setIsStarting] = useState(false);
@@ -65,7 +67,7 @@ export default function AttendancePage() {
     isStartingRef.current = true;
     setIsStarting(true);
     try {
-      const classDayId = await startAttendance({ sectionId: params.id as any });
+      const classDayId = await startAttendance({ sectionId });
       if (classDayId) {
         // The attendance status will be updated via the Convex query
         await loadStatus();

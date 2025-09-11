@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Modal, Button, TextInput } from '@snaproll/ui';
 import { useMutation } from 'convex/react';
 import { api } from '@snaproll/convex-client';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
 
 export default function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
   const router = useRouter();
@@ -62,7 +62,8 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
                 const opts = options.map((o) => o.trim()).filter(Boolean);
                 const sessionId = await startPollMutation({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts });
                 onClose();
-                setTimeout(() => router.push(`/poll/live/${String((sessionId as any)?._id || sessionId)}`), 120);
+                const sessionIdStr = typeof sessionId === 'string' ? sessionId : String((sessionId as unknown as { _id?: string })._id ?? sessionId);
+                setTimeout(() => router.push(`/poll/live/${sessionIdStr}`), 120);
               } finally {
                 setWorking(false);
               }

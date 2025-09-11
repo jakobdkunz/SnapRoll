@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Card, Button } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
 
-type PollSession = { id: string; prompt: string; options: string[]; showResults: boolean };
+// Removed unused PollSession type
 
 export default function PollLivePage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
@@ -17,13 +18,13 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   // Convex hooks
   // Using session details from getResults response; for header we can reuse prompt if available
   // sessionId here is the poll session; getActivePoll expects sectionId. We'll derive header from results.
-  const session = null as any;
+  // derive session from results when available
   const results = useQuery(
     api.functions.polls.getResults,
-    authReady ? { sessionId: params.sessionId as any } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'pollSessions'> } : "skip"
   );
-  const sectionId = (results as any)?.session?.sectionId;
-  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as any } : "skip");
+  const sectionId = (results as any)?.session?.sectionId as Id<'sections'> | undefined;
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId } : "skip");
   const toggleResults = useMutation(api.functions.polls.toggleResults);
   const closePoll = useMutation(api.functions.polls.closePoll);
   const heartbeat = useMutation(api.functions.polls.heartbeat);
@@ -40,8 +41,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as any }); } catch {} }, 10000);
+      try { void heartbeat({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {}
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {} }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
@@ -67,7 +68,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
         <div className="mb-2 flex items-center justify-between gap-3">
           <button
             className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
-            onClick={async () => { try { await closePoll({ sessionId: params.sessionId as any }); } catch {/* ignore */} history.back(); }}
+            onClick={async () => { try { await closePoll({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {/* ignore */} history.back(); }}
           >
             ← Back
           </button>
@@ -88,7 +89,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               try {
                 return JSON.parse(((results as any)?.session?.optionsJson) || '[]');
               } catch { return []; }
-            })().map((opt: any, i: number) => {
+            })().map((opt: string, i: number) => {
               const count = results ? (results as any).results?.[i]?.count || 0 : 0;
               const total = results ? (results as any).totalAnswers || 0 : 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -111,13 +112,14 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
             <div className="text-slate-500">{(results as any)?.totalAnswers || 0} {((results as any)?.totalAnswers || 0) === 1 ? 'response' : 'responses'}</div>
             <Button disabled={toggling} onClick={async () => {
               // Instant UI toggle
-              setShowLocal((prev) => !(prev ?? session?.showResults));
+              const currentShow = (results as any)?.session?.showResults ?? false;
+              setShowLocal((prev) => !(prev ?? currentShow));
               // Fire-and-forget server toggle
               setToggling(true);
-              toggleResults({ sessionId: params.sessionId as any })
+              toggleResults({ sessionId: params.sessionId as Id<'pollSessions'> })
                 .catch(() => { /* ignore */ })
                 .finally(() => setToggling(false));
-            }}>{(showLocal ?? session?.showResults) ? 'Hide Results' : 'Show Results'}</Button>
+            }}>{(showLocal ?? (results as any)?.session?.showResults ?? false) ? 'Hide Results' : 'Show Results'}</Button>
           </div>
           </Card>
         </div>

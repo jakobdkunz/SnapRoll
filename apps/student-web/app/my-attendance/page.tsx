@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 // import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
 import { convexApi, api } from '@snaproll/convex-client';
-import type { Id } from '../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
 
 type HistoryResponse = {
@@ -55,30 +55,30 @@ export default function MyAttendancePage() {
     setTooltip(t => ({ ...t, visible: false }));
   }
 
-  function TooltipOverlay() {
+  function TooltipOverlay({ visible, text, anchorX, anchorY }: { visible: boolean; text: string; anchorX: number; anchorY: number }) {
     const ref = useRef<HTMLDivElement | null>(null);
-    const [pos, setPos] = useState<{ left: number; top: number }>({ left: tooltip.anchorX, top: tooltip.anchorY });
+    const [pos, setPos] = useState<{ left: number; top: number }>({ left: anchorX, top: anchorY });
     useLayoutEffect(() => {
-      if (!tooltip.visible) return;
+      if (!visible) return;
       const el = ref.current;
       if (!el) return;
       const vw = window.innerWidth;
       const margin = 8;
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      const left = Math.min(vw - margin - w, Math.max(margin, tooltip.anchorX - w / 2));
-      let top = tooltip.anchorY - margin - h;
-      if (top < margin) top = tooltip.anchorY + margin;
+      const left = Math.min(vw - margin - w, Math.max(margin, anchorX - w / 2));
+      let top = anchorY - margin - h;
+      if (top < margin) top = anchorY + margin;
       setPos({ left, top });
-    }, [tooltip]);
-    if (!tooltip.visible) return null;
+    }, [visible, anchorX, anchorY]);
+    if (!visible) return null;
     return createPortal(
       <div
         ref={ref}
         style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 9999, maxWidth: 'calc(100vw - 16px)' }}
         className="pointer-events-none px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg"
       >
-        {tooltip.text}
+        {text}
       </div>,
       document.body
     );
@@ -411,7 +411,7 @@ export default function MyAttendancePage() {
           )}
         </div>
         )}
-        <TooltipOverlay />
+        <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
       </Card>
     </div>
   );

@@ -122,3 +122,6 @@ export const convexApi = {
     generateDemoData: api.functions.demo.generateDemoData,
   },
 };
+
+// Re-export Convex model types for consumer convenience
+export type { Id } from '../../../convex/_generated/dataModel';

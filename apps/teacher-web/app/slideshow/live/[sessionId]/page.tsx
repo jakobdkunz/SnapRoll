@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card } from '@snaproll/ui';
 import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 // import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
@@ -26,11 +27,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const [loading, setLoading] = useState(true);
 
   // Convex hooks
-  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: params.sessionId as any });
-  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any } : "skip");
-  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: params.sessionId as any }) as any[];
+  const sessionIdTyped = params.sessionId as Id<'slideshowSessions'>;
+  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionIdTyped });
+  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as Id<'sections'> } : "skip");
+  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionIdTyped }) as any[];
   const [slides, setSlides] = useState<any[]>([]);
-  const drawings = (useQuery(api.functions.slideshow.getDrawings, { sessionId: params.sessionId as any }) as any) || {};
+  const drawingsRaw = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionIdTyped });
+  const drawings = useMemo(() => (drawingsRaw as any) || {}, [drawingsRaw]);
   const heartbeat = useMutation(api.functions.slideshow.heartbeat);
   const closeSession = useMutation(api.functions.slideshow.closeSession);
   const gotoSlideMutation = useMutation(api.functions.slideshow.gotoSlide);
@@ -254,7 +257,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       // Save drawings to server
       // Persist via Convex if implemented
     }
-  }, [isDrawing, currentStroke, drawings, sessionId, details?.currentSlide, drawingMode]);
+  }, [isDrawing, currentStroke, drawings, sessionIdTyped, details?.currentSlide, drawingMode]);
 
   const clearDrawings = useCallback(() => {
     const currentSlideIndex = details?.currentSlide || 1;
@@ -269,7 +272,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
     
     // Persist via Convex if implemented
-  }, [sessionId, drawings, details?.currentSlide]);
+  }, [sessionIdTyped, drawings, details?.currentSlide]);
 
   // Initialize canvas when frame size changes
   useEffect(() => {
@@ -348,7 +351,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
     loadSession();
     return () => { cancelled = true; };
-  }, [sessionId]);
+  }, [sessionIdTyped]);
 
   // Remove redundant polling; `slidesQuery` already subscribes via Convex useQuery
   // (left intentionally blank)
@@ -358,24 +361,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as any }); } catch {} }, 10000);
+      try { void heartbeat({ sessionId: sessionIdTyped }); } catch {}
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdTyped }); } catch {} }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
     document.addEventListener('visibilitychange', onVis);
     onVis();
     return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
-  }, [sessionId, heartbeat]);
-
-  // Recompute frame on resize
-  useEffect(() => {
-    if (!imgAspect) return;
-    const onResize = () => recomputeFrame(imgAspect);
-    window.addEventListener('resize', onResize);
-    onResize();
-    return () => window.removeEventListener('resize', onResize);
-  }, [imgAspect]);
+  }, [sessionIdTyped, heartbeat]);
 
   // Recompute frame when aspect changes or on resize
   useEffect(() => {
@@ -390,13 +384,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (working || !details) return;
     setWorking(true);
     try {
-      await gotoSlideMutation({ sessionId: params.sessionId as any, slideNumber });
+      await gotoSlideMutation({ sessionId: sessionIdTyped, slideNumber });
     } catch (e) {
       console.error('Failed to goto slide:', e);
     } finally {
       setWorking(false);
     }
-  }, [working, details, sessionId]);
+  }, [working, details, sessionIdTyped, gotoSlideMutation]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -444,7 +438,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (working) return;
     setWorking(true);
     try {
-      await closeSession({ sessionId: params.sessionId as any });
+      await closeSession({ sessionId: sessionIdTyped });
       router.push('/dashboard');
     } catch {
       router.push('/dashboard');

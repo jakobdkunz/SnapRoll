@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Card, TextInput } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 
 type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };
@@ -27,10 +28,10 @@ export default function TeacherProfilePage() {
 
   // Convex hooks
   const updateUser = useMutation(api.functions.users.update);
-  const generateDemo = useMutation((api as any).functions.demo.generateDemoData);
+  const generateDemo = useMutation(api.functions.demo.generateDemoData);
 
   // Get teacher data
-  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as any } : "skip");
+  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'> } : "skip");
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.teacherId');
@@ -50,7 +51,7 @@ export default function TeacherProfilePage() {
     if (!teacherId) return;
     setSaving(true);
     try {
-      await updateUser({ id: teacherId as any, firstName, lastName });
+      await updateUser({ id: teacherId as Id<'users'>, firstName, lastName });
       const name = `${firstName} ${lastName}`;
       localStorage.setItem('snaproll.teacherName', name);
       try { router.refresh(); } catch {
