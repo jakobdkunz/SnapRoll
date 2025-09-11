@@ -23,7 +23,9 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     api.functions.polls.getResults,
     authReady ? { sessionId: params.sessionId as Id<'pollSessions'> } : "skip"
   );
-  const sectionId = (results as any)?.session?.sectionId as Id<'sections'> | undefined;
+  type PollResults = { session?: { sectionId?: string; prompt?: string; optionsJson?: string; showResults?: boolean }; results?: Array<{ count: number }>; totalAnswers?: number };
+  const pr = results as unknown as PollResults | undefined;
+  const sectionId = (pr?.session?.sectionId as Id<'sections'> | undefined);
   const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId } : "skip");
   const toggleResults = useMutation(api.functions.polls.toggleResults);
   const closePoll = useMutation(api.functions.polls.closePoll);
@@ -31,9 +33,9 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
 
   // Update showLocal when results load
   useEffect(() => {
-    const sr = (results as any)?.session;
+    const sr = pr?.session;
     if (sr && showLocal === null) setShowLocal(!!sr.showResults);
-  }, [results, showLocal]);
+  }, [pr, showLocal]);
 
   // Heartbeat (10s), paused while tab hidden; immediate on visible
   useEffect(() => {
@@ -41,8 +43,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {}
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {} }, 10000);
+      try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'> }); } catch { /* ignore */ }
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'> }); } catch { /* ignore */ } }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
@@ -77,7 +79,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
               <div className="text-sm text-slate-700 truncate mb-1">{section.title}</div>
             )}
             <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800">
-              {(results as any)?.session?.prompt ?? 'Loading…'}
+              {pr?.session?.prompt ?? 'Loading…'}
             </div>
           </div>
           <div className="w-[120px]" />
@@ -87,39 +89,39 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
           <div className="space-y-3">
             {(() => {
               try {
-                return JSON.parse(((results as any)?.session?.optionsJson) || '[]');
+                return JSON.parse((pr?.session?.optionsJson || '[]'));
               } catch { return []; }
             })().map((opt: string, i: number) => {
-              const count = results ? (results as any).results?.[i]?.count || 0 : 0;
-              const total = results ? (results as any).totalAnswers || 0 : 0;
+              const count = pr?.results?.[i]?.count || 0;
+              const total = pr?.totalAnswers || 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
                 <div key={i} className="relative overflow-hidden rounded-xl border bg-slate-50">
-                  {(showLocal ?? (results as any)?.session?.showResults) ? (
+                  {(showLocal ?? pr?.session?.showResults) ? (
                     <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `${pct}%` }} />
                   ) : (
                                           <div className="absolute inset-y-0 left-0 bg-blue-500/80 transition-all duration-500" style={{ width: `0%` }} />
                   )}
                   <div className="relative z-10 flex items-center justify-between px-4 py-3 text-lg">
                     <div className="font-medium">{opt}</div>
-                    {(showLocal ?? (results as any)?.session?.showResults) ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
+                    {(showLocal ?? pr?.session?.showResults) ? <div className="text-slate-800 font-semibold">{count} ({pct}%)</div> : null}
                   </div>
                 </div>
               );
             })}
           </div>
           <div className="flex justify-between items-center mt-5">
-            <div className="text-slate-500">{(results as any)?.totalAnswers || 0} {((results as any)?.totalAnswers || 0) === 1 ? 'response' : 'responses'}</div>
+            <div className="text-slate-500">{pr?.totalAnswers || 0} {(pr?.totalAnswers || 0) === 1 ? 'response' : 'responses'}</div>
             <Button disabled={toggling} onClick={async () => {
               // Instant UI toggle
-              const currentShow = (results as any)?.session?.showResults ?? false;
+              const currentShow = pr?.session?.showResults ?? false;
               setShowLocal((prev) => !(prev ?? currentShow));
               // Fire-and-forget server toggle
               setToggling(true);
               toggleResults({ sessionId: params.sessionId as Id<'pollSessions'> })
-                .catch(() => { /* ignore */ })
+                .catch(() => undefined)
                 .finally(() => setToggling(false));
-            }}>{(showLocal ?? (results as any)?.session?.showResults ?? false) ? 'Hide Results' : 'Show Results'}</Button>
+            }}>{(showLocal ?? pr?.session?.showResults ?? false) ? 'Hide Results' : 'Show Results'}</Button>
           </div>
           </Card>
         </div>

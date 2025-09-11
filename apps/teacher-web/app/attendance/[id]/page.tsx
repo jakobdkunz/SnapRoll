@@ -9,7 +9,6 @@ import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 
-type ClassDay = { id: string; attendanceCode: string };
 type AttendanceStatus = {
   hasActiveAttendance: boolean;
   totalStudents: number;
@@ -78,7 +77,7 @@ export default function AttendancePage() {
       isStartingRef.current = false;
       setIsStarting(false);
     }
-  }, [params.id, loadStatus, startAttendance]);
+  }, [sectionId, loadStatus, startAttendance]);
 
   useEffect(() => {
     void loadStatus();

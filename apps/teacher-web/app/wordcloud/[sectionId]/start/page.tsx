@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Modal, TextInput } from '@snaproll/ui';
 import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useMutation } from 'convex/react';
 
 export default function StartWordCloudPage({ params }: { params: { sectionId: string } }) {
@@ -20,14 +21,15 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
   async function start() {
     try {
       const session = await startWordCloud({ 
-        sectionId: sectionId as any, 
+        sectionId: sectionId as Id<'sections'>, 
         prompt, 
         showPromptToStudents: showPrompt, 
         allowMultipleAnswers: allowMultiple 
       });
       setOpen(false);
       // delay to allow modal animation to dismiss before navigating
-      setTimeout(() => router.push(`/wordcloud/live/${(session as any)._id}`), 120);
+      const idStr = typeof session === 'string' ? session : String((session as unknown as { _id?: string })._id ?? '');
+      if (idStr) setTimeout(() => router.push(`/wordcloud/live/${idStr}`), 120);
     } catch {
       alert('Failed to start word cloud. Please try again.');
     }

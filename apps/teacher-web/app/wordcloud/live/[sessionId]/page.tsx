@@ -1,12 +1,13 @@
 "use client";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
 
 type Word = { word: string; count: number };
-type Session = { id: string; prompt: string; showPromptToStudents: boolean; allowMultipleAnswers: boolean };
+// removed unused Session type
 
 export default function WordCloudLivePage({ params }: { params: { sessionId: string } }) {
   const sessionId = params.sessionId;
@@ -16,19 +17,19 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
   // Convex hooks
   const session = useQuery(
     api.functions.wordcloud.getActiveSession,
-    authReady ? { sessionId: params.sessionId as any } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'> } : "skip"
   );
-  const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as any } : "skip");
+  const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as Id<'sections'> } : "skip");
   const answers = useQuery(
     api.functions.wordcloud.getAnswers,
-    authReady ? { sessionId: params.sessionId as any } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'> } : "skip"
   );
   const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
   const closeSession = useMutation(api.functions.wordcloud.closeSession);
 
   // Extract words from Convex data and aggregate counts
   const words = (() => {
-    const arr = (answers as any[]) || [];
+    const arr = (answers as unknown as Array<{ text?: string }> | undefined) || [];
     const map = new Map<string, number>();
     for (const a of arr) {
       const t = String(a?.text || '').trim();
@@ -45,9 +46,9 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
     const start = () => {
       if (intervalId !== null) return;
       // send one immediately when visible
-      try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+      try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'> }); } catch { /* ignore */ }
       intervalId = window.setInterval(() => {
-        try { void heartbeat({ sessionId: params.sessionId as any }); } catch {}
+        try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'> }); } catch { /* ignore */ }
       }, 10000);
     };
     const stop = () => { if (intervalId !== null) { window.clearInterval(intervalId); intervalId = null; } };
@@ -160,6 +161,7 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 
   // Physics loop
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const run = () => {
       const map = nodes.current;
       const { w: W, h: H } = containerSize.current;
@@ -353,8 +355,8 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
             className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
             onClick={async () => {
               try {
-                await closeSession({ sessionId: params.sessionId as any });
-              } catch {/* ignore */}
+                await closeSession({ sessionId: params.sessionId as Id<'wordCloudSessions'> });
+              } catch { /* ignore */ }
               history.back();
             }}
           >
