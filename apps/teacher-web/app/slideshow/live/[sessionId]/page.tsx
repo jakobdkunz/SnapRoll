@@ -14,20 +14,7 @@ type DrawingPoint = { x: number; y: number };
 type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: DrawingMode };
 type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
-type SessionDetails = {
-  id: string;
-  title: string;
-  filePath: string;
-  mimeType: string;
-  totalSlides: number | null;
-  currentSlide: number;
-  showOnDevices: boolean;
-  allowDownload: boolean;
-  requireStay: boolean;
-  preventJump: boolean;
-};
-
-type Slide = { id: string; index: number; imageUrl: string; width?: number | null; height?: number | null };
+// (removed unused SessionDetails and Slide type declarations)
 
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
