@@ -6,8 +6,6 @@ import { api } from '@snaproll/convex-client';
 import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 
-type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };
-
 export default function TeacherProfilePage() {
   const router = useRouter();
   const [teacherId, setTeacherId] = useState<string | null>(null);

@@ -10,7 +10,7 @@ import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useAuth } from '@clerk/nextjs';
 import { isValidEmail } from '@snaproll/lib';
-import { HiOutlineTrash, HiOutlinePencilSquare, HiChevronDown, HiOutlineArrowUpTray } from 'react-icons/hi2';
+import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
 
 type Student = { id: Id<'users'>; email: string; firstName: string; lastName: string };
