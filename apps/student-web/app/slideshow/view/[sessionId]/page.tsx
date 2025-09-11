@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState } from 'react';
+import type { Id } from '@snaproll/convex-client';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
 import { api } from '@snaproll/convex-client';
@@ -10,20 +11,19 @@ import { HiOutlineArrowLeft } from 'react-icons/hi2';
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
 type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: 'pen' | 'eraser' };
-type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
 // removed unused SessionResponse/SlideItem/SlidesResponse types
 
 export default function SlideshowViewPage({ params }: { params: { sessionId: string } }) {
   const router = useRouter();
-  const { sessionId } = params;
-  const [error, setError] = useState<string | null>(null);
+  const sessionId = params.sessionId as Id<'slideshowSessions'>;
+  const error: string | null = null;
 
   // Convex hooks
-  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionId as any });
+  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId });
   const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any } : "skip");
-  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionId as any });
-  const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionId as any });
+  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId });
+  const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId });
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -32,7 +32,6 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   
   // Drawing state
   const [showDrawings, setShowDrawings] = useState(true);
-  const [localDrawings, setLocalDrawings] = useState<SlideDrawings>({});
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
@@ -60,15 +59,6 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
   // Set loading state based on Convex queries
   const loading = !details || !slides;
 
-  // Recompute frame on resize
-  useEffect(() => {
-    if (!imgAspect) return;
-    const onResize = () => recomputeFrame(imgAspect);
-    window.addEventListener('resize', onResize);
-    onResize();
-    return () => window.removeEventListener('resize', onResize);
-  }, [imgAspect]);
-
   // Recompute frame when aspect changes or on resize
   useEffect(() => {
     if (!imgAspect) return;
@@ -94,8 +84,11 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     }
   }, [frameSize]);
 
-  // Extract drawings from Convex data
-  const slideDrawings: Record<number, DrawingStroke[]> = (drawings as any) || {};
+  // Extract drawings from Convex data, memoized to stabilize deps
+  const slideDrawings = useMemo<Record<number, DrawingStroke[]>>(
+    () => ((drawings as any) ?? {}),
+    [drawings]
+  );
 
   // Redraw all strokes when drawings change or showDrawings changes or frame size changes
   useEffect(() => {
@@ -206,6 +199,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
                 className="rounded-xl overflow-hidden shadow bg-white flex items-center justify-center relative"
                 style={frameSize ? { width: `${frameSize.w}px`, height: `${frameSize.h}px` } : undefined}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={slide.imageUrl}
                   alt={`Slide ${slide.index}`}

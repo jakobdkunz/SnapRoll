@@ -2,13 +2,11 @@
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { convexApi, api } from '@snaproll/convex-client';
-import type { Id } from '../../../../convex/_generated/dataModel';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
-
-type TeacherProfile = { teacher: { id: string; email: string; firstName: string; lastName: string } };
 
 export function TeacherHeaderRight() {
   const router = useRouter();
@@ -68,8 +66,8 @@ export function TeacherHeaderRight() {
     function handleEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') { setOpen(false); setProfileOpen(false); }
     }
-    function handleFocus() {}
-    function handleStorage() {}
+    function handleFocus() { /* no-op */ }
+    function handleStorage() { /* no-op */ }
     if (open) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscape);
@@ -127,7 +125,7 @@ export function TeacherHeaderRight() {
 
   const { signOut } = useClerk();
   function logout() {
-    try { signOut().catch(() => {}); } catch {}
+    try { signOut().catch(() => { /* no-op */ }); } catch (err) { if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') { /* eslint-disable-next-line no-console */ console.warn('Sign out failed', err); } }
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);

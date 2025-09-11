@@ -3,8 +3,8 @@ import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button, TextInput, Skeleton } from '@snaproll/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
-import { api } from '../../../../convex/_generated/api';
-import type { Id } from '../../../../convex/_generated/dataModel';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
 
@@ -177,37 +177,37 @@ export default function SectionsPage() {
       return () => window.clearTimeout(id);
     }
     // Coerce Convex payload to local UI type
-    const anyInt = interactive as any;
+    const anyInt = interactive as Record<string, unknown> | null;
     if (anyInt && typeof anyInt === 'object') {
-      if (anyInt.kind === 'wordcloud') {
+      if (anyInt['kind'] === 'wordcloud') {
         setRenderInteractive({
           kind: 'wordcloud',
-          sessionId: String(anyInt.sessionId),
-          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
-          prompt: typeof anyInt.prompt === 'string' ? anyInt.prompt : undefined,
-          showPromptToStudents: typeof anyInt.showPromptToStudents === 'boolean' ? anyInt.showPromptToStudents : undefined,
-          allowMultipleAnswers: typeof anyInt.allowMultipleAnswers === 'boolean' ? anyInt.allowMultipleAnswers : undefined,
-          hasSubmitted: typeof anyInt.hasSubmitted === 'boolean' ? anyInt.hasSubmitted : undefined,
+          sessionId: String(anyInt['sessionId']),
+          sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
+          prompt: typeof anyInt['prompt'] === 'string' ? (anyInt['prompt'] as string) : undefined,
+          showPromptToStudents: typeof anyInt['showPromptToStudents'] === 'boolean' ? (anyInt['showPromptToStudents'] as boolean) : undefined,
+          allowMultipleAnswers: typeof anyInt['allowMultipleAnswers'] === 'boolean' ? (anyInt['allowMultipleAnswers'] as boolean) : undefined,
+          hasSubmitted: typeof anyInt['hasSubmitted'] === 'boolean' ? (anyInt['hasSubmitted'] as boolean) : undefined,
         });
         return;
       }
-      if (anyInt.kind === 'poll') {
+      if (anyInt['kind'] === 'poll') {
         setRenderInteractive({
           kind: 'poll',
-          sessionId: String(anyInt.sessionId),
-          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
-          prompt: typeof anyInt.prompt === 'string' ? anyInt.prompt : undefined,
-          options: Array.isArray(anyInt.options) ? anyInt.options.map((o: unknown) => String(o)) : [],
-          hasSubmitted: typeof anyInt.hasSubmitted === 'boolean' ? anyInt.hasSubmitted : undefined,
+          sessionId: String(anyInt['sessionId']),
+          sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
+          prompt: typeof anyInt['prompt'] === 'string' ? (anyInt['prompt'] as string) : undefined,
+          options: Array.isArray(anyInt['options']) ? (anyInt['options'] as unknown[]).map((o: unknown) => String(o)) : [],
+          hasSubmitted: typeof anyInt['hasSubmitted'] === 'boolean' ? (anyInt['hasSubmitted'] as boolean) : undefined,
         });
         return;
       }
-      if (anyInt.kind === 'slideshow') {
+      if (anyInt['kind'] === 'slideshow') {
         setRenderInteractive({
           kind: 'slideshow',
-          sessionId: String(anyInt.sessionId),
-          sectionId: anyInt.sectionId ? String(anyInt.sectionId) : undefined,
-          showOnDevices: typeof anyInt.showOnDevices === 'boolean' ? anyInt.showOnDevices : undefined,
+          sessionId: String(anyInt['sessionId']),
+          sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
+          showOnDevices: typeof anyInt['showOnDevices'] === 'boolean' ? (anyInt['showOnDevices'] as boolean) : undefined,
         });
         return;
       }
@@ -396,7 +396,7 @@ export default function SectionsPage() {
             </div>
             {(
               // If multiple answers are NOT allowed and either server says submitted or we just submitted
-              ((renderInteractive as any).allowMultipleAnswers === false && ((renderInteractive as any).hasSubmitted || !!submitMsg))
+              (((renderInteractive as unknown as { allowMultipleAnswers?: boolean }).allowMultipleAnswers === false) && (((renderInteractive as unknown as { hasSubmitted?: boolean }).hasSubmitted || false) || !!submitMsg))
             ) ? (
               <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
                 Thanks! Your response was received.
@@ -433,7 +433,7 @@ export default function SectionsPage() {
               <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
             </div>
             <div className="space-y-2">
-              {((renderInteractive as any).hasSubmitted || !!submitMsg) ? (
+              {(((renderInteractive as unknown as { hasSubmitted?: boolean }).hasSubmitted || false) || !!submitMsg) ? (
                 <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
                   Thanks! Your response was received.
                 </div>
@@ -443,7 +443,7 @@ export default function SectionsPage() {
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: renderInteractive.sessionId as unknown as Id<'pollSessions'>, optionIdx: i });
+                        await submitPoll({ sessionId: renderInteractive.sessionId as Id<'pollSessions'>, optionIdx: i });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');

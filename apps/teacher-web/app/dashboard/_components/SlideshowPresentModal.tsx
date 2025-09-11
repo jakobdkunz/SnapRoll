@@ -1,12 +1,13 @@
 "use client";
 import { useState } from 'react';
 import { Modal, Button, TextInput } from '@snaproll/ui';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import type { Id } from '@snaproll/convex-client';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@snaproll/convex-client';
 
 export default function SlideshowPresentModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
-  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, 'skip' as any);
+  const teacherId = (typeof window !== 'undefined' ? (localStorage.getItem('snaproll.teacherId') || null) : null) as Id<'users'> | null;
+  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : 'skip');
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
   const [selectedAssetId, setSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -43,7 +44,7 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
               <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">72h retention</span>
             </div>
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {!getAssetsByTeacher || (getAssetsByTeacher as any[]).length === 0 ? (
+              {!getAssetsByTeacher || (getAssetsByTeacher as unknown[]).length === 0 ? (
                 <div className="text-sm text-slate-500 text-center py-8 bg-slate-50 rounded-lg border-2 border-dashed border-slate-200">
                   No recent slideshows
                 </div>

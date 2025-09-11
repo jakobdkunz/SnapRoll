@@ -5,7 +5,8 @@ import { useAuth } from '@clerk/nextjs';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@snaproll/lib';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '@snaproll/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
 
@@ -37,9 +38,10 @@ export default function HistoryPage() {
   const [limit, setLimit] = useState<number>(12);
 
   // Convex hooks
+  const sectionId = params.id as unknown as Id<'sections'>;
   const history = useQuery(
     api.functions.history.getSectionHistory,
-    isAuthReady && params.id ? { sectionId: params.id as any, offset, limit } : "skip"
+    isAuthReady && params.id ? { sectionId, offset, limit } : "skip"
   );
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const requestIdRef = useRef(0);
@@ -80,30 +82,30 @@ export default function HistoryPage() {
     setTooltip(t => ({ ...t, visible: false }));
   }
 
-  function TooltipOverlay() {
+  function TooltipOverlay({ visible, text, anchorX, anchorY }: { visible: boolean; text: string; anchorX: number; anchorY: number }) {
     const ref = useRef<HTMLDivElement | null>(null);
-    const [pos, setPos] = useState<{ left: number; top: number }>({ left: tooltip.anchorX, top: tooltip.anchorY });
+    const [pos, setPos] = useState<{ left: number; top: number }>({ left: anchorX, top: anchorY });
     useLayoutEffect(() => {
-      if (!tooltip.visible) return;
+      if (!visible) return;
       const el = ref.current;
       if (!el) return;
       const vw = window.innerWidth;
       const margin = 8;
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      const left = Math.min(vw - margin - w, Math.max(margin, tooltip.anchorX - w / 2));
-      let top = tooltip.anchorY - margin - h;
-      if (top < margin) top = tooltip.anchorY + margin;
+      const left = Math.min(vw - margin - w, Math.max(margin, anchorX - w / 2));
+      let top = anchorY - margin - h;
+      if (top < margin) top = anchorY + margin;
       setPos({ left, top });
-    }, [tooltip]);
-    if (!tooltip.visible) return null;
+    }, [visible, anchorX, anchorY]);
+    if (!visible) return null;
     return createPortal(
       <div
         ref={ref}
         style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 9999, maxWidth: 'calc(100vw - 16px)' }}
         className="pointer-events-none px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg"
       >
-        {tooltip.text}
+        {text}
       </div>,
       document.body
     );
@@ -222,7 +224,7 @@ export default function HistoryPage() {
       setExportOpen(true);
       setExporting(true);
       if (!params.id) throw new Error('Missing section id');
-      const data = await convex.query((api as any).functions.history.exportSectionHistory, { sectionId: params.id as any });
+      const data = await convex.query(api.functions.history.exportSectionHistory, { sectionId });
       const { days, rows } = data as { days: string[]; rows: Array<{ firstName: string; lastName: string; email: string; statuses: string[] }>; };
       const header = ['First Name', 'Last Name', 'Email', ...days];
       const lines = [header];
@@ -261,9 +263,9 @@ export default function HistoryPage() {
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     try {
       await updateManualStatus({
-        classDayId: classDayId as any,
-        studentId: studentId as any,
-        status: newStatus as any,
+        classDayId: classDayId as unknown as Id<'classDays'>,
+        studentId: studentId as unknown as Id<'users'>,
+        status: newStatus,
       });
       // Convex reactivity will refresh the history query automatically
     } catch (error) {
@@ -508,7 +510,7 @@ export default function HistoryPage() {
       )}
       </div>
       )}
-      <TooltipOverlay />
+      <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
       {/* Export modal */}
       <Modal open={exportOpen} onClose={() => (exporting ? null : setExportOpen(false))}>
         <Card className="p-6 w-[90vw] max-w-md space-y-4">
