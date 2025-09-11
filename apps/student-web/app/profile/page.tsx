@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { Card, TextInput } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
+import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
@@ -13,7 +14,7 @@ export default function StudentProfilePage() {
   const [email, setEmail] = useState('');
 
   // Get student data
-  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as any } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as unknown as Id<'users'> } : "skip");
 
   useEffect(() => {
     const id = localStorage.getItem('snaproll.studentId');

@@ -1,8 +1,9 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Button } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
+import { api } from '@snaproll/convex-client';
 import { useQuery } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 
@@ -11,9 +12,7 @@ type DrawingPoint = { x: number; y: number };
 type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: 'pen' | 'eraser' };
 type SlideDrawings = { [slideIndex: number]: DrawingStroke[] };
 
-type SessionResponse = { id: string; title: string; currentSlide: number };
- type SlideItem = { id: string; index: number; imageUrl: string };
- type SlidesResponse = { slides: SlideItem[] };
+// removed unused SessionResponse/SlideItem/SlidesResponse types
 
 export default function SlideshowViewPage({ params }: { params: { sessionId: string } }) {
   const router = useRouter();
