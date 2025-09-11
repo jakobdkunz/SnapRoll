@@ -11,7 +11,6 @@ import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
 
 type Student = { id: string; firstName: string; lastName: string; email: string };
-type Day = { id: string; date: string; attendanceCode: string };
 type Record = { 
   classDayId: string; 
   studentId: string; 
@@ -24,7 +23,6 @@ type Record = {
     createdAt: string;
   };
 };
-type StudentRecord = { studentId: string; records: Record[] };
 
 type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
@@ -32,7 +30,7 @@ export default function HistoryPage() {
   const params = useParams<{ id: string }>();
   const { isLoaded, isSignedIn } = useAuth();
   const isAuthReady = isLoaded && isSignedIn;
-  const [teacherId, setTeacherId] = useState<string | null>(null);
+  //
   const [offset, setOffset] = useState<number>(0);
   // Server-side window equals the number of columns that fit
   const [limit, setLimit] = useState<number>(12);
@@ -44,7 +42,7 @@ export default function HistoryPage() {
     isAuthReady && params.id ? { sectionId, offset, limit } : "skip"
   );
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
-  const requestIdRef = useRef(0);
+  //
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -59,7 +57,7 @@ export default function HistoryPage() {
   const STUDENT_COL_BASE = isCompact ? 120 : 220; // narrower when compact
   const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
-  const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
+  // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint (unused)
   const [initialized, setInitialized] = useState(false);
   const [leftWidth, setLeftWidth] = useState<number>(STUDENT_COL_BASE);
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -203,10 +201,7 @@ export default function HistoryPage() {
   const totalDays = history?.totalDays || 0;
 
 
-  useEffect(() => {
-    const id = localStorage.getItem('snaproll.teacherId');
-    setTeacherId(id);
-  }, [params.id]);
+  //
 
   // Set loading state based on Convex query
   const isFetching = !history;
