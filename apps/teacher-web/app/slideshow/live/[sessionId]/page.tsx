@@ -34,7 +34,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
   const heartbeat = useMutation(api.functions.slideshow.heartbeat);
   const closeSession = useMutation(api.functions.slideshow.closeSession);
   const gotoSlideMutation = useMutation(api.functions.slideshow.gotoSlide);
-  const saveDrawing = useMutation(api.functions.slideshow.saveDrawing);
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
