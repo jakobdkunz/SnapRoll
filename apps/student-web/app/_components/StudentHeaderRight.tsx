@@ -20,8 +20,8 @@ export function StudentHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const currentUser = useQuery((api as any).functions.auth.getCurrentUser);
-  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id as any } : "skip");
+  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id } : "skip");
 
   useEffect(() => {
     setIsClient(true);
@@ -66,7 +66,7 @@ export function StudentHeaderRight() {
     setStudentId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    try { signOut().catch(() => {}); } catch {}
+    try { signOut().catch(() => {}); } catch (e) { void e; }
     router.push('/');
   }
 
