@@ -61,16 +61,18 @@ export default function DashboardPage() {
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
     { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
-    { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
-    { id: 'gradient-7', name: 'Peach', class: 'gradient-7' },
     { id: 'gradient-2', name: 'Pink Red', class: 'gradient-2' },
+    { id: 'gradient-7', name: 'Peach', class: 'gradient-7' },
+    { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
   ];
 
   function pickAutoGradient(): string {
     const available = gradients.map((g) => g.id);
     const used = new Set((sections || []).map((s) => s.gradient || ''));
-    const next = available.find((id) => !used.has(id));
-    return next || (gradients[0]?.id ?? 'gradient-3');
+    const unused = available.filter((id) => !used.has(id));
+    if (unused.length > 0) return unused[0];
+    const randomIndex = Math.floor(Math.random() * available.length);
+    return available[randomIndex] || 'gradient-3';
   }
 
   useEffect(() => { setMounted(true); }, []);
