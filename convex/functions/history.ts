@@ -36,7 +36,8 @@ export const getSectionHistory = query({
     const totalDays = allClassDays.length;
     const pageRaw = allClassDays.slice(args.offset, args.offset + args.limit);
     const pageKept = pageRaw.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
-    const pageForDisplay = [...pageKept].reverse(); // newest first within the window
+    // Preserve ascending order within the window so columns render oldest → newest (left → right)
+    const pageForDisplay = pageKept;
     const classDayIds = pageKept.map(cd => cd._id);
     
     // Get all students enrolled in this section
