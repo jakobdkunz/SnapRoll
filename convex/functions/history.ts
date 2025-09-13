@@ -76,6 +76,7 @@ export const getSectionHistory = query({
     // Apply pagination (oldest first overall; offset points to oldest page)
     const totalDays = filteredDays.length;
     const page = filteredDays.slice(args.offset, args.offset + args.limit);
+    const pageForDisplay = [...page].reverse(); // newest first within the window
     const classDayIds = page.map(cd => cd._id);
     
     // Get all students enrolled in this section
@@ -143,7 +144,7 @@ export const getSectionHistory = query({
     const studentRecords = students.map(student => {
       if (!student) return null;
       
-      const records = page.map(classDay => {
+      const records = pageForDisplay.map(classDay => {
         const attendanceRecord = attendanceMap.get(`${classDay._id}-${student._id}`);
         const manualChange = manualChangeMap.get(`${classDay._id}-${student._id}`);
         
@@ -192,7 +193,7 @@ export const getSectionHistory = query({
         lastName: s!.lastName,
         email: s!.email,
       })),
-      days: page.map(cd => ({
+      days: pageForDisplay.map(cd => ({
         id: cd._id,
         // Keep ISO string of ET date (YYYY-MM-DD)
         date: new Date(getEasternDayBounds(cd.date as number).startMs).toISOString().split('T')[0],
