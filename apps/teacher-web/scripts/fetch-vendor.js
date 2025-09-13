@@ -44,6 +44,15 @@ const files = [
     name: 'pptxjs.css',
     url: 'https://cdn.jsdelivr.net/npm/pptxjs@1.21.1/dist/pptxjs.css',
   },
+  // Add PDF.js vendor files for offline/local loading
+  {
+    name: 'pdf.min.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js',
+  },
+  {
+    name: 'pdf.worker.min.js',
+    url: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js',
+  },
 ];
 
 async function ensureDir(dir) {

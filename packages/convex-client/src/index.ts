@@ -105,7 +105,7 @@ export const convexApi = {
     getAssetsByTeacher: api.functions.slideshow.getAssetsByTeacher,
     startSlideshow: api.functions.slideshow.startSlideshow,
     getActiveSlideshow: api.functions.slideshow.getActiveSlideshow,
-    closeSlideshow: api.functions.slideshow.closeSlideshow,
+    closeSlideshow: api.functions.slideshow.closeSession,
     gotoSlide: api.functions.slideshow.gotoSlide,
     heartbeat: api.functions.slideshow.heartbeat,
     addSlide: api.functions.slideshow.addSlide,

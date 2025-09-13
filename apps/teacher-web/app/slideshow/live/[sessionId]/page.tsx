@@ -249,7 +249,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       // Persist via Convex if implemented in future
     } else if (currentStroke) {
       // Pen mode: save the completed stroke
-      const currentSlideIndex = details?.currentSlide || 1;
       // const currentSlideDrawings = drawings[currentSlideIndex] || [];
       // Persist drawings to server in a future enhancement
       setCurrentStroke(null);
@@ -257,7 +256,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       // Save drawings to server
       // Persist via Convex if implemented
     }
-  }, [isDrawing, currentStroke, drawings, sessionIdTyped, details?.currentSlide, drawingMode]);
+  }, [isDrawing, currentStroke, drawings, drawingMode]);
 
   const clearDrawings = useCallback(() => {
     const canvas = canvasRef.current;
@@ -299,6 +298,8 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     }
   }, [frameSize]);
 
+  const currentSlideIndex = useMemo(() => details?.currentSlide || 1, [details?.currentSlide]);
+
   // Redraw all strokes when drawings change or frame size changes
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -307,7 +308,6 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    const currentSlideIndex = details?.currentSlide || 1;
     const currentSlideDrawings = drawings[currentSlideIndex] || [];
     
     currentSlideDrawings.forEach((stroke: DrawingStroke) => {
@@ -328,7 +328,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
       
       ctx.stroke();
     });
-  }, [drawings, frameSize, details?.currentSlide]);
+  }, [drawings, frameSize, currentSlideIndex]);
 
   // Load session details
   useEffect(() => {
@@ -346,6 +346,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     return () => { cancelled = true; };
   }, [sessionIdTyped]);
 
+  const sessionIdRef = useRef<Id<'slideshowSessions'>>(sessionIdTyped);
+  useEffect(() => { sessionIdRef.current = sessionIdTyped; }, [sessionIdTyped]);
+
   // Remove redundant polling; `slidesQuery` already subscribes via Convex useQuery
   // (left intentionally blank)
 
@@ -354,15 +357,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: sessionIdTyped }); } catch { /* ignore */ }
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdTyped }); } catch { /* ignore */ } }, 10000);
+      try { void heartbeat({ sessionId: sessionIdRef.current }); } catch { /* ignore */ }
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdRef.current }); } catch { /* ignore */ } }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
     document.addEventListener('visibilitychange', onVis);
     onVis();
     return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
-  }, [sessionIdTyped, heartbeat]);
+  }, [heartbeat]);
 
   // Recompute frame when aspect changes or on resize
   useEffect(() => {
@@ -377,7 +380,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (working || !details) return;
     setWorking(true);
     try {
-      await gotoSlideMutation({ sessionId: sessionIdTyped, slideNumber });
+      await gotoSlideMutation({ sessionId: sessionIdRef.current, slideNumber });
     } catch (e) {
       console.error('Failed to goto slide:', e);
     } finally {
@@ -461,14 +464,14 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const anyWin = window as any;
     if (!anyWin.pdfjsLib) {
-      // Use legacy UMD build which exposes window.pdfjsLib
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js');
-      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js');
+      // Load local vendored copies instead of CDN
+      await loadScript('/vendor/pdf.min.js');
+      await loadScript('/vendor/pdf.worker.min.js');
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pdfjsLib = (window as any).pdfjsLib;
     if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdf.worker.min.js';
     }
   }
 
@@ -505,16 +508,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
         const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b as Blob), 'image/png'));
         await uploadPng(i, blob, canvas.width, canvas.height);
       }
-      setRenderMsg('Done. Refreshing…');
-      try {
-        const res = await fetch(`/api/slideshow/${sessionId}/slides`, { credentials: 'include' });
-        const json = await res.json();
-        setRenderMsg('');
-        const parsed = (json as unknown as { slides?: Array<{ index: number; imageUrl: string }> }).slides || [];
-        setSlides(parsed);
-      } catch {
-        // ignore
-      }
+      setRenderMsg('Done.');
     } catch (e) {
       setError((e as Error)?.message || 'Failed to render PDF');
     } finally {
