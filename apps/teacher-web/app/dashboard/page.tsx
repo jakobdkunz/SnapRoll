@@ -53,22 +53,24 @@ export default function DashboardPage() {
   const sections = (sectionsResult ?? []) as SectionDoc[];
 
   const gradients = [
-    { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
-    { id: 'gradient-2', name: 'Pink Red', class: 'gradient-2' },
+    // First row
     { id: 'gradient-3', name: 'Blue Cyan', class: 'gradient-3' },
     { id: 'gradient-4', name: 'Green Teal', class: 'gradient-4' },
     { id: 'gradient-5', name: 'Pink Yellow', class: 'gradient-5' },
-    { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
-    { id: 'gradient-7', name: 'Peach', class: 'gradient-7' },
-    { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
+    // Remaining, spaced to avoid similar neighbors
+    { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
+    { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
+    { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
+    { id: 'gradient-7', name: 'Peach', class: 'gradient-7' },
+    { id: 'gradient-2', name: 'Pink Red', class: 'gradient-2' },
   ];
 
   function pickAutoGradient(): string {
     const available = gradients.map((g) => g.id);
     const used = new Set((sections || []).map((s) => s.gradient || ''));
     const next = available.find((id) => !used.has(id));
-    return next || 'gradient-1';
+    return next || (gradients[0]?.id ?? 'gradient-3');
   }
 
   useEffect(() => { setMounted(true); }, []);
