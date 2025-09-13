@@ -61,13 +61,12 @@ export const getSectionHistory = query({
     );
     const keepByDay = new Set<Id<'classDays'>>(existenceChecks.filter((r) => r.keep).map((r) => r.id));
 
-    const filteredDays = allClassDays.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
-    
-    // Apply pagination (oldest first overall; offset points to oldest page)
-    const totalDays = filteredDays.length;
-    const page = filteredDays.slice(args.offset, args.offset + args.limit);
-    const pageForDisplay = [...page].reverse(); // newest first within the window
-    const classDayIds = page.map(cd => cd._id);
+    // Apply pagination against all class days to avoid mixing newer kept days into old pages
+    const totalDays = allClassDays.length;
+    const pageRaw = allClassDays.slice(args.offset, args.offset + args.limit);
+    const pageKept = pageRaw.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
+    const pageForDisplay = [...pageKept].reverse(); // newest first within the window
+    const classDayIds = pageKept.map(cd => cd._id);
     
     // Get all students enrolled in this section
     const enrollments = await ctx.db
