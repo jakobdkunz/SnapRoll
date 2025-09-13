@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Card, Button, Skeleton } from '@snaproll/ui';
+import { Card, Button, Skeleton, TextInput } from '@snaproll/ui';
 import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
 import { api } from '@snaproll/convex-client';
@@ -27,10 +27,23 @@ export default function AttendancePage() {
 
   // Convex hooks
   const startAttendance = useMutation(api.functions.attendance.startAttendance);
+  const startAttendanceForDate = useMutation(api.functions.attendance.startAttendanceForDate);
   const sectionId = (params.id as unknown) as Id<'sections'>;
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0,10));
+  const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
+
+  // Convert YYYY-MM-DD to an epoch that safely maps to the intended ET day
+  const selectedEpochMs = (() => {
+    if (!selectedDate) return undefined;
+    const [y, m, d] = selectedDate.split('-').map((s) => Number(s));
+    if (!y || !m || !d) return undefined;
+    // Use 12:00 UTC to avoid DST/zone edge cases; server normalizes to ET midnight
+    return Date.UTC(y, m - 1, d, 12, 0, 0, 0);
+  })();
+
   const getAttendanceStatus = useQuery(
     api.functions.attendance.getAttendanceStatus,
-    isAuthReady && params.id ? { sectionId } : "skip"
+    isAuthReady && params.id ? (devMode && selectedEpochMs ? { sectionId, date: selectedEpochMs } : { sectionId }) : "skip"
   );
   const section = useQuery(
     api.functions.sections.get,
@@ -66,7 +79,9 @@ export default function AttendancePage() {
     isStartingRef.current = true;
     setIsStarting(true);
     try {
-      const classDayId = await startAttendance({ sectionId });
+      const classDayId = devMode && selectedEpochMs
+        ? await startAttendanceForDate({ sectionId, date: selectedEpochMs })
+        : await startAttendance({ sectionId });
       if (classDayId) {
         // The attendance status will be updated via the Convex query
         await loadStatus();
@@ -77,7 +92,7 @@ export default function AttendancePage() {
       isStartingRef.current = false;
       setIsStarting(false);
     }
-  }, [sectionId, loadStatus, startAttendance]);
+  }, [sectionId, loadStatus, startAttendance, startAttendanceForDate, devMode, selectedEpochMs]);
 
   useEffect(() => {
     if (getAttendanceStatus) {
@@ -90,12 +105,14 @@ export default function AttendancePage() {
   }, [getAttendanceStatus]);
 
   useEffect(() => {
+    // In dev mode with a selected date, avoid auto-starting to let user control the day
+    if (devMode) return;
     // If there is no active attendance or no code yet, start immediately (once)
     if (status && (!status.hasActiveAttendance || !status.attendanceCode) && !startedOnLoadRef.current) {
       startedOnLoadRef.current = true;
       void start();
     }
-  }, [status, start]);
+  }, [status, start, devMode]);
 
   useEffect(() => {
     // Briefly pulse the code when it changes
@@ -180,6 +197,23 @@ export default function AttendancePage() {
             )}
           </div>
         </div>
+
+        {devMode && (
+          <div className="mb-4">
+            <Card className="p-4 bg-white/80 backdrop-blur">
+              <div className="flex items-end gap-3 flex-wrap">
+                <div className="text-sm text-slate-600">Developer day picker</div>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-slate-700">Day</label>
+                  <TextInput type="date" value={selectedDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value)} />
+                </div>
+                <Button onClick={start} disabled={isStarting}>
+                  {isStarting ? 'Generating…' : 'Start/Rotate code for day'}
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
         
         {/* Attendance Code Widget - Centered */}
         <div className="flex-1 flex items-center justify-center">
