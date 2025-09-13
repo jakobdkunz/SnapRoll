@@ -15,30 +15,19 @@ export const getSectionHistory = query({
     const teacher = await requireTeacher(ctx);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
-    // Get all class days for this section, ordered by date asc (use date index)
+    // Only include class days that have activity (filter on hasActivity)
     const rawDays = await ctx.db
       .query("classDays")
-      .withIndex("by_section_date", (q) => q.eq("sectionId", args.sectionId))
-      .order("asc")
+      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .filter((q) => q.eq(q.field("hasActivity"), true))
       .collect();
+    // Ensure ascending order by date for display
+    const allClassDays = rawDays.sort((a, b) => (a.date as number) - (b.date as number));
 
-    // No deduping: rely on invariants that one class day per ET day exists per section
-    const allClassDays = rawDays;
-    
-    // Filter out days that would render as all auto-ABSENT (no records and no non-BLANK manual changes)
-    const allIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
-    const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
-    for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-    // No filtering: include all days; let UI show BLANK when appropriate
-    const keepByDay = new Set<Id<'classDays'>>(allIds);
-
-    // Apply pagination against all class days to avoid mixing newer kept days into old pages
+    // Apply pagination against active class days
     const totalDays = allClassDays.length;
-    const pageRaw = allClassDays.slice(args.offset, args.offset + args.limit);
-    const pageKept = pageRaw.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
-    // Preserve ascending order within the window so columns render oldest → newest (left → right)
-    const pageForDisplay = pageKept;
-    const classDayIds = pageKept.map(cd => cd._id);
+    const pageForDisplay = allClassDays.slice(args.offset, args.offset + args.limit);
+    const classDayIds = pageForDisplay.map(cd => cd._id);
     
     // Get all students enrolled in this section
     const enrollments = await ctx.db
@@ -202,7 +191,7 @@ export const getStudentHistory = query({
             ctx.db
               .query("classDays")
               .withIndex("by_section", (q) => q.eq("sectionId", id))
-              .order("desc")
+              .filter((q) => q.eq(q.field("hasActivity"), true))
               .collect()
           )
         )).flat()
@@ -223,50 +212,12 @@ export const getStudentHistory = query({
       }
     }
 
-    // Unique date keys, newest first
+    // Unique date keys, newest first, using only active days
     const allDateKeys = Array.from(dateKeyToSectionDay.keys()).sort((a, b) => b - a);
 
-    // Filter out date keys where every contributing section day would be all auto-ABSENT
-    const allClassDaysForFilter: Array<Doc<'classDays'>> = [];
-    for (const key of allDateKeys) {
-      const sectionMap = dateKeyToSectionDay.get(key)!;
-      for (const [, cd] of sectionMap) allClassDaysForFilter.push(cd as Doc<'classDays'>);
-    }
-    const allIds2 = allClassDaysForFilter.map(cd => cd._id as Id<'classDays'>);
-    const recordedOrManualByDay = new Map<Id<'classDays'>, boolean>();
-    if (allIds2.length > 0) {
-      const existence2 = await Promise.all(
-        allIds2.map(async (id) => {
-          const rec = await ctx.db
-            .query("attendanceRecords")
-            .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-            .filter((q) => q.neq(q.field("status"), "BLANK"))
-            .first();
-          const man = await ctx.db
-            .query("manualStatusChanges")
-            .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-            .filter((q) => q.neq(q.field("status"), "BLANK"))
-            .first();
-          return { id, keep: Boolean(rec || man) };
-        })
-      );
-      for (const { id, keep } of existence2) recordedOrManualByDay.set(id, keep);
-    }
-
-    const filteredDateKeys = allDateKeys.filter((key) => {
-      const sectionMap = dateKeyToSectionDay.get(key)!;
-      for (const [, cd] of sectionMap) {
-        const id = cd._id as Id<'classDays'>;
-        if (recordedOrManualByDay.get(id)) return true; // keep if any section day has records/manual
-        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
-        if (now >= startMs && now < nextStartMs) return true; // keep current ET day
-      }
-      return false; // drop this date (all section days would be auto-absent)
-    });
-
-    // Apply pagination on date keys
-    const totalDays = filteredDateKeys.length;
-    const pageDateKeys = filteredDateKeys.slice(args.offset, args.offset + args.limit);
+    // Apply pagination on active date keys
+    const totalDays = allDateKeys.length;
+    const pageDateKeys = allDateKeys.slice(args.offset, args.offset + args.limit);
 
     // Collect classDayIds for selected page (across sections) to fetch records/overrides for this student
     const pageClassDayIds: Id<'classDays'>[] = [] as unknown as Id<'classDays'>[];
@@ -384,49 +335,13 @@ export const exportSectionHistory = query({
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
     const now = Date.now();
 
-    // Get all class days for this section, ordered by date asc
-    const rawDays = await ctx.db
+    // Get all active class days for this section, ordered by date asc
+    const classDays = (await ctx.db
       .query("classDays")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
-      .order("asc")
-      .collect();
-
-    // Deduplicate by ET calendar day
-    const unique: typeof rawDays = [];
-    const seen = new Set<number>();
-    for (const cd of rawDays) {
-      const { startMs } = getEasternDayBounds(cd.date as number);
-      if (!seen.has(startMs)) {
-        seen.add(startMs);
-        unique.push(cd);
-      }
-    }
-    let classDays = unique;
-
-    // Filter out class days that would be all auto-ABSENT (no records and no non-BLANK manual changes)
-    const allIds3 = classDays.map(cd => cd._id as Id<'classDays'>);
-    const dayById3 = new Map<Id<'classDays'>, Doc<'classDays'>>();
-    for (const cd of classDays) dayById3.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-    const checks3 = await Promise.all(
-      allIds3.map(async (id) => {
-        const rec = await ctx.db
-          .query("attendanceRecords")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const man = await ctx.db
-          .query("manualStatusChanges")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const cd = dayById3.get(id)!;
-        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
-        const isCurrentDay = now >= startMs && now < nextStartMs;
-        return { id, keep: Boolean(rec || man || isCurrentDay) };
-      })
-    );
-    const keepByDay3 = new Set<Id<'classDays'>>(checks3.filter((c) => c.keep).map((c) => c.id));
-    classDays = classDays.filter(cd => keepByDay3.has(cd._id as Id<'classDays'>));
+      .filter((q) => q.eq(q.field("hasActivity"), true))
+      .collect())
+      .sort((a, b) => (a.date as number) - (b.date as number));
     const classDayIds = classDays.map(cd => cd._id as Id<'classDays'>);
 
     // Get enrollments and students

@@ -193,6 +193,8 @@ export const checkIn = mutation({
       }
       // Reset attempts on success
       await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
+      // Mark class day as active on any successful check-in
+      try { await ctx.db.patch(classDay._id, { hasActivity: true }); } catch (err) { void err; }
       return { ok: true, recordId: existingRecord._id };
     } else {
       // Create new record (success)
@@ -213,6 +215,8 @@ export const checkIn = mutation({
       }
       // Reset attempts on success
       await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
+      // Mark class day as active on first successful check-in
+      try { await ctx.db.patch(classDay._id, { hasActivity: true }); } catch (err) { void err; }
       return { ok: true, recordId: id };
     }
   },
@@ -349,16 +353,21 @@ export const updateManualStatus = mutation({
         teacherId: user._id,
         createdAt: Date.now(),
       });
+      // Mark class day as active for any non-BLANK manual change
+      try { await ctx.db.patch(args.classDayId, { hasActivity: true }); } catch (err) { void err; }
       return existingManualChange._id;
     } else {
       // Create new manual change
-      return await ctx.db.insert("manualStatusChanges", {
+      const insertedId = await ctx.db.insert("manualStatusChanges", {
         classDayId: args.classDayId,
         studentId: args.studentId,
         status: args.status,
         teacherId: user._id,
         createdAt: Date.now(),
       });
+      // Mark class day as active for any non-BLANK manual change
+      try { await ctx.db.patch(args.classDayId, { hasActivity: true }); } catch (err) { void err; }
+      return insertedId;
     }
   },
 });
@@ -485,5 +494,55 @@ export const resetCheckinRateLimit = mutation({
       await ctx.db.patch(b._id, { count: 0, windowStart: now, blockedUntil: undefined });
     }
     return { ok: true as const, reset: buckets.length };
+  },
+});
+
+// Backfill helper: Mark historical class days as active if they have any
+// non-BLANK attendance record or manual status change. Restricted to the
+// current instructor's sections, or a single section if provided.
+export const backfillClassDayActivityForTeacher = mutation({
+  args: { sectionId: v.optional(v.id("sections")) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+
+    // Determine sections to process
+    let sectionIds: Id<'sections'>[] = [] as unknown as Id<'sections'>[];
+    if (args.sectionId) {
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, user._id);
+      sectionIds = [args.sectionId as Id<'sections'>];
+    } else {
+      const secs = await ctx.db
+        .query("sections")
+        .withIndex("by_teacher", (q) => q.eq("teacherId", user._id))
+        .collect();
+      sectionIds = secs.map((s) => s._id as Id<'sections'>);
+    }
+
+    let updated = 0;
+    for (const sid of sectionIds) {
+      const days = await ctx.db
+        .query("classDays")
+        .withIndex("by_section", (q) => q.eq("sectionId", sid))
+        .collect();
+      for (const cd of days) {
+        if ((cd as unknown as { hasActivity?: boolean }).hasActivity === true) continue;
+        const anyRecord = await ctx.db
+          .query("attendanceRecords")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", cd._id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
+        const anyManual = await ctx.db
+          .query("manualStatusChanges")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", cd._id))
+          .filter((q) => q.neq(q.field("status"), "BLANK"))
+          .first();
+        if (anyRecord || anyManual) {
+          await ctx.db.patch(cd._id, { hasActivity: true });
+          updated++;
+        }
+      }
+    }
+    return { updated };
   },
 });
