@@ -52,9 +52,7 @@ export default function DashboardPage() {
   const isSectionsLoading = !!teacherId && sectionsResult === undefined;
   const sections = (sectionsResult ?? []) as SectionDoc[];
   const backfillJoinCodes = useMutation(api.functions.sections.backfillJoinCodesForTeacher);
-  const backfillActivity = useMutation(api.functions.attendance.backfillClassDayActivityForTeacher);
-  const [backfilling, setBackfilling] = useState(false);
-  const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? 'false') === 'true';
+  // const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? 'false') === 'true';
 
   const gradients = [
     // First row
@@ -312,32 +310,7 @@ export default function DashboardPage() {
         </div>
           {/* Spacer so the floating button doesn't overlap the last row on mobile */}
           <div className="h-40" aria-hidden="true" />
-          {devMode && (
-            <div className="fixed left-6 bottom-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] z-50">
-              <Button 
-                variant="ghost" 
-                className="inline-flex items-center gap-2"
-                onClick={async () => {
-                  if (backfilling) return;
-                  setBackfilling(true);
-                  try {
-                    await backfillActivity({});
-                    // eslint-disable-next-line no-alert
-                    alert('Backfill completed.');
-                  } catch (e) {
-                    // eslint-disable-next-line no-alert
-                    alert('Backfill failed. Check console for details.');
-                    console.error(e);
-                  } finally {
-                    setBackfilling(false);
-                  }
-                }}
-                disabled={backfilling}
-              >
-                {backfilling ? 'Backfilling…' : 'Backfill Active Days'}
-              </Button>
-            </div>
-          )}
+          {/* dev-only controls removed */}
         </>
       )}
       
