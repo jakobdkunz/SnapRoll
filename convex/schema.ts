@@ -36,10 +36,13 @@ export default defineSchema({
     date: v.number(), // Unix timestamp
     attendanceCode: v.string(),
     attendanceCodeExpiresAt: v.optional(v.number()),
+    hasActivity: v.optional(v.boolean()),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_date", ["sectionId", "date"])
-    .index("by_attendance_code", ["attendanceCode"]),
+    .index("by_attendance_code", ["attendanceCode"])
+    // Helpful for filtering active days per section if needed in the future
+    .index("by_section_active", ["sectionId", "hasActivity"]),
 
   attendanceRecords: defineTable({
     classDayId: v.id("classDays"),
