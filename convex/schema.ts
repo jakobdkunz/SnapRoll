@@ -15,7 +15,7 @@ export default defineSchema({
     title: v.string(),
     gradient: v.optional(v.string()),
     teacherId: v.id("users"),
-    joinCode: v.string(),
+    joinCode: v.optional(v.string()),
   })
     .index("by_teacher", ["teacherId"])
     .index("by_title", ["title"]) 
