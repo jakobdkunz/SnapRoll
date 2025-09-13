@@ -44,6 +44,7 @@ export default function AttendancePage() {
   const [codePulse, setCodePulse] = useState(false);
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   const [sectionTitle, setSectionTitle] = useState<string>('');
+  const [joinCode, setJoinCode] = useState<string>('');
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const loadStatus = useCallback(async () => {
@@ -112,6 +113,8 @@ export default function AttendancePage() {
     if (section) {
       if (section.gradient) setSectionGradient(section.gradient);
       if (section.title) setSectionTitle(section.title);
+      const s = section as { joinCode?: string };
+      if (typeof s.joinCode === 'string' && s.joinCode.length > 0) setJoinCode(s.joinCode);
     }
   }, [section]);
 
@@ -168,7 +171,14 @@ export default function AttendancePage() {
           <div className="justify-self-center text-center">
             <div className="text-lg font-semibold truncate max-w-[80vw]">{sectionTitle || 'Section'}</div>
           </div>
-          <div />
+          <div className="justify-self-end">
+            {joinCode && (
+              <div className="inline-flex items-center gap-2 bg-white/80 border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700">
+                <span className="uppercase tracking-wide text-slate-500">Join code</span>
+                <span className="tabular-nums font-semibold">{joinCode}</span>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Attendance Code Widget - Centered */}

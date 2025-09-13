@@ -56,10 +56,29 @@ export const create = mutation({
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     const title = (args.title || "").trim();
     if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
+    // Generate a unique 6-digit join code (000000-999999)
+    let joinCode = "";
+    let attempts = 0;
+    while (attempts < 30) {
+      const n = Math.floor(Math.random() * 1000000);
+      const candidate = String(n).padStart(6, '0');
+      const existing = await ctx.db
+        .query("sections")
+        .withIndex("by_joinCode", (q) => q.eq("joinCode", candidate))
+        .first();
+      if (!existing) {
+        joinCode = candidate;
+        break;
+      }
+      attempts++;
+    }
+    if (!joinCode) throw new Error("Failed to generate join code. Please try again.");
+
     return await ctx.db.insert("sections", {
       title,
       gradient: args.gradient ?? "gradient-1",
       teacherId: user._id,
+      joinCode,
     });
   },
 });

@@ -69,6 +69,7 @@ export const convexApi = {
     getBySection: api.functions.enrollments.getBySection,
     getByStudent: api.functions.enrollments.getByStudent,
     remove: api.functions.enrollments.remove,
+    joinByCode: api.functions.enrollments.joinByCode,
   },
   
   // History functions
