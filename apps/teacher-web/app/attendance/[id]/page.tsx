@@ -161,14 +161,14 @@ export default function AttendancePage() {
         }
       `}</style>
       <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl" onClick={() => router.back()}>
+        <div className="grid grid-cols-[1fr,auto,1fr] items-center mb-6">
+          <Button variant="ghost" className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl justify-self-start" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
-          <div className="mx-auto text-center">
+          <div className="justify-self-center text-center">
             <div className="text-lg font-semibold truncate max-w-[80vw]">{sectionTitle || 'Section'}</div>
           </div>
-          <div className="w-[88px]" />
+          <div />
         </div>
         
         {/* Attendance Code Widget - Centered */}
