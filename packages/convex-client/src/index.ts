@@ -49,6 +49,7 @@ export const convexApi = {
     update: api.functions.sections.update,
     deleteSection: api.functions.sections.deleteSection,
     list: api.functions.sections.list,
+    backfillJoinCodesForTeacher: api.functions.sections.backfillJoinCodesForTeacher,
   },
   
   // Attendance functions

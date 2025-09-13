@@ -56,23 +56,21 @@ export const create = mutation({
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     const title = (args.title || "").trim();
     if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
-    // Generate a unique 6-digit join code (000000-999999)
-    let joinCode = "";
-    let attempts = 0;
-    while (attempts < 30) {
-      const n = Math.floor(Math.random() * 1000000);
-      const candidate = String(n).padStart(6, '0');
-      const existing = await ctx.db
-        .query("sections")
-        .withIndex("by_joinCode", (q) => q.eq("joinCode", candidate))
-        .first();
-      if (!existing) {
-        joinCode = candidate;
-        break;
+    async function generateUniqueJoinCode(): Promise<string> {
+      let attempts = 0;
+      while (attempts < 60) {
+        const n = Math.floor(Math.random() * 1000000);
+        const candidate = String(n).padStart(6, '0');
+        const existing = await ctx.db
+          .query("sections")
+          .withIndex("by_joinCode", (q) => q.eq("joinCode", candidate))
+          .first();
+        if (!existing) return candidate;
+        attempts++;
       }
-      attempts++;
+      throw new Error("Failed to generate join code. Please try again.");
     }
-    if (!joinCode) throw new Error("Failed to generate join code. Please try again.");
+    const joinCode = await generateUniqueJoinCode();
 
     return await ctx.db.insert("sections", {
       title,
@@ -81,6 +79,42 @@ export const create = mutation({
       joinCode,
     });
   },
+});
+
+export const backfillJoinCodesForTeacher = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    async function generateUniqueJoinCode(): Promise<string> {
+      let attempts = 0;
+      while (attempts < 60) {
+        const n = Math.floor(Math.random() * 1000000);
+        const candidate = String(n).padStart(6, '0');
+        const existing = await ctx.db
+          .query("sections")
+          .withIndex("by_joinCode", (q) => q.eq("joinCode", candidate))
+          .first();
+        if (!existing) return candidate;
+        attempts++;
+      }
+      throw new Error("Failed to generate join code.");
+    }
+    const teacherSections = await ctx.db
+      .query("sections")
+      .withIndex("by_teacher", (q) => q.eq("teacherId", user._id as Id<'users'>))
+      .collect();
+    let updated = 0;
+    for (const s of teacherSections) {
+      const hasCode = typeof (s as { joinCode?: unknown }).joinCode === 'string' && ((s as { joinCode?: string }).joinCode || '').length > 0;
+      if (!hasCode) {
+        const code = await generateUniqueJoinCode();
+        await ctx.db.patch(s._id as Id<'sections'>, { joinCode: code });
+        updated++;
+      }
+    }
+    return { ok: true as const, updated };
+  }
 });
 
 export const list = query({
