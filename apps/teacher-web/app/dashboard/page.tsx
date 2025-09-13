@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
   const isSectionsLoading = !!teacherId && sectionsResult === undefined;
   const sections = (sectionsResult ?? []) as SectionDoc[];
+  const backfillJoinCodes = useMutation(api.functions.sections.backfillJoinCodesForTeacher);
 
   const gradients = [
     // First row
@@ -76,6 +77,14 @@ export default function DashboardPage() {
   }
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!sections || sections.length === 0) return;
+    const missing = sections.some(s => !(typeof (s as { joinCode?: unknown }).joinCode === 'string' && ((s as { joinCode?: string }).joinCode || '').length > 0));
+    if (missing) {
+      backfillJoinCodes().catch(() => {});
+    }
+  }, [sections, backfillJoinCodes]);
 
   // Fallback: if signed in but no Convex user yet, upsert as TEACHER
   useEffect(() => {
