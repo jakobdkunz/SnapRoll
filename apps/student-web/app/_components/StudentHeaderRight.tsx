@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@snaproll/convex-client';
+import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
 import { Modal, Card, Button, TextInput } from '@snaproll/ui';
@@ -61,6 +62,8 @@ export function StudentHeaderRight() {
   }, [open]);
 
   const { signOut } = useClerk();
+  const resetRateLimit = useMutation(api.functions.attendance.resetCheckinRateLimit);
+  const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
   function logout() {
     setStudentId(null);
     setFirstName(''); setLastName('');
@@ -119,6 +122,21 @@ export function StudentHeaderRight() {
           </div>
           {studentId && (
             <div className="text-xs text-slate-500">User ID: {studentId}</div>
+          )}
+          {devMode && (
+            <div className="pt-2">
+              <Button
+                variant="ghost"
+                onClick={async () => {
+                  try {
+                    await resetRateLimit({});
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('dev:reset-checkin-rate-limit'));
+                    }
+                  } catch { /* noop */ }
+                }}
+              >Reset check-in rate limit</Button>
+            </div>
           )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Close</Button>

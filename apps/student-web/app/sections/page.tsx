@@ -256,6 +256,15 @@ export default function SectionsPage() {
     setMounted(true);
   }, []);
 
+  // Dev utility: listen for a reset event to clear local blocked state
+  useEffect(() => {
+    function handleReset() {
+      setBlockedUntil(null);
+    }
+    window.addEventListener('dev:reset-checkin-rate-limit', handleReset as EventListener);
+    return () => window.removeEventListener('dev:reset-checkin-rate-limit', handleReset as EventListener);
+  }, []);
+
   // Set student name from Convex data
   useEffect(() => {
     if (currentUser) {

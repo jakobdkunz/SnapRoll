@@ -468,3 +468,22 @@ export const startAttendanceForDate = mutation({
     });
   },
 });
+
+// Developer utility: Reset the student's check-in rate limit immediately
+export const resetCheckinRateLimit = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "STUDENT") throw new ConvexError("Only students can reset this rate limit.");
+    const key = "checkin:any";
+    const now = Date.now();
+    const buckets = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_user_key", (q) => q.eq("userId", user._id).eq("key", key))
+      .collect();
+    for (const b of buckets) {
+      await ctx.db.patch(b._id, { count: 0, windowStart: now, blockedUntil: undefined });
+    }
+    return { ok: true as const, reset: buckets.length };
+  },
+});
