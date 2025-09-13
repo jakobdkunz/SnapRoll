@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import { requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 
 export const create = mutation({
   args: {
@@ -88,4 +88,40 @@ export const remove = mutation({
       await ctx.db.patch(enrollment._id, { removedAt: Date.now() });
     }
   },
+});
+
+export const joinByCode = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    const student = await requireStudent(ctx);
+    const code = (args.code || "").trim();
+    if (!/^\d{6}$/.test(code)) {
+      return { ok: false as const, error: "Enter a 6-digit join code." };
+    }
+    const section = await ctx.db
+      .query("sections")
+      .withIndex("by_joinCode", (q) => q.eq("joinCode", code))
+      .first();
+    if (!section) {
+      return { ok: false as const, error: "No course matches that join code." };
+    }
+    // Check if already enrolled
+    const existing = await ctx.db
+      .query("enrollments")
+      .withIndex("by_section_student", (q) => q.eq("sectionId", section._id as Id<'sections'>).eq("studentId", student._id))
+      .first();
+    if (existing) {
+      // If soft-removed, resurrect
+      if ((existing as any).removedAt) {
+        await ctx.db.patch(existing._id, { removedAt: undefined });
+      }
+      return { ok: true as const, sectionId: section._id };
+    }
+    const enrollmentId = await ctx.db.insert("enrollments", {
+      sectionId: section._id as Id<'sections'>,
+      studentId: student._id,
+      createdAt: Date.now(),
+    });
+    return { ok: true as const, sectionId: section._id, enrollmentId };
+  }
 });

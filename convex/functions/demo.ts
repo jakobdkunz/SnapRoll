@@ -40,11 +40,19 @@ export const generateDemoData = mutation({
       if (n < 0) throw new Error("Percentages cannot be negative");
     }
 
-    // Create section
+    // Create section with join code
+    async function nextJoinCode(): Promise<string> {
+      while (true) {
+        const c = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const existing = await ctx.db.query('sections').withIndex('by_joinCode', q => q.eq('joinCode', c)).first();
+        if (!existing) return c;
+      }
+    }
     const sectionId = await ctx.db.insert("sections", {
       title,
       gradient: "gradient-1",
       teacherId: teacher._id as Id<'users'>,
+      joinCode: await nextJoinCode(),
     });
 
     // Name pools

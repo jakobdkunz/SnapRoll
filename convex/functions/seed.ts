@@ -46,16 +46,25 @@ export const seedDemoData = mutation({
     ]);
 
     // Create demo sections
+    async function nextJoinCode(): Promise<string> {
+      while (true) {
+        const c = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+        const existing = await ctx.db.query('sections').withIndex('by_joinCode', q => q.eq('joinCode', c)).first();
+        if (!existing) return c;
+      }
+    }
     const sectionIds = await Promise.all([
       ctx.db.insert("sections", {
         title: "Algebra I - Period 1",
         gradient: "gradient-1",
         teacherId,
+        joinCode: await nextJoinCode(),
       }),
       ctx.db.insert("sections", {
         title: "Geometry - Period 2",
         gradient: "gradient-2",
         teacherId,
+        joinCode: await nextJoinCode(),
       }),
     ]);
 

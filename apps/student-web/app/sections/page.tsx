@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, TextInput, Skeleton } from '@snaproll/ui';
+import { Card, Button, TextInput, Skeleton, Modal } from '@snaproll/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '@snaproll/convex-client';
 import type { Id } from '@snaproll/convex-client';
@@ -147,6 +147,34 @@ export default function SectionsPage() {
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
+
+  // Join Code modal state
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const joinByCode = useMutation(api.functions.enrollments.joinByCode);
+  const handleJoinSubmit = useCallback(async (code: string) => {
+    if (!/^[0-9]{6}$/.test(code)) {
+      setJoinError('Enter a 6-digit join code.');
+      return;
+    }
+    try {
+      const res = await joinByCode({ code });
+      if (res && typeof res === 'object' && (res as { ok?: boolean }).ok) {
+        setJoinOpen(false);
+        setJoinCode('');
+        setJoinError(null);
+      } else if (res && typeof res === 'object' && (res as { error?: unknown }).error) {
+        const errVal = (res as { error?: unknown }).error;
+        setJoinError(typeof errVal === 'string' ? errVal : 'Failed to join. Try again.');
+      } else {
+        setJoinError('Failed to join. Try again.');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to join.';
+      setJoinError(/no course/i.test(msg) ? 'No course matches that join code.' : 'Failed to join. Try again.');
+    }
+  }, [joinByCode]);
 
   // Get interactive activity from Convex
   // Include a periodic tick to re-evaluate time-based staleness (heartbeat expiry)
@@ -473,7 +501,10 @@ export default function SectionsPage() {
         </div>
       </Card>
 
-      <div className="text-slate-600 text-sm">My courses</div>
+      <div className="flex items-center justify-between">
+        <div className="text-slate-600 text-sm">My courses</div>
+        <button className="text-blue-500 text-sm font-medium hover:underline" onClick={() => { setJoinOpen(true); setJoinCode(''); setJoinError(null); }}>+ Enter Join Code</button>
+      </div>
       {!enrollments || !sectionsData ? (
         <div className="text-center text-slate-600">Loading sections...</div>
       ) : sections.length === 0 ? (
@@ -504,6 +535,15 @@ export default function SectionsPage() {
           })}
         </div>
       )}
+
+      <JoinCodeModal
+        open={joinOpen}
+        onClose={() => { setJoinOpen(false); }}
+        onSubmit={handleJoinSubmit}
+        error={joinError}
+        value={joinCode}
+        setValue={(v) => { setJoinError(null); setJoinCode(v); }}
+      />
     </div>
   );
 }
@@ -525,5 +565,48 @@ function BlockedBanner({ blockedUntil, onUnblock }: { blockedUntil: number; onUn
     <div className="mt-3 w-full rounded-lg bg-amber-50 border border-amber-200 text-amber-900 p-2 text-sm text-center">
       Too many attempts. Try again in {mm}:{ss} or ask your instructor to mark your attendance manually.
     </div>
+  );
+}
+
+function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { open: boolean; onClose: () => void; onSubmit: (code: string) => void; error: string | null; value: string; setValue: (v: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (open) {
+      const id = window.setTimeout(() => inputRef.current?.focus(), 50);
+      return () => window.clearTimeout(id);
+    }
+  }, [open]);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setValue(raw);
+    if (raw.length === 6) onSubmit(raw);
+  };
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Card className="p-5 w-[92vw] max-w-sm">
+        <div className="text-center mb-3">
+          <div className="font-medium">Enter Join Code</div>
+          <div className="text-slate-500 text-sm">Ask your instructor for the 6-digit code.</div>
+        </div>
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <TextInput
+            ref={inputRef}
+            inputMode="numeric"
+            pattern="\\d*"
+            placeholder="000000"
+            value={value}
+            onChange={handleChange}
+            className="text-center tracking-widest tabular-nums"
+            aria-invalid={!!error}
+            aria-describedby={error ? 'join-error' : undefined}
+          />
+        </div>
+        {error && (
+          <div id="join-error" className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-center">
+            {error}
+          </div>
+        )}
+      </Card>
+    </Modal>
   );
 }
