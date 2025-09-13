@@ -77,6 +77,8 @@ export default function SectionsPage() {
 
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [checking, setChecking] = useState(false);
+  const checkingRef = useRef(false);
+  useEffect(() => { checkingRef.current = checking; }, [checking]);
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const [blockedUntil, setBlockedUntil] = useState<number | null>(null);
 
@@ -84,7 +86,7 @@ export default function SectionsPage() {
   const onCheckin = useCallback(async (code: string) => {
     setConfirmMsg(null);
     setCheckinError(null);
-    if (!/^[0-9]{4}$/.test(code) || !effectiveUserId || checking) return;
+    if (!/^[0-9]{4}$/.test(code) || !effectiveUserId || checkingRef.current) return;
     try {
       setChecking(true);
       
@@ -141,7 +143,7 @@ export default function SectionsPage() {
     } finally {
       setChecking(false);
     }
-  }, [effectiveUserId, checking, checkInMutation]);
+  }, [effectiveUserId, checkInMutation]);
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -278,9 +280,14 @@ export default function SectionsPage() {
 
 
   // Autosubmit when all 4 digits are present
+  const lastSubmittedRef = useRef<string | null>(null);
   useEffect(() => {
     const allFilled = digits.every((d) => /\d/.test(d) && d.length === 1);
-    if (allFilled) void onCheckin(digits.join(''));
+    if (!allFilled) return;
+    const code = digits.join('');
+    if (code === lastSubmittedRef.current) return;
+    lastSubmittedRef.current = code;
+    void onCheckin(code);
   }, [digits, onCheckin]);
 
   if (!mounted) return null;
@@ -370,14 +377,18 @@ export default function SectionsPage() {
               value={d}
               placeholder={String(i + 1)}
               disabled={checking || (blockedUntil !== null && blockedUntil > Date.now())}
-              onChange={(e) => handleDigitChange(i, e.target.value)}
+              onChange={(e) => {
+                // On any user input, allow resubmitting a new code
+                lastSubmittedRef.current = null;
+                handleDigitChange(i, e.target.value);
+              }}
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={i === 0 ? handlePaste : undefined}
             />
           ))}
         </div>
         {blockedUntil && blockedUntil > Date.now() && (
-          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => setBlockedUntil(null)} />
+          <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => { setBlockedUntil(null); lastSubmittedRef.current = null; }} />
         )}
         {confirmMsg && (
           <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
