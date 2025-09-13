@@ -198,12 +198,6 @@ export default function DashboardPage() {
                     >
                       <HiOutlineCog6Tooth className="h-5 w-5" />
                     </button>
-                  {typeof (s as { joinCode?: string }).joinCode === 'string' && (s as { joinCode?: string }).joinCode ? (
-                    <div className="absolute top-2 right-10 bg-white/85 text-slate-800 border border-white/60 rounded-full px-2 py-0.5 text-xs font-medium shadow-soft">
-                      <span className="uppercase tracking-wide text-slate-500 mr-1">Join</span>
-                      <span className="tabular-nums">{(s as { joinCode?: string }).joinCode}</span>
-                    </div>
-                  ) : null}
                   </div>
                   <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
                   <div className="mt-auto space-y-2">
