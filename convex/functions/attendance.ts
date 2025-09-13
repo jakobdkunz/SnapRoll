@@ -219,12 +219,12 @@ export const checkIn = mutation({
 });
 
 export const getAttendanceStatus = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), date: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
-    const { startMs, nextStartMs } = getEasternDayBounds();
+    const { startMs, nextStartMs } = getEasternDayBounds(args.date ?? Date.now());
     
     const classDay = await ctx.db
       .query("classDays")
@@ -417,6 +417,54 @@ export const startAttendance = mutation({
       date: startMs,
       attendanceCode: newCode,
       attendanceCodeExpiresAt: newExpiresAt,
+    });
+  },
+});
+
+// Teacher-only: Start/rotate attendance for a specific ET calendar day (dev/testing convenience)
+export const startAttendanceForDate = mutation({
+  args: {
+    sectionId: v.id("sections"),
+    date: v.number(), // any epoch ms; will be normalized to ET start-of-day
+  },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    if (user.role !== "TEACHER") throw new Error("Forbidden");
+    await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
+
+    const now = Date.now();
+    const { startMs, nextStartMs } = getEasternDayBounds(args.date);
+
+    // If a class day exists for this ET day, rotate code; else create it
+    const existingClassDay = await ctx.db
+      .query("classDays")
+      .withIndex("by_section_date", (q) =>
+        q
+          .eq("sectionId", args.sectionId)
+          .gte("date", startMs)
+          .lt("date", nextStartMs)
+      )
+      .first();
+
+    const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+    // For test/dev flows we want the code to be usable immediately but not linger for weeks.
+    // Use a short expiration window relative to real now (e.g., 6 hours).
+    const SHORT_EXPIRY_MS = 6 * 60 * 60 * 1000;
+    const expiresAt = now + SHORT_EXPIRY_MS;
+
+    if (existingClassDay) {
+      await ctx.db.patch(existingClassDay._id, {
+        attendanceCode: newCode,
+        attendanceCodeExpiresAt: expiresAt,
+      });
+      return existingClassDay;
+    }
+
+    return await ctx.db.insert("classDays", {
+      sectionId: args.sectionId,
+      date: startMs,
+      attendanceCode: newCode,
+      attendanceCodeExpiresAt: expiresAt,
     });
   },
 });

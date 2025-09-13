@@ -62,6 +62,7 @@ export const convexApi = {
     updateManualStatus: api.functions.attendance.updateManualStatus,
     getManualStatusChanges: api.functions.attendance.getManualStatusChanges,
     startAttendance: api.functions.attendance.startAttendance,
+    startAttendanceForDate: api.functions.attendance.startAttendanceForDate,
   },
   
   // Enrollment functions
