@@ -22,44 +22,15 @@ export const getSectionHistory = query({
       .order("asc")
       .collect();
 
-    // Deduplicate by Eastern Time calendar day to avoid duplicate columns
-    // Align with how classDays.date is stored (start of day in ET)
-    const unique: typeof rawDays = [];
-    const seen = new Set<number>();
-    for (const cd of rawDays) {
-      const { startMs } = getEasternDayBounds(cd.date as number);
-      const key = startMs;
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(cd);
-      }
-    }
-    const allClassDays = unique;
+    // No deduping: rely on invariants that one class day per ET day exists per section
+    const allClassDays = rawDays;
     
     // Filter out days that would render as all auto-ABSENT (no records and no non-BLANK manual changes)
     const allIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
     const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
     for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-    // Check each day individually to avoid mis-ordering and ensure correctness
-    const existenceChecks = await Promise.all(
-      allIds.map(async (id) => {
-        const hasNonBlankRecord = await ctx.db
-          .query("attendanceRecords")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const hasNonBlankManual = await ctx.db
-          .query("manualStatusChanges")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const cd = dayById.get(id)!;
-        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
-        const isCurrentDay = now >= startMs && now < nextStartMs;
-        return { id, keep: Boolean(hasNonBlankRecord || hasNonBlankManual || isCurrentDay) };
-      })
-    );
-    const keepByDay = new Set<Id<'classDays'>>(existenceChecks.filter((r) => r.keep).map((r) => r.id));
+    // No filtering: include all days; let UI show BLANK when appropriate
+    const keepByDay = new Set<Id<'classDays'>>(allIds);
 
     // Apply pagination against all class days to avoid mixing newer kept days into old pages
     const totalDays = allClassDays.length;
