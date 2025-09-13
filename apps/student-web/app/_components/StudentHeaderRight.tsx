@@ -18,6 +18,8 @@ export function StudentHeaderRight() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isClient, setIsClient] = useState(false);
+  const [devMsg, setDevMsg] = useState<string | null>(null);
+  const [devBusy, setDevBusy] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
@@ -128,14 +130,26 @@ export function StudentHeaderRight() {
               <Button
                 variant="ghost"
                 onClick={async () => {
+                  setDevMsg(null);
+                  setDevBusy(true);
                   try {
                     await resetRateLimit({});
                     if (typeof window !== 'undefined') {
                       window.dispatchEvent(new CustomEvent('dev:reset-checkin-rate-limit'));
                     }
-                  } catch { /* noop */ }
+                    setDevMsg('Rate limit reset.');
+                  } catch (e: unknown) {
+                    const msg = (e instanceof Error && e.message) ? e.message : 'Reset failed.';
+                    setDevMsg(msg);
+                  } finally {
+                    setDevBusy(false);
+                  }
                 }}
-              >Reset check-in rate limit</Button>
+                disabled={devBusy}
+              >{devBusy ? 'Resetting…' : 'Reset check-in rate limit'}</Button>
+              {devMsg && (
+                <div className="mt-2 text-xs text-slate-600">{devMsg}</div>
+              )}
             </div>
           )}
           <div className="flex gap-2 justify-end">
