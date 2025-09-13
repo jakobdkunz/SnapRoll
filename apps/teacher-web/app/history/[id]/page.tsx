@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@clerk/nextjs';
 import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
@@ -195,10 +195,10 @@ export default function HistoryPage() {
   }, [history?.totalDays, limit, offset]);
 
   // Extract data from Convex query
-  const students = history?.students || [];
-  const days = history?.days || [];
-  const studentRecords = history?.records || [];
-  const totalDays = history?.totalDays || 0;
+  const students = useMemo(() => history?.students || [], [history?.students]);
+  const days = useMemo(() => history?.days || [], [history?.days]);
+  const studentRecords = useMemo(() => history?.records || [], [history?.records]);
+  const totalDays = useMemo(() => history?.totalDays || 0, [history?.totalDays]);
 
 
   //
@@ -206,12 +206,14 @@ export default function HistoryPage() {
   // Set loading state based on Convex query
   const isFetching = !history;
 
-  // Initialize once data is available so the table renders instead of the skeleton
+  const hasInitializedRef = useRef(false);
   useEffect(() => {
+    if (hasInitializedRef.current) return;
     if (history && !initialized) {
+      hasInitializedRef.current = true;
       setInitialized(true);
     }
-  }, [history, initialized]);
+  }, [initialized, history]);
 
   const startExport = useCallback(async () => {
     try {
@@ -258,8 +260,8 @@ export default function HistoryPage() {
   async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
     try {
       await updateManualStatus({
-        classDayId: classDayId as unknown as Id<'classDays'>,
-        studentId: studentId as unknown as Id<'users'>,
+        classDayId: classDayId as Id<'classDays'>,
+        studentId: studentId as Id<'users'>,
         status: newStatus,
       });
       // Convex reactivity will refresh the history query automatically

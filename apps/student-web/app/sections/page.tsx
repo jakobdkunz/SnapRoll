@@ -152,7 +152,7 @@ export default function SectionsPage() {
   // Include a periodic tick to re-evaluate time-based staleness (heartbeat expiry)
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 5000);
+    const id = setInterval(() => setTick((t) => t + 1), 15000);
     return () => clearInterval(id);
   }, []);
   const interactive = useQuery(
@@ -511,7 +511,7 @@ export default function SectionsPage() {
 function BlockedBanner({ blockedUntil, onUnblock }: { blockedUntil: number; onUnblock: () => void }) {
   const [now, setNow] = useState<number>(Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 500);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
   const remainingMs = Math.max(0, blockedUntil - now);

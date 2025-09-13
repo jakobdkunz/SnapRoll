@@ -68,7 +68,11 @@ export const list = query({
         .withIndex("by_role", (q) => q.eq("role", role))
         .collect();
     }
-    return await ctx.db.query("users").collect();
+    // Avoid full table scans: default to listing only students for teachers
+    return await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "STUDENT"))
+      .collect();
   },
 });
 

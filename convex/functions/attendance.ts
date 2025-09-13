@@ -253,13 +253,13 @@ export const getAttendanceStatus = query({
     
     const totalStudents = enrollments.length;
     
-    // Get checked in students
-    const attendanceRecords = await ctx.db
+    // Get checked-in students (filter server-side to reduce read volume)
+    const attendancePresent = await ctx.db
       .query("attendanceRecords")
       .withIndex("by_classDay", (q) => q.eq("classDayId", classDay._id))
+      .filter((q) => q.eq(q.field("status"), "PRESENT"))
       .collect();
-    
-    const checkedIn = attendanceRecords.filter(record => record.status === "PRESENT").length;
+    const checkedIn = attendancePresent.length;
     const progress = totalStudents > 0 ? Math.round((checkedIn / totalStudents) * 100) : 0;
     
     return {

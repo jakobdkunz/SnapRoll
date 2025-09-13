@@ -21,7 +21,6 @@ export function StudentHeaderRight() {
 
   // Convex hooks
   const currentUser = useQuery(api.functions.auth.getCurrentUser);
-  const student = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id } : "skip");
 
   useEffect(() => {
     setIsClient(true);
@@ -91,7 +90,7 @@ export function StudentHeaderRight() {
     <div className="relative" ref={dropdownRef}>
       <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
-                    {student ? `${student.firstName} ${student.lastName}` : 'Profile'}
+        {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
@@ -116,7 +115,7 @@ export function StudentHeaderRight() {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
-            <TextInput value={student?.email || ''} disabled />
+            <TextInput value={currentUser?.email || ''} disabled />
           </div>
           {studentId && (
             <div className="text-xs text-slate-500">User ID: {studentId}</div>

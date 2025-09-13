@@ -32,7 +32,6 @@ export function TeacherHeaderRight() {
 
   // Convex hooks
   const currentUser = useQuery(api.functions.auth.getCurrentUser);
-  const teacher = useQuery(api.functions.users.get, currentUser?._id ? { id: currentUser._id } : "skip");
   const updateUser = useMutation(api.functions.users.update);
   const generateDemo = useMutation(api.functions.demo.generateDemoData);
 
@@ -49,13 +48,13 @@ export function TeacherHeaderRight() {
     }
   }, [currentUser]);
 
-  // Update form fields when teacher data loads
+  // Update form fields when current user data loads
   useEffect(() => {
-    if (teacher) {
-      setFirstName(teacher.firstName);
-      setLastName(teacher.lastName);
+    if (currentUser) {
+      setFirstName(currentUser.firstName);
+      setLastName(currentUser.lastName);
     }
-  }, [teacher]);
+  }, [currentUser]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -153,7 +152,7 @@ export function TeacherHeaderRight() {
     <div className="relative" ref={dropdownRef}>
       <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
-                    {teacher ? `${teacher.firstName} ${teacher.lastName}` : 'Profile'}
+        {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
@@ -177,7 +176,7 @@ export function TeacherHeaderRight() {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-slate-600">Email</label>
-            <TextInput value={teacher?.email || ''} disabled />
+            <TextInput value={currentUser?.email || ''} disabled />
             <div className="text-xs text-slate-500">To change your email, please contact support.</div>
           </div>
           {teacherId && (

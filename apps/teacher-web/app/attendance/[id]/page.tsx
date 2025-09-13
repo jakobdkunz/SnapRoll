@@ -48,7 +48,6 @@ export default function AttendancePage() {
 
   const loadStatus = useCallback(async () => {
     try {
-      // Use Convex query data instead of API call
       if (getAttendanceStatus) {
         setStatus(getAttendanceStatus);
         if (getAttendanceStatus.attendanceCode && getAttendanceStatus.attendanceCode !== prevCodeRef.current) {
@@ -80,8 +79,14 @@ export default function AttendancePage() {
   }, [sectionId, loadStatus, startAttendance]);
 
   useEffect(() => {
-    void loadStatus();
-  }, [loadStatus]);
+    if (getAttendanceStatus) {
+      setStatus(getAttendanceStatus);
+      if (getAttendanceStatus.attendanceCode && getAttendanceStatus.attendanceCode !== prevCodeRef.current) {
+        prevCodeRef.current = getAttendanceStatus.attendanceCode;
+        setCode(getAttendanceStatus.attendanceCode);
+      }
+    }
+  }, [getAttendanceStatus]);
 
   useEffect(() => {
     // If there is no active attendance or no code yet, start immediately (once)
@@ -100,12 +105,7 @@ export default function AttendancePage() {
     }
   }, [code]);
 
-  useEffect(() => {
-    if (status?.hasActiveAttendance) {
-      const interval = setInterval(loadStatus, 2000); // Refresh every 2 seconds
-      return () => clearInterval(interval);
-    }
-  }, [status?.hasActiveAttendance, loadStatus]);
+  // Remove polling; Convex query is reactive
 
   // Load section gradient and title for background/header
   useEffect(() => {
