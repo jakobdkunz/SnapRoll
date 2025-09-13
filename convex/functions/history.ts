@@ -15,10 +15,10 @@ export const getSectionHistory = query({
     const teacher = await requireTeacher(ctx);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
-    // Get all class days for this section, ordered by date asc
+    // Get all class days for this section, ordered by date asc (use date index)
     const rawDays = await ctx.db
       .query("classDays")
-      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .withIndex("by_section_date", (q) => q.eq("sectionId", args.sectionId))
       .order("asc")
       .collect();
 
@@ -40,24 +40,35 @@ export const getSectionHistory = query({
     const allIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
     const dayById = new Map<Id<'classDays'>, Doc<'classDays'>>();
     for (const cd of allClassDays) dayById.set(cd._id as Id<'classDays'>, cd as Doc<'classDays'>);
-    const existenceChecks = await Promise.all(
-      allIds.map(async (id) => {
-        const hasNonBlankRecord = await ctx.db
+    // Reduce N-per-day queries by pulling a superset and mapping
+    const nonBlankAttendance = allIds.length > 0
+      ? await ctx.db
           .query("attendanceRecords")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const hasNonBlankManual = await ctx.db
+          .withIndex("by_classDay", (q) => q.eq("classDayId", allIds[0] as Id<'classDays'>))
+          .filter((q) => q.and(
+            q.neq(q.field("status"), "BLANK"),
+            q.or(...allIds.map((id) => q.eq(q.field("classDayId"), id)))
+          ))
+          .collect()
+      : [];
+    const nonBlankManual = allIds.length > 0
+      ? await ctx.db
           .query("manualStatusChanges")
-          .withIndex("by_classDay", (q) => q.eq("classDayId", id))
-          .filter((q) => q.neq(q.field("status"), "BLANK"))
-          .first();
-        const cd = dayById.get(id)!;
-        const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
-        const isCurrentDay = now >= startMs && now < nextStartMs;
-        return { id, keep: Boolean(hasNonBlankRecord || hasNonBlankManual || isCurrentDay) };
-      })
-    );
+          .withIndex("by_classDay", (q) => q.eq("classDayId", allIds[0] as Id<'classDays'>))
+          .filter((q) => q.and(
+            q.neq(q.field("status"), "BLANK"),
+            q.or(...allIds.map((id) => q.eq(q.field("classDayId"), id)))
+          ))
+          .collect()
+      : [];
+    const hasAttendanceByDay = new Set<Id<'classDays'>>(nonBlankAttendance.map((r) => r.classDayId as Id<'classDays'>));
+    const hasManualByDay = new Set<Id<'classDays'>>(nonBlankManual.map((r) => r.classDayId as Id<'classDays'>));
+    const existenceChecks = allIds.map((id) => {
+      const cd = dayById.get(id)!;
+      const { startMs, nextStartMs } = getEasternDayBounds(cd.date as number);
+      const isCurrentDay = now >= startMs && now < nextStartMs;
+      return { id, keep: Boolean(hasAttendanceByDay.has(id) || hasManualByDay.has(id) || isCurrentDay) };
+    });
     const keepByDay = new Set<Id<'classDays'>>(existenceChecks.filter((r) => r.keep).map((r) => r.id));
 
     const filteredDays = allClassDays.filter(cd => keepByDay.has(cd._id as Id<'classDays'>));
