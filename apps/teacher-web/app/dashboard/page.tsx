@@ -53,6 +53,7 @@ export default function DashboardPage() {
   const sections = (sectionsResult ?? []) as SectionDoc[];
   const backfillJoinCodes = useMutation(api.functions.sections.backfillJoinCodesForTeacher);
   const backfillActivity = useMutation(api.functions.attendance.backfillClassDayActivityForTeacher);
+  const [backfilling, setBackfilling] = useState(false);
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? 'false') === 'true';
 
   const gradients = [
@@ -317,14 +318,23 @@ export default function DashboardPage() {
                 variant="ghost" 
                 className="inline-flex items-center gap-2"
                 onClick={async () => {
+                  if (backfilling) return;
+                  setBackfilling(true);
                   try {
                     await backfillActivity({});
+                    // eslint-disable-next-line no-alert
+                    alert('Backfill completed.');
                   } catch (e) {
-                    // no-op in dev
+                    // eslint-disable-next-line no-alert
+                    alert('Backfill failed. Check console for details.');
+                    console.error(e);
+                  } finally {
+                    setBackfilling(false);
                   }
                 }}
+                disabled={backfilling}
               >
-                Backfill Active Days
+                {backfilling ? 'Backfilling…' : 'Backfill Active Days'}
               </Button>
             </div>
           )}
