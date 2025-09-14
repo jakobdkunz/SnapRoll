@@ -38,7 +38,7 @@ export default function MyAttendancePage() {
   const [offset, setOffset] = useState<number>(0);
   // Server-side window equals the number of columns that fit
   const [limit, setLimit] = useState<number>(12);
-  const [isFetching] = useState<boolean>(false);
+  // Distinguish between first load and in-place refresh while navigating pages
   // const requestIdRef = useRef(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
@@ -241,14 +241,30 @@ export default function MyAttendancePage() {
     </div>
   );
   
-  if (loading) return (
+  const isInitialLoading = loading && !data;
+  const isRefreshing = loading && !!data;
+
+  if (isInitialLoading) return (
     <div className="space-y-4 p-6">
       <Card className="p-4">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <div className="flex gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-6 w-16 rounded" />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <Skeleton className="h-4 w-40" />
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-20 rounded" />
+              <Skeleton className="h-8 w-20 rounded" />
+            </div>
+          </div>
+          <div className="mt-2 grid grid-cols-1 gap-2">
+            {Array.from({ length: 4 }).map((_, row) => (
+              <div key={row} className="flex items-center gap-2">
+                <Skeleton className="h-5 w-48" />
+                <div className="flex-1 flex gap-2 justify-end">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-8 rounded" />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -334,7 +350,11 @@ export default function MyAttendancePage() {
                     className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
-                    {isCompact ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)}
+                    {isRefreshing ? (
+                      <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
+                    ) : (
+                      isCompact ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)
+                    )}
                   </th>
                 ))}
               </tr>
@@ -376,26 +396,30 @@ export default function MyAttendancePage() {
                           className="pl-1 pr-2 py-2 text-center"
                           style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                         >
-                          <div 
-                            className="relative group inline-block"
-                            onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
-                            onMouseLeave={hideTooltip}
-                            onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
-                            onTouchEnd={hideTooltip}
-                            title={tooltipText}
-                          >
-                            {status === 'PRESENT' ? (
-                              <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
-                            ) : status === 'ABSENT' ? (
-                              <Badge tone="red">{display}{showManual ? '*' : ''}</Badge>
-                            ) : status === 'EXCUSED' ? (
-                              <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
-                            ) : status === 'NOT_JOINED' ? (
-                              <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
-                            ) : (
-                              <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
-                            )}
-                          </div>
+                          {isRefreshing ? (
+                            <Skeleton className="h-6 w-8 mx-auto rounded" />
+                          ) : (
+                            <div 
+                              className="relative group inline-block"
+                              onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                              onMouseLeave={hideTooltip}
+                              onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                              onTouchEnd={hideTooltip}
+                              title={tooltipText}
+                            >
+                              {status === 'PRESENT' ? (
+                                <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
+                              ) : status === 'ABSENT' ? (
+                                <Badge tone="red">{display}{showManual ? '*' : ''}</Badge>
+                              ) : status === 'EXCUSED' ? (
+                                <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
+                              ) : status === 'NOT_JOINED' ? (
+                                <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
+                              ) : (
+                                <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
+                              )}
+                            </div>
+                          )}
                         </td>
                       );
                     })}
@@ -404,9 +428,9 @@ export default function MyAttendancePage() {
               })}
             </tbody>
           </table>
-          {isFetching && (
-            <div className="absolute inset-0 pointer-events-none grid place-items-center">
-              <div className="px-2 py-1 text-xs rounded bg-white/80 text-slate-600 border">Loading…</div>
+          {isRefreshing && (
+            <div className="absolute inset-0 pointer-events-none">
+              {/* subtle shimmer already provided by Skeletons; keep area interactive for navigation */}
             </div>
           )}
         </div>
