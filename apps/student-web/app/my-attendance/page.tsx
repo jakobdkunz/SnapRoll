@@ -307,12 +307,12 @@ export default function MyAttendancePage() {
       <div className="-mx-4 sm:mx-0">
         <Card className="p-4">
         {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
-          <div className="mb-2 text-xs text-slate-500 pl-4">
+          <div className={`mb-2 text-xs text-slate-500 ${isCompact ? 'pl-2' : 'pl-4'}`}>
             cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
           </div>
         )}
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-slate-600 pl-4">
+          <div className={`text-sm text-slate-600 ${isCompact ? 'pl-2' : 'pl-4'}`}>
             {data.totalDays > 0
               ? (() => {
                   const windowSize = Math.min(limit, grid.days.length);
@@ -370,7 +370,7 @@ export default function MyAttendancePage() {
             </colgroup>
             <thead>
               <tr>
-                <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
+                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
                 <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                 {[...grid.days].reverse().map((d) => (
                   <th 
@@ -396,7 +396,7 @@ export default function MyAttendancePage() {
                 const byDate = grid.recBySection.get(s.id)!;
                 return (
                   <tr key={s.id} className="odd:bg-slate-50">
-                    <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
+                    <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                     </td>
                     <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
