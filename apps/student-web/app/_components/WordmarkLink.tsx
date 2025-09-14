@@ -12,7 +12,7 @@ export function WordmarkLink() {
   }
   return (
     <button onClick={onClick} className="flex items-center gap-1 hover:opacity-80 transition" aria-label="FlameLink home">
-      <Image src="/logo.svg" alt="" width={20} height={20} className="h-5 w-5 -translate-y-1" />
+      <Image src="/logo.svg" alt="" width={20} height={20} className="h-5 w-5 -translate-y-[2px]" />
       <span className="text-lg font-semibold text-black">FlameLink</span>
       <span className="text-lg font-medium text-blue-600">Student</span>
     </button>
