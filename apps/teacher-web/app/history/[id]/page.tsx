@@ -202,14 +202,14 @@ export default function HistoryPage() {
     initializedRightmostRef.current = true;
   }, [history?.totalDays, limit, offset]);
 
-  // Extract data from Convex query
-  const students = useMemo(() => history?.students || [], [history?.students]);
-  // Preserve roster list during refresh; only update when new data arrives
+  // Preserve roster and grid during refresh; only update when new data arrives
+  const [students, setStudents] = useState<Student[]>(history?.students || []);
   const [days, setDays] = useState(history?.days || []);
   const [studentRecords, setStudentRecords] = useState(history?.records || []);
   const totalDays = useMemo(() => history?.totalDays || 0, [history?.totalDays]);
   useEffect(() => {
     if (history) {
+      setStudents(history.students || []);
       setDays(history.days || []);
       setStudentRecords(history.records || []);
     }
