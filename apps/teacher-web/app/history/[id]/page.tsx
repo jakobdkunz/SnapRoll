@@ -55,7 +55,7 @@ export default function HistoryPage() {
   }, []);
 
   const STUDENT_COL_BASE = isCompact ? 120 : 220; // narrower when compact
-  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
+  const DAY_COL_CONTENT = isCompact ? 48 : 96; // tighter in compact to fit more columns
   const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint (unused)
   const [initialized, setInitialized] = useState(false);
@@ -109,10 +109,9 @@ export default function HistoryPage() {
     );
   }
 
-  function formatHeaderDateMD(date: Date) {
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${m}/${d}`;
+  function formatHeaderDateMDFromString(dateStr: string) {
+    const [, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
+    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
   }
 
   // Removed measurement-driven left column width to avoid drift across resizes
@@ -131,7 +130,7 @@ export default function HistoryPage() {
     setIsCompact(compact);
     const leftCol = compact ? 120 : 220;
     const availableForDays = Math.max(0, rectW - leftCol);
-    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
+    const perCol = (compact ? 48 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
@@ -141,15 +140,19 @@ export default function HistoryPage() {
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [DAY_COL_PADDING, offset]);
 
-  // Recompute filler width to right-align day columns
+  // Recompute filler width to right-align day columns and allocate slack to left column first
   useEffect(() => {
     if (!containerWidth) return;
-    const leftCol = isCompact ? 120 : 220;
-    const perCol = (isCompact ? 56 : 96) + DAY_COL_PADDING;
+    const baseLeft = isCompact ? 120 : 220;
+    const perCol = (isCompact ? 48 : 96) + DAY_COL_PADDING;
     const numCols = (history?.days?.length || 0);
-    const slack = Math.max(0, containerWidth - leftCol - perCol * numCols);
-    // Snap to integer pixels to avoid subpixel jitter
-    setFillerWidth(Math.round(slack));
+    const slack = Math.max(0, containerWidth - baseLeft - perCol * numCols);
+    const maxExtraForLeft = isCompact ? 56 : 120; // allow student column to grow first
+    const useForLeft = Math.min(slack, maxExtraForLeft);
+    const newLeft = baseLeft + useForLeft;
+    const remaining = Math.max(0, slack - useForLeft);
+    setLeftWidth(Math.round(newLeft));
+    setFillerWidth(Math.round(remaining));
   }, [containerWidth, isCompact, DAY_COL_PADDING, history?.days?.length]);
 
   useEffect(() => {
@@ -205,6 +208,18 @@ export default function HistoryPage() {
 
   // Set loading state based on Convex query
   const isFetching = !history;
+  const isInitialLoading = !initialized;
+  const isRefreshing = initialized && isFetching;
+  const [hasRefreshDelayElapsed, setHasRefreshDelayElapsed] = useState(false);
+  useEffect(() => {
+    let id: number | undefined;
+    if (isRefreshing) {
+      id = window.setTimeout(() => setHasRefreshDelayElapsed(true), 500);
+    } else {
+      setHasRefreshDelayElapsed(false);
+    }
+    return () => { if (id) window.clearTimeout(id); };
+  }, [isRefreshing]);
 
   const hasInitializedRef = useRef(false);
   useEffect(() => {
@@ -385,9 +400,10 @@ export default function HistoryPage() {
   // Render skeleton while initializing table (do not block on empty arrays)
   if (!initialized) {
     return (
-      <Card className="p-4">
+      <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+      <Card className="py-4 px-2 sm:px-4">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-slate-600 pl-4">Loading…</div>
+          <div className={`text-sm text-slate-600 ${isCompact ? 'pl-2' : 'pl-4'}`}>Loading…</div>
           <div className="flex items-center gap-2">
             <Skeleton className="h-9 w-24 rounded-xl" />
             <Skeleton className="h-9 w-20 rounded-xl" />
@@ -399,26 +415,28 @@ export default function HistoryPage() {
               <Skeleton className="h-6 w-56 rounded" />
               <div className="flex gap-2">
                 {Array.from({ length: 6 }).map((_, j) => (
-                  <Skeleton key={j} className="h-6 w-16 rounded-full" />
+                  <Skeleton key={j} className="h-6 w-12 rounded" />
                 ))}
               </div>
             </div>
           ))}
         </div>
       </Card>
+      </div>
     );
   }
 
   // Render shell with loading overlay instead of blank screen
   return (
-    <Card className="p-4">
+    <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+    <Card className="py-4 px-2 sm:px-4">
       {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
-        <div className="mb-2 text-xs text-slate-500 pl-4">
+        <div className={`mb-2 text-xs text-slate-500 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
         </div>
       )}
       <div className="flex items-center justify-between mb-3">
-        <div className="text-sm text-slate-600 pl-4">
+        <div className={`text-sm text-slate-600 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           {totalDays > 0
             ? (() => {
                 const windowSize = Math.min(limit, days.length);
@@ -453,7 +471,7 @@ export default function HistoryPage() {
         </div>
       ) : (
       <div ref={containerRef} className="relative overflow-hidden w-full">
-      <table className="border-separate border-spacing-0 table-fixed">
+      <table className="border-separate border-spacing-0 table-fixed w-full">
         <colgroup>
           <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
           <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
@@ -463,7 +481,7 @@ export default function HistoryPage() {
         </colgroup>
         <thead>
           <tr>
-            <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+            <th ref={firstThRef} className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
             {days.map((day) => (
               <th
@@ -471,7 +489,15 @@ export default function HistoryPage() {
                 className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
                 style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
               >
-                {isCompact ? formatHeaderDateMD(new Date(day.date)) : formatDateMDY(new Date(day.date))}
+                {isRefreshing ? (
+                  hasRefreshDelayElapsed ? (
+                    <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
+                  ) : (
+                    <span className="inline-block h-4 w-14 sm:w-20" />
+                  )
+                ) : (
+                  isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDY(new Date(day.date))
+                )}
               </th>
             ))}
           </tr>
@@ -479,7 +505,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student: Student, i: number) => (
             <tr key={student.id} className="odd:bg-slate-50">
-              <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+              <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
               </td>
@@ -492,7 +518,17 @@ export default function HistoryPage() {
                     className="pl-1 pr-2 py-2 text-center"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
-                    {record ? renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date) : <span className="text-slate-400">–</span>}
+                    {isRefreshing ? (
+                      hasRefreshDelayElapsed ? (
+                        <Skeleton className="h-6 w-8 mx-auto rounded" />
+                      ) : (
+                        <span className="inline-block h-6 w-8" />
+                      )
+                    ) : record ? (
+                      renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date)
+                    ) : (
+                      <span className="text-slate-400">–</span>
+                    )}
                   </td>
                 );
               })}
@@ -500,10 +536,8 @@ export default function HistoryPage() {
           ))}
         </tbody>
       </table>
-      {isFetching && (
-        <div className="absolute inset-0 pointer-events-none grid place-items-center">
-          <div className="px-2 py-1 text-xs rounded bg-white/80 text-slate-600 border">Loading…</div>
-        </div>
+      {isRefreshing && hasRefreshDelayElapsed && (
+        <div className="absolute inset-0 pointer-events-none" />
       )}
       </div>
       )}
@@ -526,5 +560,6 @@ export default function HistoryPage() {
         </Card>
       </Modal>
     </Card>
+    </div>
   );
 }
