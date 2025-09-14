@@ -11,8 +11,8 @@ export function WordmarkLink() {
   }
   return (
     <button onClick={onClick} className="flex items-baseline gap-2 hover:opacity-80 transition" aria-label="FlameLink home">
-      <span className="text-base font-semibold text-black">FlameLink</span>
-      <span className="text-sm font-medium text-blue-600">Student</span>
+      <span className="text-lg font-semibold text-black">FlameLink</span>
+      <span className="text-lg font-medium text-blue-600">Student</span>
     </button>
   );
 }
