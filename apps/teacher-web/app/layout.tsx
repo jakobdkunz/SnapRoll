@@ -7,7 +7,7 @@ import { AuthGuard } from './_components/AuthGuard';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'SnapRoll – Instructor',
+  title: 'FlameLink – Instructor',
   description: 'Attendance made delightful',
 };
 

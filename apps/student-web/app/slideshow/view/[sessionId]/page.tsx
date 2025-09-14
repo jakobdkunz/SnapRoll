@@ -1,10 +1,10 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { Id } from '@snaproll/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button } from '@snaproll/ui';
-import { api } from '@snaproll/convex-client';
+import { Card, Button } from '@flamelink/ui';
+import { api } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
 

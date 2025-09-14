@@ -1,5 +1,5 @@
 {
-  "name": "snaproll",
+  "name": "flamelink",
   "private": true,
   "packageManager": "pnpm@9.7.0",
   "version": "0.1.0",
@@ -16,8 +16,8 @@
     "convex:dev": "npx convex dev",
     "convex:deploy": "npx convex deploy",
     "convex:codegen": "npx convex codegen",
-    "build:teacher-web": "turbo run build --filter=@snaproll/teacher-web",
-    "build:student-web": "turbo run build --filter=@snaproll/student-web"
+    "build:teacher-web": "turbo run build --filter=@flamelink/teacher-web",
+    "build:student-web": "turbo run build --filter=@flamelink/student-web"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 // import { usePathname } from 'next/navigation';
-import { Card, Badge, Skeleton, Button } from '@snaproll/ui';
-import { convexApi, api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { Card, Badge, Skeleton, Button } from '@flamelink/ui';
+import { convexApi, api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
 
 type HistoryResponse = {

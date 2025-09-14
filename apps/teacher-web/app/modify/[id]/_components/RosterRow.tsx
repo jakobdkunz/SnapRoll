@@ -1,6 +1,6 @@
 "use client";
 import * as React from 'react';
-import { Button, TextInput } from '@snaproll/ui';
+import { Button, TextInput } from '@flamelink/ui';
 import { HiOutlinePencilSquare, HiOutlineTrash } from 'react-icons/hi2';
 
 export type RosterStudent = { id: string; email: string; firstName: string; lastName: string };

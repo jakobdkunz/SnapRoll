@@ -1,6 +1,6 @@
-# Convex Backend for SnapRoll
+# Convex Backend for FlameLink
 
-This directory contains the Convex backend for SnapRoll, providing real-time database and API functionality.
+This directory contains the Convex backend for FlameLink, providing real-time database and API functionality.
 
 ## Structure
 
@@ -42,7 +42,7 @@ NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
 Then use the Convex client:
 ```typescript
-import { convex, api } from "@snaproll/convex-client";
+import { convex, api } from "@flamelink/convex-client";
 import { useQuery, useMutation } from "convex/react";
 
 // In your component

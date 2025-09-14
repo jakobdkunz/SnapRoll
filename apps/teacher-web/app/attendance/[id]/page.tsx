@@ -1,10 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Card, Button, Skeleton, TextInput } from '@snaproll/ui';
+import { Card, Button, Skeleton, TextInput } from '@flamelink/ui';
 import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
@@ -245,9 +245,9 @@ export default function AttendancePage() {
                 <div className="mt-6 text-slate-600 text-base flex items-center justify-center gap-6">
                   <span className="inline-flex items-center gap-2">
                     <HiOutlineGlobeAlt className="h-6 w-6" />
-                    <span>Enter at&nbsp;<span className="font-medium">SnapRoll.org</span></span>
+                    <span>Enter at&nbsp;<span className="font-medium">FlameLink.org</span></span>
                   </span>
-                  <span className="inline-flex items-center gap-2"><HiOutlineDevicePhoneMobile className="h-6 w-6" /> or use the SnapRoll app</span>
+                  <span className="inline-flex items-center gap-2"><HiOutlineDevicePhoneMobile className="h-6 w-6" /> or use the FlameLink app</span>
                 </div>
               </>
             )}

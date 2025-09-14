@@ -1,5 +1,5 @@
 import type { Config } from 'tailwindcss';
-import preset from '@snaproll/config/tailwind-preset';
+import preset from '@flamelink/config/tailwind-preset';
 
 export default {
   presets: [preset],

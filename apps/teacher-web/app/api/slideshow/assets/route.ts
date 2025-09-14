@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@snaproll/convex-client/server';
+import { api } from '@flamelink/convex-client/server';
 import { auth } from '@clerk/nextjs/server';
 
 function getConvexUrl(): string {

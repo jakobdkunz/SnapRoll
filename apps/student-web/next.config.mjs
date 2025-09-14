@@ -1,5 +1,5 @@
 const nextConfig = {
-  transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
+  transpilePackages: ['@flamelink/ui', '@flamelink/lib', '@flamelink/config', '@flamelink/convex-client'],
   experimental: { typedRoutes: true },
   env: {
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/sign-in',

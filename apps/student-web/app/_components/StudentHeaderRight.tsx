@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
-import { Modal, Card, Button, TextInput } from '@snaproll/ui';
+import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
 // type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };

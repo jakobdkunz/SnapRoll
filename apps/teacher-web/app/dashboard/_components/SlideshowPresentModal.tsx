@@ -1,12 +1,12 @@
 "use client";
 import { useState } from 'react';
-import { Modal, Button, TextInput } from '@snaproll/ui';
-import type { Id } from '@snaproll/convex-client';
+import { Modal, Button, TextInput } from '@flamelink/ui';
+import type { Id } from '@flamelink/convex-client';
 import { useMutation, useQuery } from 'convex/react';
-import { api } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
 
 export default function SlideshowPresentModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
-  const teacherId = (typeof window !== 'undefined' ? (localStorage.getItem('snaproll.teacherId') || null) : null) as Id<'users'> | null;
+  const teacherId = (typeof window !== 'undefined' ? (localStorage.getItem('flamelink.teacherId') || null) : null) as Id<'users'> | null;
   const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : 'skip');
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
   const [selectedAssetId, setSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);

@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef } from 'react';
 
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
 

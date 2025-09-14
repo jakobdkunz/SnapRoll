@@ -63,16 +63,16 @@ importers:
 
   apps/student-web:
     dependencies:
-      '@snaproll/config':
+      '@flamelink/config':
         specifier: ^0.1.0
         version: link:../../packages/config
-      '@snaproll/convex-client':
+      '@flamelink/convex-client':
         specifier: ^0.1.0
         version: link:../../packages/convex-client
-      '@snaproll/lib':
+      '@flamelink/lib':
         specifier: ^0.1.0
         version: link:../../packages/lib
-      '@snaproll/ui':
+      '@flamelink/ui':
         specifier: ^0.1.0
         version: link:../../packages/ui
       next:
@@ -112,16 +112,16 @@ importers:
 
   apps/teacher-web:
     dependencies:
-      '@snaproll/config':
+      '@flamelink/config':
         specifier: ^0.1.0
         version: link:../../packages/config
-      '@snaproll/convex-client':
+      '@flamelink/convex-client':
         specifier: ^0.1.0
         version: link:../../packages/convex-client
-      '@snaproll/lib':
+      '@flamelink/lib':
         specifier: ^0.1.0
         version: link:../../packages/lib
-      '@snaproll/ui':
+      '@flamelink/ui':
         specifier: ^0.1.0
         version: link:../../packages/ui
       jszip:

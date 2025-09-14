@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { ClerkProvider, useAuth } from '@clerk/nextjs';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { createConvexClient, getConvexUrl } from '@snaproll/convex-client';
+import { createConvexClient, getConvexUrl } from '@flamelink/convex-client';
 
 function AuthDebug() {
   const { isLoaded, isSignedIn, getToken } = useAuth();

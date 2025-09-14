@@ -2,12 +2,12 @@
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
-import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
+import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import dynamic from 'next/dynamic';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
-import { api } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import type { Id } from '@snaproll/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import type { Doc } from '../../../../convex/_generated/dataModel';
 
 type SectionDoc = Doc<'sections'>;
