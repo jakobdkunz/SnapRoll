@@ -360,7 +360,8 @@ export default function MyAttendancePage() {
           </div>
         ) : (
         <div ref={containerRef} className="relative overflow-hidden w-full">
-          <table className="border-separate border-spacing-0 table-fixed">
+          <div className="flex justify-end">
+          <table className="border-separate border-spacing-0 table-fixed w-auto">
             <colgroup>
               <col style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }} />
               <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
@@ -464,6 +465,7 @@ export default function MyAttendancePage() {
               })}
             </tbody>
           </table>
+          </div>
           {isRefreshing && hasRefreshDelayElapsed && (
             <div className="absolute inset-0 pointer-events-none">
               {/* subtle shimmer already provided by Skeletons; keep area interactive for navigation */}
