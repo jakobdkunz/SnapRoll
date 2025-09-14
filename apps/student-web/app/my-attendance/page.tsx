@@ -211,6 +211,21 @@ export default function MyAttendancePage() {
     }
   }, [studentId, history]);
 
+  // Loading phases
+  const isInitialLoading = loading && !data;
+  const isRefreshing = loading && !!data;
+  // Delay showing per-cell skeletons during refresh to avoid flash on fast networks
+  const [hasRefreshDelayElapsed, setHasRefreshDelayElapsed] = useState(false);
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    if (isRefreshing) {
+      timeoutId = window.setTimeout(() => setHasRefreshDelayElapsed(true), 500);
+    } else {
+      setHasRefreshDelayElapsed(false);
+    }
+    return () => { if (timeoutId) window.clearTimeout(timeoutId); };
+  }, [isRefreshing, setHasRefreshDelayElapsed]);
+
   const grid = useMemo(() => {
     if (!data) return null;
     const { sections, days, records } = data;
@@ -227,57 +242,61 @@ export default function MyAttendancePage() {
 
   // Always render the same skeleton on both server and client to avoid hydration mismatch
   if (!isClient || !studentId) return (
-    <div className="space-y-4 p-6">
-      <Card className="p-4">
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-32" />
-          <div className="flex gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-6 w-16 rounded" />
-            ))}
+    <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
+      <div className="-mx-4 sm:mx-0">
+        <Card className="p-4">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-32" />
+            <div className="flex gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-16 rounded" />
+              ))}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
   
-  const isInitialLoading = loading && !data;
-  const isRefreshing = loading && !!data;
-
   if (isInitialLoading) return (
-    <div className="space-y-4 p-6">
-      <Card className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between mb-1">
-            <Skeleton className="h-4 w-40" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-8 w-20 rounded" />
-              <Skeleton className="h-8 w-20 rounded" />
+    <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
+      <div className="-mx-4 sm:mx-0">
+        <Card className="p-4">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <Skeleton className="h-4 w-40" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-20 rounded" />
+                <Skeleton className="h-8 w-20 rounded" />
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-2">
+              {Array.from({ length: 4 }).map((_, row) => (
+                <div key={row} className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-48" />
+                  <div className="flex-1 flex gap-2 justify-end">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Skeleton key={i} className="h-6 w-8 rounded" />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="mt-2 grid grid-cols-1 gap-2">
-            {Array.from({ length: 4 }).map((_, row) => (
-              <div key={row} className="flex items-center gap-2">
-                <Skeleton className="h-5 w-48" />
-                <div className="flex-1 flex gap-2 justify-end">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <Skeleton key={i} className="h-6 w-8 rounded" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
   
   if (error) return <div className="p-6 text-red-600">{error}</div>;
   if (!grid || !data) return <div className="p-6">No data.</div>;
 
+  
+
   return (
-    <div className="space-y-4 p-6">
-      <Card className="p-4">
+    <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
+      <div className="-mx-4 sm:mx-0">
+        <Card className="p-4">
         {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
           <div className="mb-2 text-xs text-slate-500 pl-4">
             cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
@@ -351,7 +370,11 @@ export default function MyAttendancePage() {
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
                     {isRefreshing ? (
-                      <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
+                      hasRefreshDelayElapsed ? (
+                        <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
+                      ) : (
+                        <span className="inline-block h-4 w-14 sm:w-20" />
+                      )
                     ) : (
                       isCompact ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)
                     )}
@@ -397,7 +420,11 @@ export default function MyAttendancePage() {
                           style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                         >
                           {isRefreshing ? (
-                            <Skeleton className="h-6 w-8 mx-auto rounded" />
+                            hasRefreshDelayElapsed ? (
+                              <Skeleton className="h-6 w-8 mx-auto rounded" />
+                            ) : (
+                              <span className="inline-block h-6 w-8" />
+                            )
                           ) : (
                             <div 
                               className="relative group inline-block"
@@ -428,7 +455,7 @@ export default function MyAttendancePage() {
               })}
             </tbody>
           </table>
-          {isRefreshing && (
+          {isRefreshing && hasRefreshDelayElapsed && (
             <div className="absolute inset-0 pointer-events-none">
               {/* subtle shimmer already provided by Skeletons; keep area interactive for navigation */}
             </div>
@@ -437,6 +464,7 @@ export default function MyAttendancePage() {
         )}
         <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
       </Card>
+      </div>
     </div>
   );
 }
