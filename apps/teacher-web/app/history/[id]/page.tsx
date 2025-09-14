@@ -114,6 +114,11 @@ export default function HistoryPage() {
     return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
   }
 
+  function formatDateMDYFromString(dateStr: string) {
+    const [y, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
+    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
+  }
+
   // Removed measurement-driven left column width to avoid drift across resizes
 
   // Recompute how many day columns fit and update query limit
@@ -199,9 +204,16 @@ export default function HistoryPage() {
 
   // Extract data from Convex query
   const students = useMemo(() => history?.students || [], [history?.students]);
-  const days = useMemo(() => history?.days || [], [history?.days]);
-  const studentRecords = useMemo(() => history?.records || [], [history?.records]);
+  // Preserve roster list during refresh; only update when new data arrives
+  const [days, setDays] = useState(history?.days || []);
+  const [studentRecords, setStudentRecords] = useState(history?.records || []);
   const totalDays = useMemo(() => history?.totalDays || 0, [history?.totalDays]);
+  useEffect(() => {
+    if (history) {
+      setDays(history.days || []);
+      setStudentRecords(history.records || []);
+    }
+  }, [history]);
 
 
   //
@@ -339,19 +351,19 @@ export default function HistoryPage() {
       // Standard attendance tooltip
       switch (status) {
         case 'PRESENT':
-          tooltipText = `${studentName} was Present in class on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `${studentName} was Present in class on ${formatDateMDYFromString(date)}.`;
           break;
         case 'ABSENT':
-          tooltipText = `${studentName} was Absent on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `${studentName} was Absent on ${formatDateMDYFromString(date)}.`;
           break;
         case 'EXCUSED':
-          tooltipText = `${studentName} was Excused on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `${studentName} was Excused on ${formatDateMDYFromString(date)}.`;
           break;
         case 'NOT_JOINED':
-          tooltipText = `${studentName} was not enrolled in this section on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `${studentName} was not enrolled in this section on ${formatDateMDYFromString(date)}.`;
           break;
         case 'BLANK':
-          tooltipText = `No attendance recorded for ${studentName} on ${formatDateMDY(new Date(date))}.`;
+          tooltipText = `No attendance recorded for ${studentName} on ${formatDateMDYFromString(date)}.`;
           break;
       }
     }
