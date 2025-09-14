@@ -21,10 +21,12 @@ function formatDateMDY(dateStr: string) {
   return `${(m).toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}/${y}`;
 }
 
-function formatHeaderDateMD(date: Date) {
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${m}/${d}`;
+// Unused legacy helper retained for reference was removed to avoid confusion
+
+// Avoid timezone issues when rendering a YYYY-MM-DD date string by not using Date parsing
+function formatHeaderDateMDFromString(dateStr: string) {
+  const [, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
+  return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
 }
 
 export default function MyAttendancePage() {
@@ -376,7 +378,7 @@ export default function MyAttendancePage() {
                         <span className="inline-block h-4 w-14 sm:w-20" />
                       )
                     ) : (
-                      isCompact ? formatHeaderDateMD(new Date(d.date)) : formatDateMDY(d.date)
+                      isCompact ? formatHeaderDateMDFromString(d.date) : formatDateMDY(d.date)
                     )}
                   </th>
                 ))}
