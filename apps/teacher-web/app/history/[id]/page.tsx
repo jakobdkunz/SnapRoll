@@ -508,7 +508,7 @@ export default function HistoryPage() {
                     <span className="inline-block h-4 w-14 sm:w-20" />
                   )
                 ) : (
-                  isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDY(new Date(day.date))
+                  isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)
                 )}
               </th>
             ))}
