@@ -252,7 +252,7 @@ export default function MyAttendancePage() {
   // Always render the same skeleton on both server and client to avoid hydration mismatch
   if (!isClient || !studentId) return (
     <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
-      <div className="-mx-4 sm:mx-0">
+      <div className="-mx-4 sm:mx-0 px-[2px] sm:px-0">
         <Card className="py-4 px-2 sm:px-4">
           <div className="space-y-2">
             <Skeleton className="h-5 w-32" />
@@ -269,7 +269,7 @@ export default function MyAttendancePage() {
   
   if (isInitialLoading) return (
     <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
-      <div className="-mx-4 sm:mx-0">
+      <div className="-mx-4 sm:mx-0 px-[2px] sm:px-0">
         <Card className="py-4 px-2 sm:px-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between mb-1">
@@ -304,7 +304,7 @@ export default function MyAttendancePage() {
 
   return (
     <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
-      <div className="-mx-4 sm:mx-0">
+      <div className="-mx-4 sm:mx-0 px-[2px] sm:px-0">
         <Card className="py-4 px-2 sm:px-4">
         {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
           <div className={`mb-2 text-xs text-slate-500 ${isCompact ? 'pl-2' : 'pl-4'}`}>
