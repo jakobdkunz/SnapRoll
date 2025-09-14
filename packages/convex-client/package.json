@@ -1,5 +1,5 @@
 {
-  "name": "@snaproll/convex-client",
+  "name": "@flamelink/convex-client",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",

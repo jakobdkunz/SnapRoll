@@ -1,4 +1,4 @@
-const CACHE = 'snaproll-cache-v3';
+const CACHE = 'flamelink-cache-v3';
 const OFFLINE_URLS = ['/','/manifest.json','/icon.svg','/maskable.svg'];
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -21,7 +21,7 @@ self.addEventListener('fetch', (event) => {
 
   // For navigations (HTML pages), use network-first; when signed in, do not cache navigations
   if (request.mode === 'navigate') {
-    const isSignedIn = (request.headers.get('cookie') || '').includes('snaproll_auth=1');
+    const isSignedIn = (request.headers.get('cookie') || '').includes('flamelink_auth=1');
     event.respondWith(
       fetch(request)
         .then((response) => {

@@ -1,5 +1,5 @@
 const nextConfig = {
-  transpilePackages: ['@snaproll/ui', '@snaproll/lib', '@snaproll/config', '@snaproll/convex-client'],
+  transpilePackages: ['@flamelink/ui', '@flamelink/lib', '@flamelink/config', '@flamelink/convex-client'],
   experimental: { typedRoutes: true, serverMinification: false },
   // Mitigate occasional jest-worker crashes on Vercel
   // See: https://github.com/vercel/next.js/issues/48089

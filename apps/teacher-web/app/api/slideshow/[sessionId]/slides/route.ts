@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@snaproll/convex-client/server';
+import { api } from '@flamelink/convex-client/server';
 import { auth } from '@clerk/nextjs/server';
-import type { Id } from '@snaproll/convex-client';
+import type { Id } from '@flamelink/convex-client';
 
 function getConvexUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;

@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Button, TextInput, Skeleton, Modal } from '@snaproll/ui';
+import { Card, Button, TextInput, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
 

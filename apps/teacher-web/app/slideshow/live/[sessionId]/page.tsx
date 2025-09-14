@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card } from '@snaproll/ui';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { Button, Card } from '@flamelink/ui';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 // import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';

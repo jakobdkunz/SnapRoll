@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@snaproll/convex-client/server';
+import { api } from '@flamelink/convex-client/server';
 
 function getConvexUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;

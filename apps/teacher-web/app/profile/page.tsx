@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Card, TextInput } from '@snaproll/ui';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { Button, Card, TextInput } from '@flamelink/ui';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 
 export default function TeacherProfilePage() {
@@ -32,7 +32,7 @@ export default function TeacherProfilePage() {
   const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'> } : "skip");
 
   useEffect(() => {
-    const id = localStorage.getItem('snaproll.teacherId');
+    const id = localStorage.getItem('flamelink.teacherId');
     setTeacherId(id);
   }, []);
 
@@ -51,7 +51,7 @@ export default function TeacherProfilePage() {
     try {
       await updateUser({ id: teacherId as Id<'users'>, firstName, lastName });
       const name = `${firstName} ${lastName}`;
-      localStorage.setItem('snaproll.teacherName', name);
+      localStorage.setItem('flamelink.teacherName', name);
       try { router.refresh(); } catch {
         // Ignore refresh errors, fallback to reload
       }

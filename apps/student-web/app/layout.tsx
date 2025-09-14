@@ -7,7 +7,7 @@ import { WordmarkLink } from './_components/WordmarkLink';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'SnapRoll – Student',
+  title: 'FlameLink – Student',
   description: 'Fast, friendly attendance check-in',
   manifest: '/manifest.json',
 };

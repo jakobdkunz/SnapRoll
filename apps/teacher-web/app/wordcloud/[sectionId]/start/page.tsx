@@ -1,10 +1,10 @@
 "use client";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Modal, TextInput } from '@snaproll/ui';
+import { Button, Modal, TextInput } from '@flamelink/ui';
 import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 
 export default function StartWordCloudPage({ params }: { params: { sectionId: string } }) {

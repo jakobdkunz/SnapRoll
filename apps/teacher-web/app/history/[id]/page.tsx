@@ -2,11 +2,11 @@
 import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@clerk/nextjs';
-import { Card, Badge, Button, Skeleton, Modal } from '@snaproll/ui';
+import { Card, Badge, Button, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
-import { formatDateMDY } from '@snaproll/lib';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { formatDateMDY } from '@flamelink/lib';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
 

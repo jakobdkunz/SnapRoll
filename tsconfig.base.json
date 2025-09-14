@@ -16,10 +16,10 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@snaproll/ui": ["packages/ui/src"],
-      "@snaproll/lib": ["packages/lib/src"],
-      "@snaproll/convex-client": ["packages/convex-client/src"],
-      "@snaproll/config": ["packages/config/src"]
+      "@flamelink/ui": ["packages/ui/src"],
+      "@flamelink/lib": ["packages/lib/src"],
+      "@flamelink/convex-client": ["packages/convex-client/src"],
+      "@flamelink/config": ["packages/config/src"]
     }
   }
 }

@@ -1,15 +1,15 @@
 "use client";
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { Button, Card, TextInput, Modal, Skeleton } from '@snaproll/ui';
+import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import { RosterRow } from './_components/RosterRow';
 import { SectionHeader } from './_components/SectionHeader';
 import { ImportCsvModal } from './_components/ImportCsvModal';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
-import type { Id } from '@snaproll/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useAuth } from '@clerk/nextjs';
-import { isValidEmail } from '@snaproll/lib';
+import { isValidEmail } from '@flamelink/lib';
 import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
 

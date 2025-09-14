@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { Card, TextInput } from '@snaproll/ui';
-import { api } from '@snaproll/convex-client';
+import { Card, TextInput } from '@flamelink/ui';
+import { api } from '@flamelink/convex-client';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 
@@ -17,7 +17,7 @@ export default function StudentProfilePage() {
   const student = useQuery(api.functions.users.get, studentId ? { id: studentId as unknown as Id<'users'> } : "skip");
 
   useEffect(() => {
-    const id = localStorage.getItem('snaproll.studentId');
+    const id = localStorage.getItem('flamelink.studentId');
     setStudentId(id);
   }, []);
 

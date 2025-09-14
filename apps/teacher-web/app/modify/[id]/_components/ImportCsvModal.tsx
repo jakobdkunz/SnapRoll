@@ -1,6 +1,6 @@
 "use client";
 import * as React from 'react';
-import { Button, Modal } from '@snaproll/ui';
+import { Button, Modal } from '@flamelink/ui';
 import { HiChevronDown } from 'react-icons/hi2';
 
 type ColumnRole = 'email' | 'first' | 'last' | 'full' | 'other';

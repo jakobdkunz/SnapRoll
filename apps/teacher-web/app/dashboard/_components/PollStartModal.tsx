@@ -1,10 +1,10 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Modal, Button, TextInput } from '@snaproll/ui';
+import { Modal, Button, TextInput } from '@flamelink/ui';
 import { useMutation } from 'convex/react';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 
 export default function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
   const router = useRouter();

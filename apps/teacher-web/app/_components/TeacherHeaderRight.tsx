@@ -2,11 +2,11 @@
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@snaproll/convex-client';
-import type { Id } from '@snaproll/convex-client';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useClerk } from '@clerk/nextjs';
-import { Modal, Card, Button, TextInput } from '@snaproll/ui';
+import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 
 export function TeacherHeaderRight() {
   const router = useRouter();

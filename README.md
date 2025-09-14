@@ -1,6 +1,6 @@
-# SnapRoll Monorepo
+# FlameLink Monorepo
 
-A Turborepo monorepo for SnapRoll with Next.js apps for teachers and students, shared packages, and Convex backend.
+A Turborepo monorepo for FlameLink with Next.js apps for teachers and students, shared packages, and Convex backend.
 
 ## Prerequisites
 - PNPM 9+
@@ -40,6 +40,6 @@ pnpm dev
 - convex:dev, convex:deploy
 
 ## Notes
-- Tailwind preset is in `@snaproll/config/tailwind-preset`.
+- Tailwind preset is in `@flamelink/config/tailwind-preset`.
 - PWA support is enabled in `apps/student-web` with manifest and service worker.
 - Backend is powered by Convex with real-time subscriptions.
