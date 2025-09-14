@@ -95,7 +95,7 @@ export default function MyAttendancePage() {
 
   // Column width calculations
   const COURSE_COL_BASE = isCompact ? 120 : 200; // narrower when compact
-  const DAY_COL_CONTENT = isCompact ? 56 : 96; // compact uses MM/DD
+  const DAY_COL_CONTENT = isCompact ? 48 : 96; // compact uses MM/DD (tighter to fit more columns)
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -124,7 +124,7 @@ export default function MyAttendancePage() {
     // Compute fit using configured left column width instead of measured (which can be inflated)
     const leftCol = COURSE_COL_BASE; // use exact configured width
     const availableForDays = Math.max(0, rectW - leftCol);
-    const perCol = (compact ? 56 : 96) + DAY_COL_PADDING;
+    const perCol = (compact ? 48 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
     const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
     const capped = Math.min(60, fit);
@@ -137,7 +137,7 @@ export default function MyAttendancePage() {
   useEffect(() => {
     if (!containerWidth) return;
     const leftCol = COURSE_COL_BASE;
-    const perCol = (isCompact ? 56 : 96) + DAY_COL_PADDING;
+    const perCol = (isCompact ? 48 : 96) + DAY_COL_PADDING;
     const numCols = (data?.days?.length || 0);
     const slack = Math.max(0, containerWidth - leftCol - perCol * numCols);
     setFillerWidth(Math.round(slack));
