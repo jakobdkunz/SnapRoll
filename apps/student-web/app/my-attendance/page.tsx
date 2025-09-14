@@ -306,7 +306,7 @@ export default function MyAttendancePage() {
     <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
       <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
         <Card className="py-4 px-2 sm:px-4">
-        {process.env.NEXT_PUBLIC_DEBUG_HISTORY === '1' && debug && (
+        {process.env.NEXT_PUBLIC_DEBUG_HISTORY === 'true' && debug && (
           <div className={`mb-2 text-xs text-slate-500 ${isCompact ? 'pl-2' : 'pl-4'}`}>
             cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
           </div>
