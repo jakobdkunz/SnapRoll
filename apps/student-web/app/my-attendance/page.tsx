@@ -100,6 +100,7 @@ export default function MyAttendancePage() {
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [fillerWidth, setFillerWidth] = useState<number>(0);
+  const [courseColWidth, setCourseColWidth] = useState<number>(COURSE_COL_BASE);
 
   useEffect(() => {
     const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
@@ -133,14 +134,20 @@ export default function MyAttendancePage() {
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
   }, [COURSE_COL_BASE, DAY_COL_PADDING, offset]);
 
-  // Recompute filler width to right-align day columns
+  // Recompute filler width to right-align day columns and grow course column with slack
   useEffect(() => {
     if (!containerWidth) return;
-    const leftCol = COURSE_COL_BASE;
+    const baseLeftCol = COURSE_COL_BASE;
     const perCol = (isCompact ? 48 : 96) + DAY_COL_PADDING;
     const numCols = (data?.days?.length || 0);
-    const slack = Math.max(0, containerWidth - leftCol - perCol * numCols);
-    setFillerWidth(Math.round(slack));
+    const slack = Math.max(0, containerWidth - baseLeftCol - perCol * numCols);
+    // Allocate slack to course column first (reduce truncation), cap growth to avoid extreme widths
+    const maxExtraForCourse = isCompact ? 56 : 120; // allows up to ~176px compact, 320px regular
+    const useForCourse = Math.min(slack, maxExtraForCourse);
+    const newCourseWidth = baseLeftCol + useForCourse;
+    const remaining = Math.max(0, slack - useForCourse);
+    setCourseColWidth(Math.round(newCourseWidth));
+    setFillerWidth(Math.round(remaining));
   }, [containerWidth, COURSE_COL_BASE, isCompact, DAY_COL_PADDING, data?.days?.length]);
 
   useEffect(() => {
@@ -355,7 +362,7 @@ export default function MyAttendancePage() {
         <div ref={containerRef} className="relative overflow-hidden w-full">
           <table className="border-separate border-spacing-0 table-fixed">
             <colgroup>
-              <col style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }} />
+              <col style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }} />
               <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
               {grid.days.map((d) => (
                 <col key={`col-${d.date}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
@@ -363,7 +370,7 @@ export default function MyAttendancePage() {
             </colgroup>
             <thead>
               <tr>
-                <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>Course</th>
+                <th ref={firstThRef} className="sticky left-0 z-0 bg-white pl-4 pr-1 py-2 text-left" style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
                 <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                 {[...grid.days].reverse().map((d) => (
                   <th 
@@ -389,7 +396,7 @@ export default function MyAttendancePage() {
                 const byDate = grid.recBySection.get(s.id)!;
                 return (
                   <tr key={s.id} className="odd:bg-slate-50">
-                    <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: COURSE_COL_BASE, minWidth: COURSE_COL_BASE, maxWidth: COURSE_COL_BASE }}>
+                    <td className="sticky left-0 z-0 bg-white pl-4 pr-1 py-1 text-sm" style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                     </td>
                     <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
