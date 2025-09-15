@@ -10,45 +10,45 @@ export default function LandingPage() {
         <div className="relative z-10">
           <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 items-center gap-6 sm:gap-10">
             <div className="text-center lg:text-left">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">Fast, friendly attendance check‑in</h1>
-              <p className="mt-3 text-slate-600 text-base sm:text-lg">FlameLink makes it delightful to check in, interact, and stay present in class. Simple for students, powerful for instructors.</p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900">A better Top Hat alternative for classroom response</h1>
+              <p className="mt-3 text-slate-600 text-base sm:text-lg">Take attendance in seconds, engage students with polls, word clouds, and slides — all at <span className="font-semibold text-slate-900">half the price of Top Hat</span>.</p>
               <div className="mt-5 flex items-center justify-center lg:justify-start gap-3">
                 <Link href="/sign-in"><Button className="min-w-28">Log in</Button></Link>
                 <a href="#features" className="text-blue-600 hover:underline font-medium">Learn more →</a>
               </div>
             </div>
-            <div className="relative h-[300px] sm:h-[380px] lg:h-[440px]">
+            <div className="relative h-[360px] sm:h-[440px] lg:h-[520px]">
               {/* MacBook */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[82%] aspect-[16/10] drop-shadow-xl">
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[96%] aspect-[16/10] drop-shadow-xl">
                 <Image
                   src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE7xxh4oXSTpQFUsHlVAhxM8u6DNnPiKqLzZc0"
                   alt="FlameLink on MacBook"
                   fill
-                  sizes="(max-width: 1024px) 90vw, 40vw"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
                   className="object-contain"
                   priority
                   quality={90}
                 />
               </div>
               {/* iPad */}
-              <div className="absolute left-[4%] bottom-2 w-[38%] aspect-[4/3] -rotate-2 drop-shadow-md">
+              <div className="absolute left-[2%] bottom-2 w-[48%] aspect-[4/3] -rotate-2 drop-shadow-md">
                 <Image
                   src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE9pzLoI3Fz9VoWxJBkvIUwGrZKR4i6uQYEgMn"
                   alt="FlameLink on iPad"
                   fill
-                  sizes="(max-width: 1024px) 45vw, 20vw"
+                  sizes="(max-width: 1024px) 55vw, 26vw"
                   className="object-contain"
                   priority
                   quality={90}
                 />
               </div>
               {/* iPhone */}
-              <div className="absolute right-[2%] bottom-0 w-[24%] aspect-[9/19] rotate-2 drop-shadow-md">
+              <div className="absolute right-[0%] bottom-0 w-[30%] aspect-[9/19] rotate-2 drop-shadow-md">
                 <Image
                   src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepEcWE56ZJ1MDQrUL0pz8OZEKtHdsAjTXP6uBVJ"
                   alt="FlameLink on iPhone"
                   fill
-                  sizes="(max-width: 1024px) 30vw, 14vw"
+                  sizes="(max-width: 1024px) 36vw, 18vw"
                   className="object-contain"
                   priority
                   quality={90}
@@ -61,16 +61,16 @@ export default function LandingPage() {
 
       <div id="features" className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
         <Card className="p-5">
-          <div className="text-lg font-semibold">One‑tap check‑ins</div>
-          <div className="mt-1 text-slate-600 text-sm">Enter a short code to mark attendance. Accessible and fast on any device.</div>
+          <div className="text-lg font-semibold">Attendance in seconds</div>
+          <div className="mt-1 text-slate-600 text-sm">Short codes and one‑tap check‑ins keep roll‑taking fast and accurate.</div>
         </Card>
         <Card className="p-5">
-          <div className="text-lg font-semibold">Live activities</div>
-          <div className="mt-1 text-slate-600 text-sm">Word clouds, polls, and slides keep you engaged with class content.</div>
+          <div className="text-lg font-semibold">Engage with polls & more</div>
+          <div className="mt-1 text-slate-600 text-sm">Polls, word clouds, and slides keep every student involved.</div>
         </Card>
         <Card className="p-5">
-          <div className="text-lg font-semibold">Privacy‑minded</div>
-          <div className="mt-1 text-slate-600 text-sm">Built with minimal data collection and modern, secure authentication.</div>
+          <div className="text-lg font-semibold">Half the price</div>
+          <div className="mt-1 text-slate-600 text-sm">All the essentials for classroom response at about 50% of Top Hat.</div>
         </Card>
       </div>
     </div>
