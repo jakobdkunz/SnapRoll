@@ -11,6 +11,12 @@ body {
   background: rgb(var(--background));
 }
 
+@keyframes gradient_drift {
+  0% { transform: translate3d(0,0,0); }
+  50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+  100% { transform: translate3d(0,0,0); }
+}
+
 /* iOS Safari address bar / viewport changes: keep header fixed to the top */
 html, body {
   height: 100%;

@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
+const isPublicRoute = createRouteMatcher(["/", "/manifest.json", "/sw.js", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return;
