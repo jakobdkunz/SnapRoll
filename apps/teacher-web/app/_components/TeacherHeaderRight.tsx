@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useClerk } from '@clerk/nextjs';
+import { useAuth, useClerk } from '@clerk/nextjs';
+import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 
 export function TeacherHeaderRight() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [teacherId, setTeacherId] = useState<Id<'users'> | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -136,6 +138,14 @@ export function TeacherHeaderRight() {
     return (
       <div className="opacity-0 pointer-events-none select-none">
         <button className="text-sm">Profile</button>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div>
+        <Link href="/sign-in"><Button variant="secondary">Log in</Button></Link>
       </div>
     );
   }

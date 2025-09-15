@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { api } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
-import { useClerk } from '@clerk/nextjs';
+import { useAuth, useClerk } from '@clerk/nextjs';
+import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 
@@ -12,6 +13,7 @@ import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons
 
 export function StudentHeaderRight() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -79,6 +81,14 @@ export function StudentHeaderRight() {
     return (
       <div className="opacity-0 pointer-events-none select-none">
         <button className="text-sm">Profile</button>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div>
+        <Link href="/sign-in"><Button variant="secondary">Log in</Button></Link>
       </div>
     );
   }
