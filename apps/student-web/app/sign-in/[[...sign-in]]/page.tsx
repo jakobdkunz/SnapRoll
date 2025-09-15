@@ -8,7 +8,7 @@ export default function StudentSignInCatchAll() {
   const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/');
+    if (isLoaded && isSignedIn) router.replace('/sections');
   }, [isLoaded, isSignedIn, router]);
 
   return (
@@ -17,7 +17,7 @@ export default function StudentSignInCatchAll() {
         <SignIn 
           routing="hash" 
           signUpUrl="/sign-up" 
-          fallbackRedirectUrl="/" 
+          fallbackRedirectUrl="/sections" 
           appearance={{ elements: { rootBox: 'w-full', card: 'w-full mx-auto', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
         />
       </div>

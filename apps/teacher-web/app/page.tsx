@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button, Card } from '@flamelink/ui';
 
 export default function LandingPage() {
@@ -32,6 +33,27 @@ export default function LandingPage() {
           <div className="text-lg font-semibold">Actionable insights</div>
           <div className="mt-1 text-slate-600 text-sm">See trends over time and spot who needs help at a glance.</div>
         </Card>
+      </div>
+
+      <div className="mt-8">
+        <div className="text-center text-slate-600 text-sm mb-3">Product previews</div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 items-center">
+          <Card className="p-3 overflow-hidden">
+            <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-slate-100">
+              <Image src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE7xxh4oXSTpQFUsHlVAhxM8u6DNnPiKqLzZc0" alt="MacBook mockup" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+            </div>
+          </Card>
+          <Card className="p-3 overflow-hidden">
+            <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-slate-100">
+              <Image src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepEcWE56ZJ1MDQrUL0pz8OZEKtHdsAjTXP6uBVJ" alt="iPhone mockup" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+            </div>
+          </Card>
+          <Card className="p-3 overflow-hidden">
+            <div className="relative aspect-[3/2] rounded-lg overflow-hidden bg-slate-100">
+              <Image src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE9pzLoI3Fz9VoWxJBkvIUwGrZKR4i6uQYEgMn" alt="iPad mockup" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+            </div>
+          </Card>
+        </div>
       </div>
     </div>
   );

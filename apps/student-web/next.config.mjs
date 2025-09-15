@@ -1,6 +1,11 @@
 const nextConfig = {
   transpilePackages: ['@flamelink/ui', '@flamelink/lib', '@flamelink/config', '@flamelink/convex-client'],
   experimental: { typedRoutes: true },
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.ufs.sh' },
+    ],
+  },
   env: {
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/sign-in',
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: '/sign-up',
