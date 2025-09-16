@@ -1,10 +1,21 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 const isPublicRoute = createRouteMatcher(["/", "/manifest.json", "/sw.js", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) return;
   const { userId, redirectToSignIn } = await auth();
+
+  if (req.nextUrl.pathname === '/') {
+    if (userId) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/sections';
+      return NextResponse.redirect(url);
+    }
+    return;
+  }
+
+  if (isPublicRoute(req)) return;
   if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
 });
 
