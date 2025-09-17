@@ -6,6 +6,7 @@ import { Card, Badge, Skeleton, Button } from '@flamelink/ui';
 import { convexApi, api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
+import { Modal } from '@flamelink/ui';
 
 type HistoryResponse = {
   sections: { id: string; title: string }[];
@@ -49,6 +50,7 @@ export default function MyAttendancePage() {
   // const [initialized, setInitialized] = useState(false);
   const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>({ visible: false, text: '', anchorX: 0, anchorY: 0 });
   const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -258,6 +260,10 @@ export default function MyAttendancePage() {
     api.functions.sections.getByIds,
     sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
   );
+  const sectionDetails = useQuery(
+    api.functions.sections.getDetailsByIds,
+    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+  );
   const gradientBySectionId = useMemo(() => {
     const map = new Map<string, string>();
     if (sectionsData && Array.isArray(sectionsData)) {
@@ -267,6 +273,23 @@ export default function MyAttendancePage() {
     }
     return map;
   }, [sectionsData]);
+  const detailsBySectionId = useMemo(() => {
+    const map = new Map<string, { gradient: string; teacher: { firstName: string; lastName: string; email: string } }>();
+    if (sectionDetails && Array.isArray(sectionDetails)) {
+      for (const s of sectionDetails as Array<{ id: string; gradient?: string; teacher?: { firstName?: string; lastName?: string; email?: string } }>) {
+        map.set(s.id, {
+          gradient: s.gradient || 'gradient-1',
+          teacher: {
+            firstName: s.teacher?.firstName || '',
+            lastName: s.teacher?.lastName || '',
+            email: s.teacher?.email || ''
+          }
+        });
+      }
+    }
+    return map;
+  }, [sectionDetails]);
+  const emailSubject = useMemo(() => encodeURIComponent('Attendance Question'), []);
 
   // Always render the same skeleton on both server and client to avoid hydration mismatch
   if (!isClient || !studentId) return (
@@ -496,6 +519,68 @@ export default function MyAttendancePage() {
         <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
       </Card>
       </div>
+      {/* Contact Instructor Section */}
+      <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+        <Card className="py-4 px-2 sm:px-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-base font-medium">Have a question about your attendance?</div>
+              <div className="text-sm text-slate-600">Email your professor to ask about a specific day or status.</div>
+            </div>
+            <Button onClick={() => setEmailModalOpen(true)}>Email your professor…</Button>
+          </div>
+        </Card>
+      </div>
+
+      <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)}>
+        <Card className="p-4 sm:p-6 w-[92vw] max-w-2xl">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-lg font-semibold">Contact your instructors</div>
+            <Button variant="ghost" onClick={() => setEmailModalOpen(false)}>Close</Button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-fixed">
+              <colgroup>
+                <col style={{ width: '50%' }} />
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '25%' }} />
+              </colgroup>
+              <thead>
+                <tr className="text-left text-sm text-slate-600">
+                  <th className="py-2 pr-2">Course</th>
+                  <th className="py-2 px-2">Instructor</th>
+                  <th className="py-2 pl-2">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grid.sections.map((s) => {
+                  const details = detailsBySectionId.get(s.id);
+                  const gradientClass = (details?.gradient || gradientBySectionId.get(s.id) || 'gradient-1');
+                  const teacherName = details ? `${details.teacher.firstName} ${details.teacher.lastName}`.trim() : '';
+                  const email = details?.teacher.email || '';
+                  return (
+                    <tr key={`row-${s.id}`} className="border-t border-slate-200">
+                      <td className="py-2 pr-2 align-middle">
+                        <div className={`rounded-md ${gradientClass} text-white px-2 py-1 inline-block max-w-full`}>
+                          <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
+                        </div>
+                      </td>
+                      <td className="py-2 px-2 align-middle text-sm text-slate-700 truncate">{teacherName || '—'}</td>
+                      <td className="py-2 pl-2 align-middle text-sm">
+                        {email ? (
+                          <a className="text-indigo-600 hover:underline" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </Modal>
     </div>
   );
 }
