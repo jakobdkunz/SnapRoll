@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useLayoutEffect, useCallback } from 'react';
+import React from 'react';
 import { createPortal } from 'react-dom';
 // import { usePathname } from 'next/navigation';
 import { Card, Badge, Skeleton, Button } from '@flamelink/ui';
@@ -96,7 +97,7 @@ export default function MyAttendancePage() {
   );
 
   // Column width calculations
-  const COURSE_COL_BASE = isCompact ? 120 : 200; // narrower when compact
+  const COURSE_COL_BASE = isCompact ? 120 : 200; // unchanged for non-compact; compact uses no left column
   const DAY_COL_CONTENT = isCompact ? 48 : 96; // compact uses MM/DD (tighter to fit more columns)
   const DAY_COL_PADDING = 12; // pl-1 (4px) + pr-2 (8px)
   // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint
@@ -124,8 +125,8 @@ export default function MyAttendancePage() {
     // Update compact mode from container width
     const compact = rectW < 640;
     setIsCompact(compact);
-    // Compute fit using configured left column width instead of measured (which can be inflated)
-    const leftCol = COURSE_COL_BASE; // use exact configured width
+    // Compute fit: in compact, remove left column entirely; otherwise use base course width
+    const leftCol = compact ? 0 : 200;
     const availableForDays = Math.max(0, rectW - leftCol);
     const perCol = (compact ? 48 : 96) + DAY_COL_PADDING;
     const epsilon = 4;
@@ -134,11 +135,17 @@ export default function MyAttendancePage() {
     setLimit((prev) => (prev !== capped ? capped : prev));
     setContainerWidth(Math.round(rectW));
     setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
-  }, [COURSE_COL_BASE, DAY_COL_PADDING, offset]);
+  }, [DAY_COL_PADDING, offset]);
 
   // Recompute filler width to right-align day columns and grow course column with slack
   useEffect(() => {
     if (!containerWidth) return;
+    if (isCompact) {
+      // No left/filler columns in compact layout
+      setCourseColWidth(0);
+      setFillerWidth(0);
+      return;
+    }
     const baseLeftCol = COURSE_COL_BASE;
     const perCol = (isCompact ? 48 : 96) + DAY_COL_PADDING;
     const numCols = (data?.days?.length || 0);
@@ -404,16 +411,24 @@ export default function MyAttendancePage() {
         <div ref={containerRef} className="relative overflow-hidden w-full">
           <table className="border-separate border-spacing-0 table-fixed w-full">
             <colgroup>
-              <col style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }} />
-              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+              {!isCompact && (
+                <>
+                  <col style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }} />
+                  <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+                </>
+              )}
               {grid.days.map((d) => (
                 <col key={`col-${d.date}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
               ))}
             </colgroup>
             <thead>
               <tr>
-                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
-                <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                {!isCompact && (
+                  <>
+                    <th ref={firstThRef} className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
+                    <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                  </>
+                )}
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
@@ -434,9 +449,79 @@ export default function MyAttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {grid.sections.map((s) => {
+              {grid.sections.map((s, idx) => {
                 const byDate = grid.recBySection.get(s.id)!;
                 const gradientClass = gradientBySectionId.get(s.id) || 'gradient-1';
+                if (isCompact) {
+                  return (
+                    <React.Fragment key={s.id}>
+                      <tr key={`${s.id}-title`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                        <td colSpan={grid.days.length} className="px-2 py-1">
+                          <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
+                            <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                        {[...grid.days].reverse().map((d) => {
+                          const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
+                          const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
+                          const showManual = rec.isManual && rec.status !== rec.originalStatus;
+                          const display = status === 'PRESENT' ? 'P' : status === 'ABSENT' ? 'A' : status === 'EXCUSED' ? 'E' : status === 'NOT_JOINED' ? 'NE' : '–';
+                          const tooltipText = showManual && rec.manualChange
+                            ? (() => {
+                                const createdAt = rec.manualChange!.createdAt;
+                                const dateKey = typeof createdAt === 'number'
+                                  ? new Date(createdAt).toISOString().slice(0,10)
+                                  : (createdAt || '').slice(0,10);
+                                return `Instructor manually changed the status to ${status} on ${formatDateMDY(dateKey)}`;
+                              })()
+                            : (() => {
+                                const name = studentName || 'Student';
+                                if (status === 'PRESENT') return `${name} was Present in class on ${formatDateMDY(d.date)}.`;
+                                if (status === 'ABSENT') return `${name} was Absent on ${formatDateMDY(d.date)}.`;
+                                if (status === 'EXCUSED') return `${name} was Excused on ${formatDateMDY(d.date)}.`;
+                                if (status === 'NOT_JOINED') return `${name} was not enrolled in this course on ${formatDateMDY(d.date)}.`;
+                                return '';
+                              })();
+                          return (
+                            <td key={d.date} className="pl-1 pr-2 py-2 text-center" style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}>
+                              {isRefreshing ? (
+                                hasRefreshDelayElapsed ? (
+                                  <Skeleton className="h-6 w-8 mx-auto rounded" />
+                                ) : (
+                                  <span className="inline-block h-6 w-8" />
+                                )
+                              ) : (
+                                <div 
+                                  className="relative group inline-block"
+                                  onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                                  onMouseLeave={hideTooltip}
+                                  onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+                                  onTouchEnd={hideTooltip}
+                                  title={tooltipText}
+                                >
+                                  {status === 'PRESENT' ? (
+                                    <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
+                                  ) : status === 'ABSENT' ? (
+                                    <Badge tone="red">{display}{showManual ? '*' : ''}</Badge>
+                                  ) : status === 'EXCUSED' ? (
+                                    <Badge tone="yellow">{display}{showManual ? '*' : ''}</Badge>
+                                  ) : status === 'NOT_JOINED' ? (
+                                    <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
+                                  ) : (
+                                    <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </React.Fragment>
+                  );
+                }
+                // Non-compact: original single-row with left course column
                 return (
                   <tr key={s.id} className="odd:bg-slate-50">
                     <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
