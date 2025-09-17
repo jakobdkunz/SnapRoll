@@ -521,7 +521,7 @@ export default function MyAttendancePage() {
       </div>
       {/* Contact Instructor Section */}
       <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
-        <Card className="py-4 px-2 sm:px-4">
+        <Card className="py-4 px-4 sm:px-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="text-base font-medium">Have a question about your attendance?</div>
