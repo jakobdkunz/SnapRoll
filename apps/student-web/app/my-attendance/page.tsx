@@ -533,20 +533,23 @@ export default function MyAttendancePage() {
       </div>
 
       <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)}>
-        <Card className="p-4 sm:p-6 w-[92vw] max-w-2xl">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-lg font-semibold">Contact your instructors</div>
+        <Card className="p-4 sm:p-6 w-[94vw] sm:w-[92vw] max-w-2xl">
+          <div className="flex items-start justify-between gap-3 mb-2 sm:mb-3">
+            <div>
+              <div className="text-lg font-semibold">Contact your instructors</div>
+              <div className="mt-1 text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">Be sure to use your school email.</div>
+            </div>
             <Button variant="ghost" onClick={() => setEmailModalOpen(false)}>Close</Button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full table-fixed">
+          <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <table className="min-w-full table-fixed text-sm">
               <colgroup>
-                <col style={{ width: '50%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '25%' }} />
+                <col style={{ width: '48%' }} />
+                <col style={{ width: '26%' }} />
+                <col style={{ width: '26%' }} />
               </colgroup>
               <thead>
-                <tr className="text-left text-sm text-slate-600">
+                <tr className="text-left text-slate-600">
                   <th className="py-2 pr-2">Course</th>
                   <th className="py-2 px-2">Instructor</th>
                   <th className="py-2 pl-2">Email</th>
@@ -561,14 +564,14 @@ export default function MyAttendancePage() {
                   return (
                     <tr key={`row-${s.id}`} className="border-t border-slate-200">
                       <td className="py-2 pr-2 align-middle">
-                        <div className={`rounded-md ${gradientClass} text-white px-2 py-1 inline-block max-w-full`}>
-                          <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
+                        <div className={`rounded-md ${gradientClass} text-white px-2 py-1 inline-flex max-w-full`}>
+                          <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight">{s.title}</div>
                         </div>
                       </td>
-                      <td className="py-2 px-2 align-middle text-sm text-slate-700 truncate">{teacherName || '—'}</td>
-                      <td className="py-2 pl-2 align-middle text-sm">
+                      <td className="py-2 px-2 align-middle text-slate-700 truncate">{teacherName || '—'}</td>
+                      <td className="py-2 pl-2 align-middle">
                         {email ? (
-                          <a className="text-indigo-600 hover:underline" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
+                          <a className="text-indigo-600 hover:underline break-all" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
                         ) : (
                           <span className="text-slate-500">—</span>
                         )}
