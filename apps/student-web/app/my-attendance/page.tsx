@@ -249,6 +249,25 @@ export default function MyAttendancePage() {
     return { sections, days: uniqueDays, recBySection };
   }, [data]);
 
+  // Fetch gradients for the sections on the page
+  const sectionIds = useMemo(() => {
+    if (!grid) return null as Id<'sections'>[] | null;
+    return grid.sections.map((s) => s.id as unknown as Id<'sections'>);
+  }, [grid]);
+  const sectionsData = useQuery(
+    api.functions.sections.getByIds,
+    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+  );
+  const gradientBySectionId = useMemo(() => {
+    const map = new Map<string, string>();
+    if (sectionsData && Array.isArray(sectionsData)) {
+      for (const s of sectionsData as Array<{ _id: string; gradient?: string }>) {
+        map.set(s._id, s.gradient || 'gradient-1');
+      }
+    }
+    return map;
+  }, [sectionsData]);
+
   // Always render the same skeleton on both server and client to avoid hydration mismatch
   if (!isClient || !studentId) return (
     <div className="space-y-4 px-0 sm:px-0 py-6 sm:py-8">
@@ -394,10 +413,13 @@ export default function MyAttendancePage() {
             <tbody>
               {grid.sections.map((s) => {
                 const byDate = grid.recBySection.get(s.id)!;
+                const gradientClass = gradientBySectionId.get(s.id) || 'gradient-1';
                 return (
                   <tr key={s.id} className="odd:bg-slate-50">
                     <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
-                      <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
+                      <div className={`rounded-md ${gradientClass} text-white px-2 py-1`}>
+                        <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
+                      </div>
                     </td>
                     <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
