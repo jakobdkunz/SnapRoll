@@ -552,9 +552,9 @@ export default function MyAttendancePage() {
               const email = details?.teacher.email || '';
               return (
                 <div key={`mob-${s.id}`} className="border border-slate-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className={`rounded-md ${gradientClass} text-white px-2 py-1 max-w-[70%]`}>
-                      <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight">{s.title}</div>
+                  <div className="mb-2">
+                    <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
+                      <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
                     </div>
                   </div>
                   <div className="text-sm text-slate-700">
@@ -602,8 +602,10 @@ export default function MyAttendancePage() {
                   return (
                     <tr key={`row-${s.id}`} className="border-t border-slate-200">
                       <td className="py-2 pr-2 align-middle">
-                        <div className={`rounded-md ${gradientClass} text-white px-2 py-1 inline-flex max-w-full`}>
-                          <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight">{s.title}</div>
+                        <div className="flex justify-center">
+                          <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 inline-block`}>
+                            <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
+                          </div>
                         </div>
                       </td>
                       <td className="py-2 px-2 align-middle text-slate-700 truncate">{teacherName || '—'}</td>
