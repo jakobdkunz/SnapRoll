@@ -184,3 +184,64 @@ export const getByIds = query({
     return sections.filter((s) => allowed.has(s._id));
   },
 });
+
+// Return section details including instructor info for authorized student
+export const getDetailsByIds = query({
+  args: { ids: v.array(v.id("sections")) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx);
+    const docs = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
+    const sections = (docs.filter(Boolean) as Array<{
+      _id: Id<'sections'>;
+      title: string;
+      gradient?: string;
+      teacherId: Id<'users'>;
+    }>);
+
+    if (user.role === "TEACHER") {
+      // Teachers can only view their own sections
+      const own = sections.filter((s) => s.teacherId === user._id);
+      const teacher = await ctx.db.get(user._id as Id<'users'>);
+      return own.map((s) => ({
+        id: s._id,
+        title: s.title,
+        gradient: s.gradient ?? "gradient-1",
+        teacher: teacher
+          ? { id: teacher._id as Id<'users'>, firstName: teacher.firstName as string, lastName: teacher.lastName as string, email: teacher.email as string }
+          : { id: user._id, firstName: "", lastName: "", email: "" },
+      }));
+    }
+
+    // Student: return only sections where the student is enrolled
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_student", (q) => q.eq("studentId", user._id))
+      .collect();
+    const allowed = new Set(enrollments.map((e) => e.sectionId));
+    const filtered = sections.filter((s) => allowed.has(s._id));
+    // Fetch instructor docs
+    const teacherIds = Array.from(new Set(filtered.map((s) => s.teacherId)));
+    const teacherDocs = await Promise.all(teacherIds.map((id) => ctx.db.get(id)));
+    const teacherById = new Map<Id<'users'>, { firstName: string; lastName: string; email: string }>();
+    for (const t of teacherDocs) {
+      if (!t) continue;
+      teacherById.set(t._id as Id<'users'>, {
+        firstName: (t.firstName as string) || "",
+        lastName: (t.lastName as string) || "",
+        email: (t.email as string) || "",
+      });
+    }
+
+    return filtered.map((s) => ({
+      id: s._id,
+      title: s.title,
+      gradient: s.gradient ?? "gradient-1",
+      teacher: {
+        id: s.teacherId,
+        firstName: teacherById.get(s.teacherId)?.firstName || "",
+        lastName: teacherById.get(s.teacherId)?.lastName || "",
+        email: teacherById.get(s.teacherId)?.email || "",
+      },
+    }));
+  },
+});
