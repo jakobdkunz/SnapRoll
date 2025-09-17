@@ -130,7 +130,7 @@ export function TeacherHeaderRight() {
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    router.push('/');
+    router.push('/sign-in');
   }
 
   // Don't render anything until client-side hydration is complete
