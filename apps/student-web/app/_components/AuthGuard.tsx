@@ -14,8 +14,8 @@ export function AuthGuard() {
     const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
     if (!isSignedIn && !isPublic) {
       const t = setTimeout(() => {
-        if (!isSignedIn) router.replace('/');
-      }, 50);
+        if (!isSignedIn) router.replace('/sign-in');
+      }, 10);
       return () => clearTimeout(t);
     }
     // Set a non-PII cookie to indicate auth state for the service worker

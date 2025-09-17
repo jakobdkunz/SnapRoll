@@ -10,8 +10,14 @@ export function AuthGuard() {
   const { user } = useUser();
 
   useEffect(() => {
-    // Rely on middleware for redirect behavior; client doesn't redirect
-    // This avoids redirect flicker during hydrations and preserves target routes on refresh
+    if (!isLoaded) return;
+    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
+    if (!isSignedIn && !isPublic) {
+      const t = setTimeout(() => {
+        if (!isSignedIn) router.replace('/sign-in');
+      }, 10);
+      return () => clearTimeout(t);
+    }
   }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;

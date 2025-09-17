@@ -73,7 +73,7 @@ export function StudentHeaderRight() {
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
     try { signOut().catch(() => {}); } catch (e) { void e; }
-    router.push('/');
+    router.push('/sign-in');
   }
 
   // Don't render anything until client-side hydration is complete
