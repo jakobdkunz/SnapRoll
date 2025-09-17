@@ -522,12 +522,14 @@ export default function MyAttendancePage() {
       {/* Contact Instructor Section */}
       <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
         <Card className="py-4 px-2 sm:px-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="text-base font-medium">Have a question about your attendance?</div>
               <div className="text-sm text-slate-600">Email your professor to ask about a specific day or status.</div>
             </div>
-            <Button onClick={() => setEmailModalOpen(true)}>Email your professor…</Button>
+            <div className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto" onClick={() => setEmailModalOpen(true)}>Email your professor…</Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -541,7 +543,43 @@ export default function MyAttendancePage() {
             </div>
             <Button variant="ghost" onClick={() => setEmailModalOpen(false)}>Close</Button>
           </div>
-          <div className="overflow-x-auto -mx-2 sm:mx-0">
+          {/* Mobile stacked list */}
+          <div className="sm:hidden space-y-3 mt-2">
+            {grid.sections.map((s) => {
+              const details = detailsBySectionId.get(s.id);
+              const gradientClass = (details?.gradient || gradientBySectionId.get(s.id) || 'gradient-1');
+              const teacherName = details ? `${details.teacher.firstName} ${details.teacher.lastName}`.trim() : '';
+              const email = details?.teacher.email || '';
+              return (
+                <div key={`mob-${s.id}`} className="border border-slate-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className={`rounded-md ${gradientClass} text-white px-2 py-1 max-w-[70%]`}>
+                      <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight">{s.title}</div>
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-700">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-slate-600">Instructor</div>
+                      <div className="truncate">{teacherName || '—'}</div>
+                    </div>
+                    <div className="mt-1 flex items-start justify-between gap-2">
+                      <div className="text-slate-600">Email</div>
+                      <div className="truncate text-right">
+                        {email ? (
+                          <a className="text-indigo-600 hover:underline break-all" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
+                        ) : (
+                          <span className="text-slate-500">—</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Table for sm and up */}
+          <div className="hidden sm:block overflow-x-auto -mx-2 sm:mx-0 mt-1">
             <table className="min-w-full table-fixed text-sm">
               <colgroup>
                 <col style={{ width: '48%' }} />
