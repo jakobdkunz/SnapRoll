@@ -543,8 +543,8 @@ export default function MyAttendancePage() {
             </div>
             <Button variant="ghost" onClick={() => setEmailModalOpen(false)}>Close</Button>
           </div>
-          {/* Mobile stacked list */}
-          <div className="sm:hidden space-y-3 mt-2">
+          {/* Stacked list (all viewports) */}
+          <div className="space-y-3 mt-2">
             {grid.sections.map((s) => {
               const details = detailsBySectionId.get(s.id);
               const gradientClass = (details?.gradient || gradientBySectionId.get(s.id) || 'gradient-1');
@@ -576,51 +576,6 @@ export default function MyAttendancePage() {
                 </div>
               );
             })}
-          </div>
-
-          {/* Table for sm and up */}
-          <div className="hidden sm:block overflow-x-auto -mx-2 sm:mx-0 mt-1">
-            <table className="min-w-full table-fixed text-sm">
-              <colgroup>
-                <col style={{ width: '48%' }} />
-                <col style={{ width: '26%' }} />
-                <col style={{ width: '26%' }} />
-              </colgroup>
-              <thead>
-                <tr className="text-left text-slate-600">
-                  <th className="py-2 pr-2">Course</th>
-                  <th className="py-2 px-2">Instructor</th>
-                  <th className="py-2 pl-2">Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {grid.sections.map((s) => {
-                  const details = detailsBySectionId.get(s.id);
-                  const gradientClass = (details?.gradient || gradientBySectionId.get(s.id) || 'gradient-1');
-                  const teacherName = details ? `${details.teacher.firstName} ${details.teacher.lastName}`.trim() : '';
-                  const email = details?.teacher.email || '';
-                  return (
-                    <tr key={`row-${s.id}`} className="border-t border-slate-200">
-                      <td className="py-2 pr-2 align-middle">
-                        <div className="flex justify-center">
-                          <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 inline-block`}>
-                            <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-2 px-2 align-middle text-slate-700 truncate">{teacherName || '—'}</td>
-                      <td className="py-2 pl-2 align-middle">
-                        {email ? (
-                          <a className="text-indigo-600 hover:underline break-all" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
-                        ) : (
-                          <span className="text-slate-500">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
           </div>
         </Card>
       </Modal>
