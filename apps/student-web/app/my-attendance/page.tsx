@@ -484,12 +484,12 @@ export default function MyAttendancePage() {
                             const totalAbsences = grid.totalsBySection.get(s.id);
                             const over = permitted != null && typeof totalAbsences === 'number' && totalAbsences > permitted;
                             return (
-                              <div className={`mt-1 text-xs ${over ? 'text-rose-100' : 'text-white'} text-center font-medium`}>
+                              <div className={`mt-1 text-xs ${over ? 'text-rose-700' : 'text-slate-700'} text-center font-medium`}>
                                 {typeof totalAbsences !== 'number' ? (
                                   <span className="opacity-80">Absences: —</span>
                                 ) : permitted != null ? (
                                   <span>
-                                    Absences: <span className={over ? 'underline decoration-rose-200' : ''}>{totalAbsences}</span> of {permitted} used
+                                    Absences: <span className={over ? 'font-semibold underline' : 'font-semibold'}>{totalAbsences}</span> of {permitted} used
                                   </span>
                                 ) : (
                                   <span>Absences: {totalAbsences}</span>
