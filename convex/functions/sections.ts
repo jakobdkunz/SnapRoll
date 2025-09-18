@@ -136,6 +136,7 @@ export const update = mutation({
     title: v.optional(v.string()),
     gradient: v.optional(v.string()),
     permittedAbsences: v.optional(v.number()),
+    clearPermittedAbsences: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
@@ -158,6 +159,11 @@ export const update = mutation({
       const n = Number(updates.permittedAbsences);
       if (!Number.isFinite(n) || n < 0 || n > 60) throw new Error("Permitted absences must be 0-60");
       safe.permittedAbsences = Math.floor(n);
+    }
+    // If explicitly clearing, unset the optional field
+    if (args.clearPermittedAbsences) {
+      const patchAny: any = { ...safe, permittedAbsences: undefined };
+      return await ctx.db.patch(id, patchAny);
     }
     return await ctx.db.patch(id, safe);
   },

@@ -120,7 +120,7 @@ export default function DashboardPage() {
   async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
-    await updateSection({ id: sid, title: title.trim(), gradient, permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences });
+    await updateSection({ id: sid, title: title.trim(), gradient, permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences, clearPermittedAbsences: permittedAbsences == null });
     handleCloseCustomize();
   }
 

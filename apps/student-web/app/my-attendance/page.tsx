@@ -482,16 +482,17 @@ export default function MyAttendancePage() {
                           {(() => {
                             const permitted = detailsBySectionId.get(s.id)?.permittedAbsences ?? null;
                             const totalAbsences = grid.totalsBySection.get(s.id);
+                            const over = permitted != null && typeof totalAbsences === 'number' && totalAbsences > permitted;
                             return (
-                              <div className="mt-1 text-xs text-slate-700 text-center">
-                                {totalAbsences === undefined ? (
-                                  <span className="text-slate-400">Absences: —</span>
+                              <div className={`mt-1 text-xs ${over ? 'text-rose-100' : 'text-white'} text-center font-medium`}>
+                                {typeof totalAbsences !== 'number' ? (
+                                  <span className="opacity-80">Absences: —</span>
                                 ) : permitted != null ? (
                                   <span>
-                                    Absences: <span className={totalAbsences > permitted ? 'text-rose-700 font-medium' : 'text-white font-semibold'}>{totalAbsences}</span> of {permitted}
+                                    Absences: <span className={over ? 'underline decoration-rose-200' : ''}>{totalAbsences}</span> of {permitted} used
                                   </span>
                                 ) : (
-                                  <span>Absences: <span className="font-semibold text-white">{totalAbsences}</span></span>
+                                  <span>Absences: {totalAbsences}</span>
                                 )}
                               </div>
                             );
@@ -567,13 +568,14 @@ export default function MyAttendancePage() {
                       {(() => {
                         const permitted = detailsBySectionId.get(s.id)?.permittedAbsences ?? null;
                         const totalAbsences = grid.totalsBySection.get(s.id);
+                        const over = permitted != null && typeof totalAbsences === 'number' && totalAbsences > permitted;
                         return (
-                          <div className="mt-1 text-xs text-slate-600">
-                            {totalAbsences === undefined ? (
+                          <div className={`mt-1 text-xs ${over ? 'text-rose-700' : 'text-slate-600'}`}>
+                            {typeof totalAbsences !== 'number' ? (
                               <span className="text-slate-400">Absences: —</span>
                             ) : permitted != null ? (
                               <span>
-                                Absences: <span className={totalAbsences > permitted ? 'text-rose-700 font-medium' : 'text-slate-700 font-medium'}>{totalAbsences}</span> of {permitted}
+                                Absences: <span className={over ? 'font-semibold underline' : 'font-medium'}>{totalAbsences}</span> of {permitted} used
                               </span>
                             ) : (
                               <span>Absences: <span className="font-medium text-slate-700">{totalAbsences}</span></span>
