@@ -50,6 +50,7 @@ export const create = mutation({
   args: {
     title: v.string(),
     gradient: v.optional(v.string()),
+    permittedAbsences: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
@@ -77,6 +78,7 @@ export const create = mutation({
       gradient: args.gradient ?? "gradient-1",
       teacherId: user._id,
       joinCode,
+      permittedAbsences: args.permittedAbsences,
     });
   },
 });
@@ -133,6 +135,7 @@ export const update = mutation({
     id: v.id("sections"),
     title: v.optional(v.string()),
     gradient: v.optional(v.string()),
+    permittedAbsences: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
@@ -140,7 +143,7 @@ export const update = mutation({
     const { id, ...updates } = args;
     const section = await ctx.db.get(id);
     if (!section || section.teacherId !== user._id) throw new Error("Forbidden");
-    const safe: { title?: string; gradient?: string } = {};
+    const safe: { title?: string; gradient?: string; permittedAbsences?: number } = {};
     if (updates.title !== undefined) {
       const t = (updates.title || "").trim();
       if (t.length === 0 || t.length > 200) throw new Error("Title must be 1-200 chars");
@@ -150,6 +153,11 @@ export const update = mutation({
       const g = (updates.gradient || "").trim();
       if (g.length === 0 || g.length > 100) throw new Error("Invalid gradient");
       safe.gradient = g;
+    }
+    if (updates.permittedAbsences !== undefined) {
+      const n = Number(updates.permittedAbsences);
+      if (!Number.isFinite(n) || n < 0 || n > 60) throw new Error("Permitted absences must be 0-60");
+      safe.permittedAbsences = Math.floor(n);
     }
     return await ctx.db.patch(id, safe);
   },
@@ -171,7 +179,7 @@ export const getByIds = query({
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
     const docs = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
-    const sections = docs.filter(Boolean) as Array<{ _id: Id<'sections'>; teacherId: Id<'users'>; title: string; gradient?: string }>;
+    const sections = docs.filter(Boolean) as Array<{ _id: Id<'sections'>; teacherId: Id<'users'>; title: string; gradient?: string; permittedAbsences?: number | null }>;
     if (user.role === "TEACHER") {
       return sections.filter((s) => s.teacherId === user._id);
     }
@@ -196,6 +204,7 @@ export const getDetailsByIds = query({
       title: string;
       gradient?: string;
       teacherId: Id<'users'>;
+      permittedAbsences?: number | null;
     }>);
 
     if (user.role === "TEACHER") {
@@ -206,6 +215,7 @@ export const getDetailsByIds = query({
         id: s._id,
         title: s.title,
         gradient: s.gradient ?? "gradient-1",
+        permittedAbsences: s.permittedAbsences ?? null,
         teacher: teacher
           ? { id: teacher._id as Id<'users'>, firstName: teacher.firstName as string, lastName: teacher.lastName as string, email: teacher.email as string }
           : { id: user._id, firstName: "", lastName: "", email: "" },
@@ -236,6 +246,7 @@ export const getDetailsByIds = query({
       id: s._id,
       title: s.title,
       gradient: s.gradient ?? "gradient-1",
+      permittedAbsences: s.permittedAbsences ?? null,
       teacher: {
         id: s.teacherId,
         firstName: teacherById.get(s.teacherId)?.firstName || "",

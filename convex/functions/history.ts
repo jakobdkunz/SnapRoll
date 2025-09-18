@@ -90,7 +90,7 @@ export const getSectionHistory = query({
       manualChangeMap.set(`${mc.classDayId}-${mc.studentId}`, mc);
     });
     
-    // Build student records
+    // Build student records and track absence totals per student
     const studentRecords = students.map(student => {
       if (!student) return null;
       
@@ -135,13 +135,62 @@ export const getSectionHistory = query({
         records,
       };
     }).filter(Boolean);
-    
+    // Compute total ABSENT counts per student across ALL active days in section
+    const allClassDayIds = allClassDays.map(cd => cd._id as Id<'classDays'>);
+    const allAttendance = allClassDayIds.length > 0
+      ? (await Promise.all(
+          allClassDayIds.map((id) =>
+            ctx.db
+              .query("attendanceRecords")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const allManual = allClassDayIds.length > 0
+      ? (await Promise.all(
+          allClassDayIds.map((id) =>
+            ctx.db
+              .query("manualStatusChanges")
+              .withIndex("by_classDay", (q) => q.eq("classDayId", id))
+              .collect()
+          )
+        )).flat()
+      : [];
+    const arByDayStudent = new Map<string, Doc<'attendanceRecords'>>();
+    for (const ar of allAttendance) arByDayStudent.set(`${ar.classDayId}-${ar.studentId}`, ar as Doc<'attendanceRecords'>);
+    const mcByDayStudent = new Map<string, Doc<'manualStatusChanges'>>();
+    for (const mc of allManual) mcByDayStudent.set(`${mc.classDayId}-${mc.studentId}`, mc as Doc<'manualStatusChanges'>);
+    const absencesByStudentId = new Map<string, number>();
+    for (const s of students) {
+      if (!s) continue;
+      let count = 0;
+      for (const classDay of allClassDays) {
+        const k = `${classDay._id}-${s._id}`;
+        const ar = arByDayStudent.get(k);
+        const mc = mcByDayStudent.get(k);
+        const original = ar?.status || "BLANK";
+        const hasManual = !!mc && mc.status !== "BLANK";
+        let effective: "PRESENT" | "ABSENT" | "EXCUSED" | "NOT_JOINED" | "BLANK" = hasManual ? (mc!.status as any) : (original as any);
+        if (!hasManual && (!ar || ar.status === "BLANK")) {
+          const { nextStartMs } = getEasternDayBounds(classDay.date as number);
+          const endOfDay = nextStartMs;
+          const enroll = enrollmentByStudent.get(s._id as Id<'users'>);
+          const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
+          if (now >= endOfDay) effective = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
+        }
+        if (effective === "ABSENT") count++;
+      }
+      absencesByStudentId.set(s._id as string, count);
+    }
+
     return {
       students: students.filter(Boolean).map(s => ({
         id: s!._id,
         firstName: s!.firstName,
         lastName: s!.lastName,
         email: s!.email,
+        totalAbsences: absencesByStudentId.get(s!._id as string) || 0,
       })),
       days: pageForDisplay.map(cd => ({
         id: cd._id,
@@ -316,10 +365,50 @@ export const getStudentHistory = query({
       })
       .filter(Boolean);
 
+    // Compute total absences per section across ALL active days (not just paged window)
+    const allRawDaysBySection = new Map<Id<'sections'>, Doc<'classDays'>[]>();
+    for (const id of sectionIds) {
+      const days = await ctx.db
+        .query("classDays")
+        .withIndex("by_section", (q) => q.eq("sectionId", id))
+        .filter((q) => q.eq(q.field("hasActivity"), true))
+        .collect();
+      allRawDaysBySection.set(id, days);
+    }
+    let totalAbsencesBySection = new Map<Id<'sections'>, number>();
+    for (const section of sections) {
+      if (!section) continue;
+      const allDays = allRawDaysBySection.get(section._id as Id<'sections'>) || [];
+      let count = 0;
+      for (const cd of allDays) {
+        const ar = await ctx.db
+          .query("attendanceRecords")
+          .withIndex("by_classDay_student", (q) => q.eq("classDayId", cd._id).eq("studentId", args.studentId))
+          .first();
+        const mc = await ctx.db
+          .query("manualStatusChanges")
+          .withIndex("by_classDay_student", (q) => q.eq("classDayId", cd._id).eq("studentId", args.studentId))
+          .first();
+        const original = ar?.status || "BLANK";
+        const hasManual = !!mc && mc.status !== "BLANK";
+        let effective = hasManual ? mc!.status : original;
+        if (!hasManual && (!ar || ar.status === "BLANK")) {
+          const { nextStartMs } = getEasternDayBounds(cd.date as number);
+          const endOfDay = nextStartMs;
+          const enroll = enrollments.find(e => e.sectionId === section._id);
+          const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
+          if (now >= endOfDay) effective = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
+        }
+        if (effective === "ABSENT") count++;
+      }
+      totalAbsencesBySection.set(section._id as Id<'sections'>, count);
+    }
+
     return {
       sections: sections.filter(Boolean).map((s) => ({ id: s!._id, title: s!.title })),
       days: pageDateKeys.map((key) => ({ date: new Date(key).toISOString().split('T')[0] })),
       records,
+      totals: Array.from(totalAbsencesBySection.entries()).map(([sectionId, total]) => ({ sectionId, total })),
       totalDays,
       offset: args.offset,
       limit: args.limit,
