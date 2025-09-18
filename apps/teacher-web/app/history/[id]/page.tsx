@@ -10,7 +10,7 @@ import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
 
-type Student = { id: string; firstName: string; lastName: string; email: string };
+type Student = { id: string; firstName: string; lastName: string; email: string; totalAbsences?: number };
 type Record = { 
   classDayId: string; 
   studentId: string; 
@@ -520,6 +520,9 @@ export default function HistoryPage() {
               <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
+                <div className="mt-0.5 text-xs text-slate-600">
+                  Absences: <span className="font-medium text-slate-700">{student.totalAbsences ?? '—'}</span>
+                </div>
               </td>
               <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
               {days.map((day, j) => {

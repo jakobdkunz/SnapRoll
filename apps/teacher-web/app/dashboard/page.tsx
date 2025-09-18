@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: SectionDoc | null }>({ open: false, section: null });
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createTitle, setCreateTitle] = useState('');
+  const [createAbsences, setCreateAbsences] = useState<{ mode: 'not_set' | 'policy' | 'custom'; timesPerWeek: 1 | 2 | 3; duration: 'semester' | '8week'; custom?: string }>({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
   const [createError, setCreateError] = useState<string | null>(null);
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
@@ -116,10 +117,10 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function saveCustomization(title: string, gradient: string) {
+  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
-    await updateSection({ id: sid, title: title.trim(), gradient });
+    await updateSection({ id: sid, title: title.trim(), gradient, permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences });
     handleCloseCustomize();
   }
 
@@ -352,6 +353,50 @@ export default function DashboardPage() {
                 <div className="mt-2 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{createError}</div>
               )}
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Permitted Elective Absences</label>
+              <div className="space-y-2">
+                <div className="flex gap-2 flex-wrap">
+                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'not_set' }))}>Not Set</button>
+                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>Use Policy</button>
+                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
+                </div>
+                {createAbsences.mode === 'policy' && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-600">Meets</span>
+                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
+                        <option value={1}>1x/week</option>
+                        <option value={2}>2x/week</option>
+                        <option value={3}>3x/week</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-600">Course length</span>
+                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.duration} onChange={(e) => setCreateAbsences((p) => ({ ...p, duration: e.target.value as 'semester' | '8week' }))}>
+                        <option value="semester">Semester-long</option>
+                        <option value="8week">8-week</option>
+                      </select>
+                    </div>
+                    <div className="text-sm text-slate-700">
+                      {(() => {
+                        const t = createAbsences.timesPerWeek;
+                        const d = createAbsences.duration;
+                        const value = t === 3 ? (d === 'semester' ? 4 : 2) : t === 2 ? (d === 'semester' ? 3 : 1) : 1;
+                        return <span>Permitted: <span className="font-medium">{value}</span></span>;
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {createAbsences.mode === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-600">Number</span>
+                    <TextInput value={createAbsences.custom || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAbsences((p) => ({ ...p, custom: e.target.value }))} placeholder="e.g., 3" />
+                  </div>
+                )}
+                <div className="text-xs text-slate-500">Policy guidance: 3x/week → 4 (semester) / 2 (8-week); 2x/week → 3 / 1; 1x/week → 1.</div>
+              </div>
+            </div>
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
               <Button id="create-section-submit" onClick={async () => {
@@ -361,7 +406,8 @@ export default function DashboardPage() {
                 if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
                 try {
                   const gradient = pickAutoGradient();
-                  await createSection({ title: t, gradient });
+                  const permittedAbsences = createAbsences.mode === 'not_set' ? undefined : (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })());
+                  await createSection({ title: t, gradient, permittedAbsences });
                   setCreateModalOpen(false);
                   setCreateTitle('');
                   setCreateError(null);
@@ -405,12 +451,16 @@ function CustomizeModal({
 }: { 
   section: SectionDoc; 
   gradients: Array<{ id: string; name: string; class: string }>;
-  onSave: (title: string, gradient: string) => void;
+  onSave: (title: string, gradient: string, permittedAbsences?: number | null) => void;
   onCancel: () => void;
   onDelete: (id: string) => Promise<void> | void;
 }) {
   const [title, setTitle] = useState<string>(section.title ?? "");
   const [gradient, setGradient] = useState<string>(section.gradient ?? "gradient-1");
+  const [permMode, setPermMode] = useState<'not_set' | 'policy' | 'custom'>(typeof (section as unknown as { permittedAbsences?: number | null }).permittedAbsences === 'number' ? 'custom' : 'not_set');
+  const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(3);
+  const [duration, setDuration] = useState<'semester' | '8week'>('semester');
+  const [customAbsences, setCustomAbsences] = useState<string>(typeof (section as unknown as { permittedAbsences?: number | null }).permittedAbsences === 'number' ? String((section as unknown as { permittedAbsences?: number | null }).permittedAbsences) : '');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -447,12 +497,68 @@ function CustomizeModal({
           ))}
         </div>
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">Permitted Elective Absences</label>
+        <div className="space-y-2">
+          <div className="flex gap-2 flex-wrap">
+            <button className={`px-3 py-1.5 rounded border ${permMode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('not_set')}>Not Set</button>
+            <button className={`px-3 py-1.5 rounded border ${permMode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('policy')}>Use Policy</button>
+            <button className={`px-3 py-1.5 rounded border ${permMode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('custom')}>Custom</button>
+          </div>
+          {permMode === 'policy' && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Meets</span>
+                <select className="border rounded px-2 py-1 text-sm" value={timesPerWeek} onChange={(e) => setTimesPerWeek(Number(e.target.value) as 1|2|3)}>
+                  <option value={1}>1x/week</option>
+                  <option value={2}>2x/week</option>
+                  <option value={3}>3x/week</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Course length</span>
+                <select className="border rounded px-2 py-1 text-sm" value={duration} onChange={(e) => setDuration(e.target.value as 'semester' | '8week')}>
+                  <option value="semester">Semester-long</option>
+                  <option value="8week">8-week</option>
+                </select>
+              </div>
+              <div className="text-sm text-slate-700">
+                {(() => {
+                  const t = timesPerWeek;
+                  const d = duration;
+                  const value = t === 3 ? (d === 'semester' ? 4 : 2) : t === 2 ? (d === 'semester' ? 3 : 1) : 1;
+                  return <span>Permitted: <span className="font-medium">{value}</span></span>;
+                })()}
+              </div>
+            </div>
+          )}
+          {permMode === 'custom' && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-600">Number</span>
+              <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
+            </div>
+          )}
+          <div className="text-xs text-slate-500">Policy guidance: 3x/week → 4 (semester) / 2 (8-week); 2x/week → 3 / 1; 1x/week → 1.</div>
+        </div>
+      </div>
       
       <div className="flex gap-2 pt-4 justify-end">
         <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={() => onSave(title, gradient)} disabled={!title.trim()}>
+        <Button onClick={() => {
+          let permitted: number | null | undefined = undefined;
+          if (permMode === 'policy') {
+            permitted = timesPerWeek === 3 ? (duration === 'semester' ? 4 : 2) : (timesPerWeek === 2 ? (duration === 'semester' ? 3 : 1) : 1);
+          } else if (permMode === 'custom') {
+            const n = Number(customAbsences);
+            permitted = Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined;
+          } else if (permMode === 'not_set') {
+            permitted = null;
+          }
+          onSave(title, gradient, permitted);
+        }} disabled={!title.trim()}>
           Save Changes
         </Button>
       </div>

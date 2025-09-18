@@ -16,6 +16,8 @@ export default defineSchema({
     gradient: v.optional(v.string()),
     teacherId: v.id("users"),
     joinCode: v.optional(v.string()),
+    // Optional permitted elective absences for the section
+    permittedAbsences: v.optional(v.number()),
   })
     .index("by_teacher", ["teacherId"])
     .index("by_title", ["title"]) 

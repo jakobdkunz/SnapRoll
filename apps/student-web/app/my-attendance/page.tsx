@@ -13,6 +13,7 @@ type HistoryResponse = {
   sections: { id: string; title: string }[];
   days: { date: string }[]; // YYYY-MM-DD
   records: Array<{ sectionId: string; byDate: Record<string, { status: string; originalStatus: string; isManual: boolean; manualChange: { status: string; teacherName: string; createdAt: string | number } | null }> }>;
+  totals?: Array<{ sectionId: string; total: number }>; // total ABSENT across all active days
   totalDays: number;
   offset: number;
   limit: number;
@@ -255,7 +256,11 @@ export default function MyAttendancePage() {
       return true;
     });
     const recBySection = new Map(records.map((r) => [r.sectionId, r.byDate]));
-    return { sections, days: uniqueDays, recBySection };
+    const totalsBySection = new Map<string, number>();
+    if (Array.isArray(data.totals)) {
+      for (const t of data.totals) totalsBySection.set(t.sectionId, t.total);
+    }
+    return { sections, days: uniqueDays, recBySection, totalsBySection } as const;
   }, [data]);
 
   // Fetch gradients for the sections on the page
@@ -281,16 +286,17 @@ export default function MyAttendancePage() {
     return map;
   }, [sectionsData]);
   const detailsBySectionId = useMemo(() => {
-    const map = new Map<string, { gradient: string; teacher: { firstName: string; lastName: string; email: string } }>();
+    const map = new Map<string, { gradient: string; teacher: { firstName: string; lastName: string; email: string }; permittedAbsences: number | null }>();
     if (sectionDetails && Array.isArray(sectionDetails)) {
-      for (const s of sectionDetails as Array<{ id: string; gradient?: string; teacher?: { firstName?: string; lastName?: string; email?: string } }>) {
+      for (const s of sectionDetails as Array<{ id: string; gradient?: string; teacher?: { firstName?: string; lastName?: string; email?: string }; permittedAbsences?: number | null }>) {
         map.set(s.id, {
           gradient: s.gradient || 'gradient-1',
           teacher: {
             firstName: s.teacher?.firstName || '',
             lastName: s.teacher?.lastName || '',
             email: s.teacher?.email || ''
-          }
+          },
+          permittedAbsences: s.permittedAbsences ?? null,
         });
       }
     }
@@ -460,6 +466,23 @@ export default function MyAttendancePage() {
                           <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
                             <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
                           </div>
+                          {(() => {
+                            const permitted = detailsBySectionId.get(s.id)?.permittedAbsences ?? null;
+                            const totalAbsences = grid.totalsBySection.get(s.id);
+                            return (
+                              <div className="mt-1 text-xs text-slate-700 text-center">
+                                {totalAbsences === undefined ? (
+                                  <span className="text-slate-400">Absences: —</span>
+                                ) : permitted != null ? (
+                                  <span>
+                                    Absences: <span className={totalAbsences > permitted ? 'text-rose-700 font-medium' : 'text-white font-semibold'}>{totalAbsences}</span> of {permitted}
+                                  </span>
+                                ) : (
+                                  <span>Absences: <span className="font-semibold text-white">{totalAbsences}</span></span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                       <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
@@ -521,13 +544,30 @@ export default function MyAttendancePage() {
                     </React.Fragment>
                   );
                 }
-                // Non-compact: original single-row with left course column
+                // Non-compact: original single-row with left course column, include absence summary below title
                 return (
                   <tr key={s.id} className="odd:bg-slate-50">
                     <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
                       <div className={`rounded-md ${gradientClass} text-white px-2 py-1`}>
                         <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                       </div>
+                      {(() => {
+                        const permitted = detailsBySectionId.get(s.id)?.permittedAbsences ?? null;
+                        const totalAbsences = grid.totalsBySection.get(s.id);
+                        return (
+                          <div className="mt-1 text-xs text-slate-600">
+                            {totalAbsences === undefined ? (
+                              <span className="text-slate-400">Absences: —</span>
+                            ) : permitted != null ? (
+                              <span>
+                                Absences: <span className={totalAbsences > permitted ? 'text-rose-700 font-medium' : 'text-slate-700 font-medium'}>{totalAbsences}</span> of {permitted}
+                              </span>
+                            ) : (
+                              <span>Absences: <span className="font-medium text-slate-700">{totalAbsences}</span></span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
