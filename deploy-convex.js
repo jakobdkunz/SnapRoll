@@ -2,7 +2,7 @@ const { execSync } = require('child_process');
 
 console.log('Deploying Convex functions...');
 try {
-  execSync(`npx convex deploy --once`, {
+  execSync(`npx convex deploy -y`, {
     stdio: 'inherit',
     timeout: 120000,
   });
