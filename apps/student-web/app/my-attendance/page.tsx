@@ -260,6 +260,19 @@ export default function MyAttendancePage() {
     if (Array.isArray(data.totals)) {
       for (const t of data.totals) totalsBySection.set(t.sectionId, t.total);
     }
+    // Fallback: if totals missing, compute from visible days only so we always show a number
+    for (const s of sections) {
+      if (!totalsBySection.has(s.id)) {
+        const byDate = recBySection.get(s.id) || {};
+        let count = 0;
+        for (const d of uniqueDays) {
+          const rec = byDate[d.date];
+          const status = rec?.status || 'BLANK';
+          if (status === 'ABSENT') count++;
+        }
+        totalsBySection.set(s.id, count);
+      }
+    }
     return { sections, days: uniqueDays, recBySection, totalsBySection } as const;
   }, [data]);
 

@@ -319,7 +319,7 @@ export default function DashboardPage() {
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
-          <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
+          <div className="bg-white rounded-lg p-6 max-w-xl w-[92vw] mx-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Edit Section</h2>
               <button onClick={handleCloseCustomize} className="text-slate-400 hover:text-slate-600" aria-label="Close">✕</button>
@@ -340,7 +340,7 @@ export default function DashboardPage() {
 
       {/* Create Section Modal */}
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)}>
-        <div className="bg-white rounded-lg p-6 max-w-md w-[90vw] mx-4">
+        <div className="bg-white rounded-lg p-6 max-w-xl w-[92vw] mx-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Create Section</h2>
             <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
@@ -358,11 +358,11 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <div className="flex gap-2 flex-wrap">
                   <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'not_set' }))}>Not Set</button>
-                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>Use Policy</button>
+                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
                   <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
                 </div>
                 {createAbsences.mode === 'policy' && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-slate-600">Meets</span>
                       <select className="border rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
@@ -394,7 +394,7 @@ export default function DashboardPage() {
                     <TextInput value={createAbsences.custom || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAbsences((p) => ({ ...p, custom: e.target.value }))} placeholder="e.g., 3" />
                   </div>
                 )}
-                <div className="text-xs text-slate-500">Policy guidance: 3x/week → 4 (semester) / 2 (8-week); 2x/week → 3 / 1; 1x/week → 1.</div>
+                <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
               </div>
             </div>
             <div className="flex gap-2 pt-2 justify-end">
@@ -457,10 +457,10 @@ function CustomizeModal({
 }) {
   const [title, setTitle] = useState<string>(section.title ?? "");
   const [gradient, setGradient] = useState<string>(section.gradient ?? "gradient-1");
-  const [permMode, setPermMode] = useState<'not_set' | 'policy' | 'custom'>(typeof (section as unknown as { permittedAbsences?: number | null }).permittedAbsences === 'number' ? 'custom' : 'not_set');
+  const [permMode, setPermMode] = useState<'not_set' | 'policy' | 'custom'>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? 'custom' : 'not_set');
   const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(3);
   const [duration, setDuration] = useState<'semester' | '8week'>('semester');
-  const [customAbsences, setCustomAbsences] = useState<string>(typeof (section as unknown as { permittedAbsences?: number | null }).permittedAbsences === 'number' ? String((section as unknown as { permittedAbsences?: number | null }).permittedAbsences) : '');
+  const [customAbsences, setCustomAbsences] = useState<string>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences) : '');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -503,11 +503,11 @@ function CustomizeModal({
         <div className="space-y-2">
           <div className="flex gap-2 flex-wrap">
             <button className={`px-3 py-1.5 rounded border ${permMode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('not_set')}>Not Set</button>
-            <button className={`px-3 py-1.5 rounded border ${permMode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('policy')}>Use Policy</button>
+            <button className={`px-3 py-1.5 rounded border ${permMode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('policy')}>University Policy</button>
             <button className={`px-3 py-1.5 rounded border ${permMode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('custom')}>Custom</button>
           </div>
           {permMode === 'policy' && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-600">Meets</span>
                 <select className="border rounded px-2 py-1 text-sm" value={timesPerWeek} onChange={(e) => setTimesPerWeek(Number(e.target.value) as 1|2|3)}>
@@ -539,7 +539,7 @@ function CustomizeModal({
               <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
             </div>
           )}
-          <div className="text-xs text-slate-500">Policy guidance: 3x/week → 4 (semester) / 2 (8-week); 2x/week → 3 / 1; 1x/week → 1.</div>
+          <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
         </div>
       </div>
       
