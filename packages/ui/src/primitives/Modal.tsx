@@ -9,8 +9,8 @@ export type ModalProps = {
 };
 
 export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
-  const [mounted, setMounted] = React.useState(open);
-  const [visible, setVisible] = React.useState(open);
+  const [mounted, setMounted] = React.useState(false);
+  const [visible, setVisible] = React.useState(false);
   const [portalEl, setPortalEl] = React.useState<HTMLElement | null>(null);
 
   React.useEffect(() => {
@@ -18,14 +18,20 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
   }, []);
 
   React.useEffect(() => {
+    let raf1 = 0;
+    let raf2 = 0;
+    let timeoutId = 0 as unknown as number;
     if (open) {
       setMounted(true);
-      const id = window.setTimeout(() => setVisible(true), 10);
-      return () => window.clearTimeout(id);
+      setVisible(false);
+      raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => setVisible(true));
+      });
+      return () => { if (raf1) cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
     }
     setVisible(false);
-    const id = window.setTimeout(() => setMounted(false), 160);
-    return () => window.clearTimeout(id);
+    timeoutId = window.setTimeout(() => setMounted(false), 180);
+    return () => { if (timeoutId) window.clearTimeout(timeoutId); };
   }, [open]);
 
   React.useEffect(() => {
@@ -51,6 +57,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       <div
         className={`${visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-1.5'} relative z-10 transition-all duration-150 ease-out`}
         onClick={(e) => e.stopPropagation()}
+        style={{ willChange: 'transform, opacity' }}
       >
         {children}
       </div>
