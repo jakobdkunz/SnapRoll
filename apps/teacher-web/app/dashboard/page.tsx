@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<Id<'sections'> | null>(null);
 
-  // Convex mutations 
+  // Convex mutations
   const createSection = useMutation(api.functions.sections.create);
   const updateSection = useMutation(api.functions.sections.update);
   const deleteSection = useMutation(api.functions.sections.deleteSection);
