@@ -40,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[1000] flex items-center justify-center ${visible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-150`}
+      className={`fixed inset-0 z-[1000] flex items-center justify-center ${visible ? 'opacity-100' : 'opacity-0'} transition-opacity duration-150 ease-out`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -49,7 +49,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       {/* Oversized overlay to cover iOS toolbars */}
       <div className="absolute left-0 right-0 bg-black/50" style={{ top: '-60vh', bottom: '-60vh' }} />
       <div
-        className={`${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'} relative z-10 transition-all duration-150`}
+        className={`${visible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-1.5'} relative z-10 transition-all duration-150 ease-out`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
