@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import dynamic from 'next/dynamic';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
@@ -51,7 +51,7 @@ export default function DashboardPage() {
   // Data queries
   const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
   const isSectionsLoading = !!teacherId && sectionsResult === undefined;
-  const sections = (sectionsResult ?? []) as SectionDoc[];
+  const sections = useMemo(() => (sectionsResult ?? []) as SectionDoc[], [sectionsResult]);
   const backfillJoinCodes = useMutation(api.functions.sections.backfillJoinCodesForTeacher);
   // const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? 'false') === 'true';
 

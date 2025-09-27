@@ -12,7 +12,7 @@ import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons
 // type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 export function StudentHeaderRight() {
-  const router = useRouter(); 
+  const router = useRouter();
   const { isSignedIn } = useAuth();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
