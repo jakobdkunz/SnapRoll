@@ -412,7 +412,7 @@ export default function SectionsPage() {
         {renderInteractive && (
           <>
             <div className={`pointer-events-none absolute inset-0 ${sections.find(s=>s.id===renderInteractive.sectionId)?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
-            <div className="pointer-events-none absolute inset-0 bg-white/35 dark:bg-black/30" />
+            <div className="pointer-events-none absolute inset-0 bg-white/35 dark:bg-neutral-900/50" />
             <div className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
             <style jsx>{`
               @keyframes gradient_drift {

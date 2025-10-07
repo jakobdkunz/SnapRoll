@@ -41,11 +41,11 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Recents</h3>
-              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-full">72h retention</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-neutral-800 px-2 py-1 rounded-full">72h retention</span>
             </div>
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {!getAssetsByTeacher || (getAssetsByTeacher as unknown[]).length === 0 ? (
-                <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-8 bg-slate-50 dark:bg-slate-800 rounded-lg border-2 border-dashed border-slate-200 dark:border-slate-700">
+                <div className="text-sm text-slate-500 dark:text-slate-400 text-center py-8 bg-slate-50 dark:bg-neutral-900 rounded-lg border-2 border-dashed border-slate-200 dark:border-neutral-800">
                   No recent slideshows
                 </div>
               ) : (
