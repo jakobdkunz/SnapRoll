@@ -442,7 +442,7 @@ export default function ModifyPage() {
               ))}
             </div>
           ) : students.length === 0 ? (
-            <div className="text-sm text-slate-500 p-3 border rounded-lg bg-white/50">No students yet. Add one below.</div>
+            <div className="text-sm text-slate-600 dark:text-slate-300 p-3 border rounded-lg bg-white/50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700">No students yet. Add one below.</div>
           ) : students.map((s) => (
             <RosterRow
               key={String(s.id)}
