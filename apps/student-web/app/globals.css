@@ -6,7 +6,7 @@
 .dark { color-scheme: dark; }
 
 body { @apply bg-slate-50 text-slate-900; }
-.dark body { @apply bg-slate-900 text-slate-100; }
+.dark body { @apply bg-slate-950 text-slate-100; }
 
 /* View Transitions theme toggle effect (circle) */
 ::view-transition-group(root) {

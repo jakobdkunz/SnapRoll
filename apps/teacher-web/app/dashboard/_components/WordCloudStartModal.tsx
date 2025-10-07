@@ -23,14 +23,14 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
 
   return (
     <Modal open={visible} onClose={onClose}>
-      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md mx-4">
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-lg p-6 w-[90vw] max-w-md mx-4">
         <div className="flex items-center justify-between mb-4">
           <div className="inline-flex items-center gap-2 text-lg font-semibold">Start Word Cloud</div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prompt</label>
             <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Enter prompt" />
           </div>
           <label className="flex items-center gap-2">
@@ -42,12 +42,12 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
             <span>Allow multiple answers</span>
           </label>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Points for participation (optional)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Points for participation (optional)</label>
             <TextInput value={points} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPoints(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))} placeholder="e.g., 5" />
-            <div className="text-xs text-slate-500 mt-1">Students earn these points once per word cloud session when they submit.</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Students earn these points once per word cloud session when they submit.</div>
           </div>
           {error && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{error}</div>
+            <div className="text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">{error}</div>
           )}
           <div className="pt-2">
             <Button onClick={async () => {

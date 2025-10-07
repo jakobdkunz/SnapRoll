@@ -22,18 +22,18 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
   const visible = open && !!sectionId;
   return (
     <Modal open={visible} onClose={onClose}>
-      <div className="bg-white rounded-lg p-6 w-[90vw] max-w-md mx-4">
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-lg p-6 w-[90vw] max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Start Poll</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Prompt</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prompt</label>
             <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Type your prompt here..." />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Options</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Options</label>
             <div className="space-y-2">
               {options.map((opt, i) => (
                 <TextInput key={i} value={opt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOptionAt(i, e.target.value)} placeholder={`Option ${i + 1}`} />
@@ -55,9 +55,9 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Points for participation (optional)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Points for participation (optional)</label>
             <TextInput value={points} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPoints(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))} placeholder="e.g., 5" />
-            <div className="text-xs text-slate-500 mt-1">Students earn these points once per poll session when they vote.</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Students earn these points once per poll session when they vote.</div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
