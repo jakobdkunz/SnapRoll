@@ -11,6 +11,7 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
   const [prompt, setPrompt] = useState('One word to describe how you feel');
   const [showPrompt, setShowPrompt] = useState(true);
   const [allowMultiple, setAllowMultiple] = useState(false);
+  const [points, setPoints] = useState<string>('');
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
@@ -40,6 +41,11 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
             <input type="checkbox" checked={allowMultiple} onChange={(e) => setAllowMultiple(e.target.checked)} />
             <span>Allow multiple answers</span>
           </label>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Points for participation (optional)</label>
+            <TextInput value={points} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPoints(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))} placeholder="e.g., 5" />
+            <div className="text-xs text-slate-500 mt-1">Students earn these points once per word cloud session when they submit.</div>
+          </div>
           {error && (
             <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{error}</div>
           )}
@@ -50,7 +56,9 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
               try {
                 setWorking(true);
                 setError(null);
-                const sessionId = await startWordCloud({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple });
+                const n = Number(points);
+                const pts = Number.isFinite(n) ? Math.max(0, Math.min(10000, Math.floor(n))) : undefined;
+                const sessionId = await startWordCloud({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple, points: pts });
                 onClose();
                 const idStr = hasId(sessionId) ? sessionId._id : String(sessionId);
                 setTimeout(() => router.push(`/wordcloud/live/${idStr}`), 120);

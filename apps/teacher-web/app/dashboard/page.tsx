@@ -29,6 +29,8 @@ export default function DashboardPage() {
   const [createTitle, setCreateTitle] = useState('');
   const [createAbsences, setCreateAbsences] = useState<{ mode: 'not_set' | 'policy' | 'custom'; timesPerWeek: 1 | 2 | 3; duration: 'semester' | '8week'; custom?: string }>({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createAttendancePoints, setCreateAttendancePoints] = useState<string>('');
+  const [createParticipationPossible, setCreateParticipationPossible] = useState<string>('');
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
@@ -60,7 +62,6 @@ export default function DashboardPage() {
     { id: 'gradient-3', name: 'Blue Cyan', class: 'gradient-3' },
     { id: 'gradient-4', name: 'Green Teal', class: 'gradient-4' },
     { id: 'gradient-5', name: 'Pink Yellow', class: 'gradient-5' },
-    // Remaining, spaced to avoid similar neighbors
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
     { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
@@ -117,10 +118,18 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null) {
+  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null, attendanceCheckinPoints?: number | null, participationCreditPointsPossible?: number | null) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
-    await updateSection({ id: sid, title: title.trim(), gradient, permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences, clearPermittedAbsences: permittedAbsences == null });
+    await updateSection({
+      id: sid,
+      title: title.trim(),
+      gradient,
+      permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences,
+      clearPermittedAbsences: permittedAbsences == null,
+      attendanceCheckinPoints: attendanceCheckinPoints == null ? undefined : attendanceCheckinPoints,
+      participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
+    });
     handleCloseCustomize();
   }
 
@@ -396,6 +405,18 @@ export default function DashboardPage() {
                 )}
                 <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
               </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Attendance check-in points (optional)</label>
+                <TextInput value={createAttendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
+                <div className="text-xs text-slate-500 mt-1">Points each student earns for checking into attendance.</div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Participation credit points possible (optional)</label>
+                <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
+                <div className="text-xs text-slate-500 mt-1">Used to compute gradebook participation.</div>
+              </div>
+            </div>
             </div>
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
@@ -407,7 +428,11 @@ export default function DashboardPage() {
                 try {
                   const gradient = pickAutoGradient();
                   const permittedAbsences = createAbsences.mode === 'not_set' ? undefined : (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })());
-                  await createSection({ title: t, gradient, permittedAbsences });
+                  const ap = Number(createAttendancePoints);
+                  const attendanceCheckinPoints = Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : undefined;
+                  const pp = Number(createParticipationPossible);
+                  const participationCreditPointsPossible = Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : undefined;
+                  await createSection({ title: t, gradient, permittedAbsences, attendanceCheckinPoints, participationCreditPointsPossible });
                   setCreateModalOpen(false);
                   setCreateTitle('');
                   setCreateError(null);
@@ -451,7 +476,13 @@ function CustomizeModal({
 }: { 
   section: SectionDoc; 
   gradients: Array<{ id: string; name: string; class: string }>;
-  onSave: (title: string, gradient: string, permittedAbsences?: number | null) => void;
+  onSave: (
+    title: string,
+    gradient: string,
+    permittedAbsences?: number | null,
+    attendanceCheckinPoints?: number | null,
+    participationCreditPointsPossible?: number | null
+  ) => void;
   onCancel: () => void;
   onDelete: (id: string) => Promise<void> | void;
 }) {
@@ -461,6 +492,8 @@ function CustomizeModal({
   const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(3);
   const [duration, setDuration] = useState<'semester' | '8week'>('semester');
   const [customAbsences, setCustomAbsences] = useState<string>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences) : '');
+  const [attendancePoints, setAttendancePoints] = useState<string>(typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number' ? String((section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints) : '');
+  const [participationPossible, setParticipationPossible] = useState<string>(typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number' ? String((section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible) : '');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -541,6 +574,19 @@ function CustomizeModal({
           )}
           <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
         </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Attendance check-in points (optional)</label>
+          <TextInput value={attendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
+          <div className="text-xs text-slate-500 mt-1">Points each student earns for checking into attendance.</div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Participation credit points possible (optional)</label>
+          <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
+          <div className="text-xs text-slate-500 mt-1">Used to compute gradebook participation.</div>
+        </div>
+      </div>
       </div>
       
       <div className="flex gap-2 pt-4 justify-end">
@@ -557,7 +603,12 @@ function CustomizeModal({
           } else if (permMode === 'not_set') {
             permitted = null;
           }
-          onSave(title, gradient, permitted);
+          // Compute numeric extras and send in onSave to persist in same mutation
+          const ap = Number(attendancePoints);
+          const pp = Number(participationPossible);
+          const attendanceCheckinPoints = Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
+          const participationCreditPointsPossible = Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
+          onSave(title, gradient, permitted, attendanceCheckinPoints, participationCreditPointsPossible);
         }} disabled={!title.trim()}>
           Save Changes
         </Button>

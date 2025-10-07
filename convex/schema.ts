@@ -18,6 +18,9 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     // Optional permitted elective absences for the section
     permittedAbsences: v.optional(v.number()),
+    // Gamification configuration
+    attendanceCheckinPoints: v.optional(v.number()),
+    participationCreditPointsPossible: v.optional(v.number()),
   })
     .index("by_teacher", ["teacherId"])
     .index("by_title", ["title"]) 
@@ -87,6 +90,7 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
+    points: v.optional(v.number()),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),
@@ -110,6 +114,7 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
+    points: v.optional(v.number()),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),
@@ -174,4 +179,32 @@ export default defineSchema({
     blockedUntil: v.optional(v.number()),
   })
     .index("by_user_key", ["userId", "key"]) ,
+
+  // Gamification: Points opportunities (attendance day, poll session, word cloud session)
+  pointsOpportunities: defineTable({
+    sectionId: v.id("sections"),
+    // 'attendance' | 'poll' | 'wordcloud'
+    kind: v.union(v.literal("attendance"), v.literal("poll"), v.literal("wordcloud")),
+    // Store the target entity id as string to avoid schema unions
+    targetId: v.string(),
+    // Optional source date in ms, when applicable (e.g., class day date)
+    sourceDate: v.optional(v.number()),
+    points: v.number(),
+    createdAt: v.number(),
+    undone: v.boolean(),
+  })
+    .index("by_section", ["sectionId"]) 
+    .index("by_kind_target", ["kind", "targetId"]) 
+    .index("by_section_createdAt", ["sectionId", "createdAt"]),
+
+  // Gamification: Individual student awards for a given opportunity
+  pointsAssignments: defineTable({
+    opportunityId: v.id("pointsOpportunities"),
+    sectionId: v.id("sections"),
+    studentId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_opportunity", ["opportunityId"]) 
+    .index("by_section_student", ["sectionId", "studentId"]) 
+    .index("by_student", ["studentId"]),
 });

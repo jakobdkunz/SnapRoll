@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query } from "../_generated/server";
+import { query, mutation } from "../_generated/server";
 import type { Id, Doc } from "../_generated/dataModel";
 import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
 import { getEasternDayBounds } from "./_tz";
@@ -500,4 +500,111 @@ export const exportSectionHistory = query({
 
     return { days, rows };
   },
+});
+
+// Gamification: list points opportunities for instructor management (with assignment counts)
+export const getPointsOpportunities = query({
+  args: { sectionId: v.id("sections") },
+  handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
+    const opps = await ctx.db
+      .query("pointsOpportunities")
+      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .collect();
+    const results = await Promise.all(opps.map(async (o) => {
+      const assigns = await ctx.db.query("pointsAssignments").withIndex("by_opportunity", (q) => q.eq("opportunityId", o._id as Id<'pointsOpportunities'>)).collect();
+      return { ...o, assignmentCount: assigns.length };
+    }));
+    return results.sort((a, b) => (a.createdAt as number) - (b.createdAt as number));
+  }
+});
+
+// Gamification: toggle undo/redo for opportunity
+export const toggleOpportunityUndone = mutation({
+  args: { opportunityId: v.id("pointsOpportunities"), undone: v.boolean() },
+  handler: async (ctx, args) => {
+    const opp = await ctx.db.get(args.opportunityId);
+    if (!opp) throw new Error("Not found");
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, opp.sectionId as Id<'sections'>, teacher._id);
+    await ctx.db.patch(args.opportunityId, { undone: args.undone });
+  }
+});
+
+// Gamification: get student points in section (earned vs possible)
+export const getStudentPointsBySection = query({
+  args: { studentId: v.id("users"), sectionId: v.id("sections") },
+  handler: async (ctx, args) => {
+    // allow teacher-owner; else student self only
+    try {
+      const t = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, t._id);
+    } catch {
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? '').toString().trim().toLowerCase();
+      const currentUser = await ctx.db.query('users').withIndex('by_email', (q) => q.eq('email', email)).first();
+      if (!currentUser || currentUser._id !== args.studentId) throw new Error('Forbidden');
+    }
+    const assignments = await ctx.db
+      .query('pointsAssignments')
+      .withIndex('by_section_student', (q) => q.eq('sectionId', args.sectionId).eq('studentId', args.studentId))
+      .collect();
+    const oppIds = assignments.map(a => a.opportunityId as Id<'pointsOpportunities'>);
+    const opps = await Promise.all(oppIds.map((id) => ctx.db.get(id)));
+    let earned = 0;
+    for (const o of opps) { if (o && !o.undone) earned += Number(o.points || 0); }
+    const allOpps = await ctx.db.query('pointsOpportunities').withIndex('by_section', (q) => q.eq('sectionId', args.sectionId)).collect();
+    const possible = allOpps.filter(o => !o.undone).reduce((acc, o) => acc + Number(o.points || 0), 0);
+    return { pointsEarned: earned, pointsPossible: possible };
+  }
+});
+
+// Gamification: student summary across enrolled sections
+export const getStudentPointsSummary = query({
+  args: { studentId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Only allow the student to access their own summary (or a teacher viewing their student is not supported here)
+    const identity = await ctx.auth.getUserIdentity();
+    const email = (identity?.email ?? identity?.tokenIdentifier ?? '').toString().trim().toLowerCase();
+    const currentUser = await ctx.db.query('users').withIndex('by_email', (q) => q.eq('email', email)).first();
+    if (!currentUser || currentUser._id !== args.studentId) throw new Error('Forbidden');
+
+    // Enrollments
+    const enrollments = await ctx.db.query('enrollments').withIndex('by_student', (q) => q.eq('studentId', args.studentId)).collect();
+    const sectionIds = enrollments.map(e => e.sectionId as Id<'sections'>);
+    const sections = await Promise.all(sectionIds.map((id) => ctx.db.get(id)));
+
+    // Assignments for this student by section
+    const assignments = await ctx.db
+      .query('pointsAssignments')
+      .withIndex('by_student', (q) => q.eq('studentId', args.studentId))
+      .collect();
+    const oppIds = assignments.map(a => a.opportunityId as Id<'pointsOpportunities'>);
+    const opps = await Promise.all(oppIds.map((id) => ctx.db.get(id)));
+    const earnedBySection = new Map<string, number>();
+    for (let i = 0; i < assignments.length; i++) {
+      const assign = assignments[i];
+      const opp = opps[i];
+      if (!opp || opp.undone) continue;
+      const key = String(assign.sectionId);
+      earnedBySection.set(key, (earnedBySection.get(key) || 0) + Number(opp.points || 0));
+    }
+
+    // Possible per section: sum of not-undone opportunities points in that section
+    const possibleBySection = new Map<string, number>();
+    for (const sid of sectionIds) {
+      const allOpps = await ctx.db.query('pointsOpportunities').withIndex('by_section', (q) => q.eq('sectionId', sid)).collect();
+      const possible = allOpps.filter(o => !o.undone).reduce((acc, o) => acc + Number(o.points || 0), 0);
+      possibleBySection.set(String(sid), possible);
+    }
+
+    return sections.filter(Boolean).map((s) => ({
+      sectionId: s!._id as Id<'sections'>,
+      sectionTitle: s!.title as string,
+      pointsEarned: earnedBySection.get(String(s!._id)) || 0,
+      pointsPossible: possibleBySection.get(String(s!._id)) || 0,
+      participationCreditPointsPossible: Number((s as any)?.participationCreditPointsPossible || 0),
+    }));
+  }
 });
