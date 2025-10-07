@@ -9,7 +9,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({ className = '', rounded = tr
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse bg-slate-200 dark:bg-slate-700 ${radius} ${className}`}
+      className={`animate-pulse bg-slate-200 dark:bg-neutral-800 ${radius} ${className}`}
       {...props}
     />
   );
