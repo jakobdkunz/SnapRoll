@@ -3,6 +3,7 @@ import preset from '@flamelink/config/tailwind-preset';
 
 export default {
   presets: [preset],
+  darkMode: 'class',
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',

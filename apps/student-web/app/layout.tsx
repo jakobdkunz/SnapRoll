@@ -24,10 +24,24 @@ const orbitron = Orbitron({
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={orbitron.variable}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            try {
+              var uaMobile = (navigator.userAgentData && navigator.userAgentData.mobile) || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+              var deviceDefault = uaMobile ? 'device' : 'light';
+              var pref = localStorage.getItem('theme') || deviceDefault;
+              var isDark = pref === 'dark' || (pref === 'device' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+              var root = document.documentElement;
+              if (isDark) { root.classList.add('dark'); root.style.colorScheme = 'dark'; } else { root.classList.remove('dark'); root.style.colorScheme = 'light'; }
+            } catch (e) {}
+          })();
+        ` }} />
+      </head>
       <body>
         <Providers>
-          <div className="min-h-dvh bg-slate-50">
-            <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+          <div className="min-h-dvh bg-slate-50 dark:bg-slate-900">
+            <header className="sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur">
               <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
                 <WordmarkLink />
                 <StudentHeaderRight />
@@ -37,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 pb-6 sm:pb-8">{children}</main>
           </div>
         </Providers>
+        <script src="/theme.js" />
         <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js')); }` }} />
       </body>
     </html>
