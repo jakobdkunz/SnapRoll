@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as functions__auth from "../functions/_auth.js";
+import type * as functions__pointsLib from "../functions/_pointsLib.js";
 import type * as functions__rateLimit from "../functions/_rateLimit.js";
 import type * as functions__tz from "../functions/_tz.js";
 import type * as functions_attendance from "../functions/attendance.js";
@@ -39,6 +40,7 @@ import type * as functions_wordcloud from "../functions/wordcloud.js";
  */
 declare const fullApi: ApiFromModules<{
   "functions/_auth": typeof functions__auth;
+  "functions/_pointsLib": typeof functions__pointsLib;
   "functions/_rateLimit": typeof functions__rateLimit;
   "functions/_tz": typeof functions__tz;
   "functions/attendance": typeof functions_attendance;

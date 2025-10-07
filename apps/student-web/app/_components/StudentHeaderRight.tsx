@@ -8,6 +8,7 @@ import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
+import { MdDarkMode, MdLightMode, MdPhoneIphone } from 'react-icons/md';
 
 // type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
@@ -17,6 +18,11 @@ export function StudentHeaderRight() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  type ThemePref = 'light' | 'dark' | 'device';
+  const setTheme = (pref: ThemePref) => {
+    const w = window as unknown as { __theme?: { set: (p: ThemePref) => void } };
+    w.__theme?.set(pref);
+  };
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isClient, setIsClient] = useState(false);
@@ -107,10 +113,23 @@ export function StudentHeaderRight() {
         <HiOutlineUserCircle className="h-5 w-5" />
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
-      <div className={`absolute right-0 mt-2 w-44 rounded-lg border bg-white shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-800 shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
           <HiOutlineUserCircle className="h-4 w-4" /> My Profile
         </button>
+        <div className="border-t border-slate-200 dark:border-slate-800 my-1" />
+        <div className="px-3 py-2 text-xs uppercase tracking-wide text-slate-500">Appearance</div>
+        <div className="px-1 pb-2">
+          <button className="flex w-full items-center gap-2 px-2 py-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-sm" onClick={() => { setOpen(false); setTheme('light'); }}>
+            <MdLightMode className="h-4 w-4" /> Light
+          </button>
+          <button className="flex w-full items-center gap-2 px-2 py-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-sm" onClick={() => { setOpen(false); setTheme('dark'); }}>
+            <MdDarkMode className="h-4 w-4" /> Dark
+          </button>
+          <button className="flex w-full items-center gap-2 px-2 py-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-sm" onClick={() => { setOpen(false); setTheme('device'); }}>
+            <MdPhoneIphone className="h-4 w-4" /> Device
+          </button>
+        </div>
         <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
           <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Log Out
         </button>
