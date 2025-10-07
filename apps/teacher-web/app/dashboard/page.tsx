@@ -328,10 +328,10 @@ export default function DashboardPage() {
 
       <Modal open={!!customizeModal.open && !!customizeModal.section} onClose={handleCloseCustomize}>
         {customizeModal.section && (
-          <div className="bg-white rounded-lg p-6 max-w-xl w-[92vw] mx-4">
+          <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-lg p-6 max-w-xl w-[92vw] mx-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Edit Section</h2>
-              <button onClick={handleCloseCustomize} className="text-slate-400 hover:text-slate-600" aria-label="Close">✕</button>
+              <button onClick={handleCloseCustomize} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="Close">✕</button>
             </div>
             <CustomizeModal 
               section={customizeModal.section}
@@ -349,10 +349,10 @@ export default function DashboardPage() {
 
       {/* Create Section Modal */}
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)}>
-        <div className="bg-white rounded-lg p-6 max-w-xl w-[92vw] mx-4">
+        <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-lg p-6 max-w-xl w-[92vw] mx-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Create Section</h2>
-            <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
           </div>
           <div className="space-y-4">
             <div>

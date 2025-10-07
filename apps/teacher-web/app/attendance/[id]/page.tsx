@@ -256,18 +256,18 @@ export default function AttendancePage() {
 
         {/* Progress Bar Widget - Bottom */}
         <div className="mb-20 flex justify-center">
-          <Card className="p-6 w-full max-w-3xl bg-white/80 backdrop-blur">
+          <Card className="p-6 w-full max-w-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur">
             {status ? (
               <>
                 <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-blue-500">
+                  <div className="text-2xl font-bold text-blue-500 dark:text-blue-400">
                     {status.checkedIn}/{status.totalStudents}
                   </div>
-                  <div className="text-sm text-slate-500">students checked in</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">students checked in</div>
                 </div>
-                <div className="w-full bg-slate-200 rounded-full h-5 mb-1">
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-5 mb-1">
                   <div 
-                    className="bg-blue-500 h-5 rounded-full transition-all duration-300"
+                    className="bg-blue-500 dark:bg-blue-400 h-5 rounded-full transition-all duration-300"
                     style={{ width: `${status.progress}%` }}
                   />
                 </div>
