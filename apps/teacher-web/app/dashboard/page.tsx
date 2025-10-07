@@ -175,7 +175,7 @@ export default function DashboardPage() {
       {!hasSections ? (
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
-          <div className="text-slate-500">Create your first section to begin.</div>
+          <div className="text-slate-500 dark:text-slate-300">Create your first section to begin.</div>
           <Button variant="primary" className="mt-4 inline-flex items-center gap-2" onClick={async () => {
             const title = prompt('Section title?');
             if (!title || !teacherId) return;
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                       <HiOutlineCog6Tooth className="h-5 w-5" />
                     </button>
                   </div>
-                  <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
+                  <div className="font-medium mb-2 text-slate-900 dark:text-slate-100 truncate">{s.title}</div>
                   <div className="mt-auto space-y-2">
                     <div className="flex gap-2">
                       <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => router.push(`/modify/${s._id}`)}>
