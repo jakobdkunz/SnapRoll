@@ -370,7 +370,7 @@ export default function SectionsPage() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700' : 'bg-white text-slate-900 border-slate-300 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700' }`}
+              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-neutral-900 dark:text-slate-500 dark:border-neutral-800' : 'bg-white text-slate-900 border-slate-300 dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-800' }`}
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
@@ -425,7 +425,7 @@ export default function SectionsPage() {
         )}
         <div className={renderInteractive ? 'relative z-10 p-6' : ''}>
         {!renderInteractive ? (
-          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700">
+          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600 dark:text-slate-300 border-slate-200 dark:border-neutral-700">
             <div className="font-medium mb-1">Activities</div>
             <div className="text-sm">Your instructors have not started any live activites yet...</div>
             <div className="mt-3 flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500">

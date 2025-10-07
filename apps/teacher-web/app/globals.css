@@ -4,12 +4,12 @@
 
 :root {
   --primary: 124 58 237;
-  --background: 248 250 252; /* slate-50 */
-  --foreground: 15 23 42;     /* slate-900 */
+  --background: 250 250 250; /* neutral-50 */
+  --foreground: 23 23 23;     /* neutral-900 */
 }
 .dark {
-  --background: 2 6 23;       /* slate-950 (deeper, less blue) */
-  --foreground: 226 232 240;  /* slate-200 */
+  --background: 10 10 10;     /* near-black neutral-950 */
+  --foreground: 229 229 229;  /* neutral-200 */
 }
 
 body {

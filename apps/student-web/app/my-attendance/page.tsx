@@ -428,7 +428,7 @@ export default function MyAttendancePage() {
           </div>
         ) : (
         <div ref={containerRef} className="relative overflow-hidden w-full">
-          <table className="border-separate border-spacing-0 table-fixed w-full text-slate-900 dark:text-slate-100">
+          <table className="border-separate border-spacing-0 table-fixed w-full text-slate-900 dark:text-neutral-100">
             <colgroup>
               {!isCompact && (
                 <>
@@ -444,8 +444,8 @@ export default function MyAttendancePage() {
               <tr>
                 {!isCompact && (
                   <>
-                    <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-slate-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
-                    <th className="p-0 bg-white dark:bg-slate-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-950 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
+                    <th className="p-0 bg-white dark:bg-neutral-950" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                   </>
                 )}
                 {[...grid.days].reverse().map((d) => (
@@ -474,7 +474,7 @@ export default function MyAttendancePage() {
                 if (isCompact) {
                   return (
                     <React.Fragment key={s.id}>
-                      <tr key={`${s.id}-title`} className={idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
+                      <tr key={`${s.id}-title`} className={idx % 2 === 0 ? 'bg-white dark:bg-neutral-950' : 'bg-slate-50 dark:bg-neutral-900'}>
                         <td colSpan={grid.days.length} className="px-2 py-1">
                           <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
                             <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
@@ -499,7 +499,7 @@ export default function MyAttendancePage() {
                           })()}
                         </td>
                       </tr>
-                      <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
+                      <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white dark:bg-neutral-950' : 'bg-slate-50 dark:bg-neutral-900'}>
                         {[...grid.days].reverse().map((d) => {
                           const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                           const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
@@ -560,8 +560,8 @@ export default function MyAttendancePage() {
                 }
                 // Non-compact: original single-row with left course column, include absence summary below title
                 return (
-                  <tr key={s.id} className="odd:bg-slate-50 dark:odd:bg-slate-800/50">
-                    <td className={`sticky left-0 z-0 bg-white dark:bg-slate-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
+                  <tr key={s.id} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
+                    <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-950 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
                       <div className={`rounded-md ${gradientClass} text-white px-2 py-1`}>
                         <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                       </div>
@@ -584,7 +584,7 @@ export default function MyAttendancePage() {
                         );
                       })()}
                     </td>
-                    <td className="p-0 bg-white dark:bg-slate-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    <td className="p-0 bg-white dark:bg-neutral-950" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
