@@ -80,6 +80,10 @@ export const convexApi = {
     getSectionHistory: api.functions.history.getSectionHistory,
     getStudentHistory: api.functions.history.getStudentHistory,
     exportSectionHistory: api.functions.history.exportSectionHistory,
+    getPointsOpportunities: api.functions.history.getPointsOpportunities,
+    toggleOpportunityUndone: api.functions.history.toggleOpportunityUndone,
+    getStudentPointsBySection: api.functions.history.getStudentPointsBySection,
+    getStudentPointsSummary: api.functions.history.getStudentPointsSummary,
   },
   
   // Poll functions

@@ -10,6 +10,7 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
   const router = useRouter();
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
+  const [points, setPoints] = useState<string>('');
   const [working, setWorking] = useState(false);
   const startPollMutation = useMutation(api.functions.polls.startPoll);
   function setOptionAt(i: number, val: string) {
@@ -53,6 +54,11 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
               />
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Points for participation (optional)</label>
+            <TextInput value={points} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPoints(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))} placeholder="e.g., 5" />
+            <div className="text-xs text-slate-500 mt-1">Students earn these points once per poll session when they vote.</div>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={onClose}>Cancel</Button>
             <Button disabled={working || !sectionId || !prompt.trim() || options.filter((o) => o.trim()).length < 2} onClick={async () => {
@@ -60,7 +66,9 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
               try {
                 setWorking(true);
                 const opts = options.map((o) => o.trim()).filter(Boolean);
-                const sessionId = await startPollMutation({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts });
+                const n = Number(points);
+                const pts = Number.isFinite(n) ? Math.max(0, Math.min(10000, Math.floor(n))) : undefined;
+                const sessionId = await startPollMutation({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts, points: pts });
                 onClose();
                 const sessionIdStr = typeof sessionId === 'string' ? sessionId : String((sessionId as unknown as { _id?: string })._id ?? sessionId);
                 setTimeout(() => router.push(`/poll/live/${sessionIdStr}`), 120);

@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireTeacher, requireTeacherOwnsSection, requireStudentEnrollment, requireCurrentUser } from "./_auth";
 import { checkAndIncrementRateLimit } from "./_rateLimit";
+import { ensureSessionOpportunity, assignIfNeeded } from "./_pointsLib";
 
 export const startPoll = mutation({
   args: {
@@ -10,6 +11,7 @@ export const startPoll = mutation({
     prompt: v.string(),
     options: v.array(v.string()),
     showResults: v.optional(v.boolean()),
+    points: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const teacher = await requireTeacher(ctx);
@@ -36,13 +38,19 @@ export const startPoll = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, { closedAt: Date.now() });
     }
-    return await ctx.db.insert("pollSessions", {
+    const sessionId = await ctx.db.insert("pollSessions", {
       sectionId: args.sectionId,
       prompt,
       optionsJson: JSON.stringify(options),
       showResults: args.showResults ?? true,
       createdAt: Date.now(),
+      points: typeof args.points === 'number' ? Math.max(0, Math.floor(args.points)) : undefined,
     });
+    // Create a points opportunity for this session if points > 0
+    if (typeof args.points === 'number' && args.points > 0) {
+      await ensureSessionOpportunity(ctx, { sectionId: args.sectionId as Id<'sections'>, sessionId: sessionId as Id<'pollSessions'>, kind: 'poll', points: Math.floor(args.points) });
+    }
+    return sessionId;
   },
 });
 
@@ -99,12 +107,20 @@ export const submitAnswer = mutation({
       throw new Error("You already voted");
     } else {
       // Create new answer
-      return await ctx.db.insert("pollAnswers", {
+      const ansId = await ctx.db.insert("pollAnswers", {
         sessionId: args.sessionId,
         studentId: callerId,
         optionIdx: args.optionIdx,
         createdAt: Date.now(),
       });
+      // Award points if configured and opportunity exists, but only once per session
+      const session = await ctx.db.get(args.sessionId);
+      const pts = Number((session as any)?.points || 0);
+      if (pts > 0) {
+        const oppId = await ensureSessionOpportunity(ctx, { sectionId: session!.sectionId as Id<'sections'>, sessionId: args.sessionId, kind: 'poll', points: pts });
+        await assignIfNeeded(ctx, { opportunityId: oppId, sectionId: session!.sectionId as Id<'sections'>, studentId: callerId });
+      }
+      return ansId;
     }
   },
 });
