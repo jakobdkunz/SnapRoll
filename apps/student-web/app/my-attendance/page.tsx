@@ -428,7 +428,7 @@ export default function MyAttendancePage() {
           </div>
         ) : (
         <div ref={containerRef} className="relative overflow-hidden w-full">
-          <table className="border-separate border-spacing-0 table-fixed w-full">
+          <table className="border-separate border-spacing-0 table-fixed w-full text-slate-900 dark:text-slate-100">
             <colgroup>
               {!isCompact && (
                 <>
@@ -444,14 +444,14 @@ export default function MyAttendancePage() {
               <tr>
                 {!isCompact && (
                   <>
-                    <th ref={firstThRef} className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
-                    <th className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-slate-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>Course</th>
+                    <th className="p-0 bg-white dark:bg-slate-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                   </>
                 )}
                 {[...grid.days].reverse().map((d) => (
                   <th 
                     key={d.date} 
-                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 text-center whitespace-nowrap sr-day-col"
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap sr-day-col"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
                     {isRefreshing ? (
@@ -474,7 +474,7 @@ export default function MyAttendancePage() {
                 if (isCompact) {
                   return (
                     <React.Fragment key={s.id}>
-                      <tr key={`${s.id}-title`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                      <tr key={`${s.id}-title`} className={idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
                         <td colSpan={grid.days.length} className="px-2 py-1">
                           <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
                             <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
@@ -499,7 +499,7 @@ export default function MyAttendancePage() {
                           })()}
                         </td>
                       </tr>
-                      <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                      <tr key={`${s.id}-data`} className={idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800/50'}>
                         {[...grid.days].reverse().map((d) => {
                           const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                           const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
@@ -547,7 +547,7 @@ export default function MyAttendancePage() {
                                   ) : status === 'NOT_JOINED' ? (
                                     <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
                                   ) : (
-                                    <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
+                                    <span className="text-slate-400 dark:text-slate-500">{display}{showManual ? '*' : ''}</span>
                                   )}
                                 </div>
                               )}
@@ -560,8 +560,8 @@ export default function MyAttendancePage() {
                 }
                 // Non-compact: original single-row with left course column, include absence summary below title
                 return (
-                  <tr key={s.id} className="odd:bg-slate-50">
-                    <td className={`sticky left-0 z-0 bg-white ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
+                  <tr key={s.id} className="odd:bg-slate-50 dark:odd:bg-slate-800/50">
+                    <td className={`sticky left-0 z-0 bg-white dark:bg-slate-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: courseColWidth, minWidth: courseColWidth, maxWidth: courseColWidth }}>
                       <div className={`rounded-md ${gradientClass} text-white px-2 py-1`}>
                         <div className="font-medium truncate whitespace-nowrap overflow-hidden">{s.title}</div>
                       </div>
@@ -570,7 +570,7 @@ export default function MyAttendancePage() {
                         const totalAbsences = grid.totalsBySection.get(s.id);
                         const over = permitted != null && typeof totalAbsences === 'number' && totalAbsences > permitted;
                         return (
-                          <div className={`mt-1 text-xs ${over ? 'text-rose-700' : 'text-slate-600'}`}>
+                          <div className={`mt-1 text-xs ${over ? 'text-rose-700' : 'text-slate-600 dark:text-slate-300'}`}>
                             {typeof totalAbsences !== 'number' ? (
                               <span className="text-slate-400">Absences: —</span>
                             ) : permitted != null ? (
@@ -578,13 +578,13 @@ export default function MyAttendancePage() {
                                 Absences: <span className={over ? 'font-semibold underline' : 'font-medium'}>{totalAbsences}</span> of {permitted} used
                               </span>
                             ) : (
-                              <span>Absences: <span className="font-medium text-slate-700">{totalAbsences}</span></span>
+                              <span>Absences: <span className="font-medium text-slate-700 dark:text-slate-200">{totalAbsences}</span></span>
                             )}
                           </div>
                         );
                       })()}
                     </td>
-                    <td className="p-0 bg-white" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    <td className="p-0 bg-white dark:bg-slate-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
                     {[...grid.days].reverse().map((d) => {
                       const rec = byDate[d.date] || { status: 'BLANK', originalStatus: 'BLANK', isManual: false, manualChange: null };
                       const status = rec.status as 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
@@ -637,7 +637,7 @@ export default function MyAttendancePage() {
                               ) : status === 'NOT_JOINED' ? (
                                 <Badge tone="gray">{display}{showManual ? '*' : ''}</Badge>
                               ) : (
-                                <span className="text-slate-400">{display}{showManual ? '*' : ''}</span>
+                                <span className="text-slate-400 dark:text-slate-500">{display}{showManual ? '*' : ''}</span>
                               )}
                             </div>
                           )}
@@ -665,7 +665,7 @@ export default function MyAttendancePage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="text-base font-medium">Have a question about your attendance?</div>
-              <div className="text-sm text-slate-600">Email your professor to ask about a specific day or status.</div>
+              <div className="text-sm text-slate-600 dark:text-slate-300">Email your professor to ask about a specific day or status.</div>
             </div>
             <div className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto" onClick={() => setEmailModalOpen(true)}>Email your professor…</Button>

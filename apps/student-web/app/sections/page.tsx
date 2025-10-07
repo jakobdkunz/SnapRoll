@@ -365,12 +365,12 @@ export default function SectionsPage() {
           <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
         </div>
         <div className="flex items-center justify-center gap-3">
-          <HiOutlineUserGroup className="w-10 h-10 text-black" />
+          <HiOutlineUserGroup className="w-10 h-10 text-slate-900 dark:text-slate-100" />
           {digits.map((d, i) => (
             <input
               key={i}
               ref={inputRefs[i]}
-              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-300 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-900 border-slate-300' }`}
+              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700' : 'bg-white text-slate-900 border-slate-300 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700' }`}
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
@@ -391,14 +391,14 @@ export default function SectionsPage() {
           <BlockedBanner blockedUntil={blockedUntil} onUnblock={() => { setBlockedUntil(null); lastSubmittedRef.current = null; }} />
         )}
         {confirmMsg && (
-          <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">{confirmMsg}</div>
+          <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 dark:text-green-200 dark:bg-green-900/30 dark:border-green-800">{confirmMsg}</div>
         )}
         {checkinError && (!(blockedUntil && blockedUntil > Date.now())) && (
-          <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">{checkinError}</div>
+          <div className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-3 dark:text-red-200 dark:bg-red-900/30 dark:border-red-800">{checkinError}</div>
         )}
         <div className="flex items-center justify-center">
           <button
-            className="text-blue-500 font-medium hover:underline"
+            className="text-blue-500 dark:text-blue-400 font-medium hover:underline"
             onClick={() => {
               router.push('/my-attendance');
             }}
@@ -412,7 +412,7 @@ export default function SectionsPage() {
         {renderInteractive && (
           <>
             <div className={`pointer-events-none absolute inset-0 ${sections.find(s=>s.id===renderInteractive.sectionId)?.gradient || 'gradient-1'}`} style={{ opacity: 0.3 }} />
-            <div className="pointer-events-none absolute inset-0 bg-white/35" />
+            <div className="pointer-events-none absolute inset-0 bg-white/35 dark:bg-black/30" />
             <div className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]" style={{ background: 'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)' }} />
             <style jsx>{`
               @keyframes gradient_drift {
@@ -425,13 +425,13 @@ export default function SectionsPage() {
         )}
         <div className={renderInteractive ? 'relative z-10 p-6' : ''}>
         {!renderInteractive ? (
-          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600">
+          <div className="border-2 border-dashed rounded-xl p-6 text-center text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700">
             <div className="font-medium mb-1">Activities</div>
             <div className="text-sm">Your instructors have not started any live activites yet...</div>
-            <div className="mt-3 flex items-center justify-center gap-2 text-slate-400">
-              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-pulse" />
-              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.2s_ease-in-out_infinite]" />
-              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 animate-[pulse_1.2s_0.4s_ease-in-out_infinite]" />
+            <div className="mt-3 flex items-center justify-center gap-2 text-slate-400 dark:text-slate-500">
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 animate-pulse" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 animate-[pulse_1.2s_0.2s_ease-in-out_infinite]" />
+              <span className="inline-block w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 animate-[pulse_1.2s_0.4s_ease-in-out_infinite]" />
             </div>
           </div>
         ) : renderInteractive.kind === 'wordcloud' ? (
@@ -442,11 +442,11 @@ export default function SectionsPage() {
                 <div className="text-slate-500 text-sm">{String((renderInteractive as unknown as { prompt?: string }).prompt || '')}</div>
               )}
             </div>
-            {(
+              {(
               // If multiple answers are NOT allowed and either server says submitted or we just submitted
               (((renderInteractive as unknown as { allowMultipleAnswers?: boolean }).allowMultipleAnswers === false) && (((renderInteractive as unknown as { hasSubmitted?: boolean }).hasSubmitted || false) || !!submitMsg))
             ) ? (
-              <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
+              <div className="rounded-xl bg-white/85 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 p-4 text-center text-slate-800 dark:text-slate-100 shadow-soft">
                 Thanks! Your response was received.
               </div>
             ) : (
@@ -482,7 +482,7 @@ export default function SectionsPage() {
             </div>
             <div className="space-y-2">
               {(((renderInteractive as unknown as { hasSubmitted?: boolean }).hasSubmitted || false) || !!submitMsg) ? (
-                <div className="rounded-xl bg-white/85 backdrop-blur border border-slate-200 p-4 text-center text-slate-800 shadow-soft">
+                <div className="rounded-xl bg-white/85 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 p-4 text-center text-slate-800 dark:text-slate-100 shadow-soft">
                   Thanks! Your response was received.
                 </div>
               ) : (
@@ -502,7 +502,7 @@ export default function SectionsPage() {
               )}
             </div>
             {submitMsg && (
-              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full">{submitMsg}</div>
+              <div className="text-green-700 bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-center w-full dark:text-green-200 dark:bg-green-900/30 dark:border-green-800">{submitMsg}</div>
             )}
           </div>
         ) : renderInteractive.kind === 'slideshow' ? (
@@ -522,7 +522,7 @@ export default function SectionsPage() {
       </Card>
 
       <div className="flex items-center justify-between">
-        <div className="text-slate-600 text-sm">My courses</div>
+        <div className="text-slate-600 dark:text-slate-300 text-sm">My courses</div>
         <button className="text-blue-500 text-sm font-medium hover:underline" onClick={() => { setJoinOpen(true); setJoinCode(''); setJoinError(null); }}>+ Enter Join Code</button>
       </div>
       {!enrollments || !sectionsData ? (
@@ -549,7 +549,7 @@ export default function SectionsPage() {
                   <div className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full"></div>
                   <div className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full"></div>
                 </div>
-                <div className="font-medium mb-2 text-slate-700 truncate">{s.title}</div>
+                <div className="font-medium mb-2 text-slate-700 dark:text-slate-200 truncate">{s.title}</div>
               </Card>
             );
           })}

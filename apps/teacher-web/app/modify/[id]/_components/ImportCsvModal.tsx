@@ -58,12 +58,12 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
 
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="w-[min(92vw,900px)] bg-white rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
+      <div className="w-[min(92vw,900px)] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
         {mappingStep === 'promptKind' && promptColumnIdx != null && (
           <div>
             <div className="mb-1 text-xs font-semibold tracking-wide text-slate-500">CSV Import</div>
             <div className="text-lg font-semibold">We’re having trouble detecting columns</div>
-            <div className="text-sm text-slate-600 mt-1 mb-4">What is this column?</div>
+            <div className="text-sm text-slate-600 dark:text-slate-300 mt-1 mb-4">What is this column?</div>
             <div className="mb-4 flex justify-center">
               <div className="w-[min(520px,88vw)]">
                 <div className="text-xs text-slate-500 mb-1 text-center">{csvColumns[promptColumnIdx] || `Column ${promptColumnIdx + 1}`}</div>
@@ -72,18 +72,18 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
                   const maxChars = samples.reduce((m, v) => Math.max(m, v.length), 0);
                   const widthCh = Math.max(10, maxChars * 2);
                   return (
-                    <div className="border rounded-lg overflow-hidden mx-auto" style={{ width: `${widthCh}ch` }}>
-                      <table className="w-full text-xs">
+                    <div className="border rounded-lg overflow-hidden mx-auto border-slate-200 dark:border-slate-700" style={{ width: `${widthCh}ch` }}>
+                      <table className="w-full text-xs text-slate-900 dark:text-slate-100">
                         <tbody>
                           {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 7).map((r, ri) => (
-                            <tr key={ri} className="odd:bg-slate-50">
+                            <tr key={ri} className="odd:bg-slate-50 dark:odd:bg-slate-800/50">
                               <td className="px-2 py-1 whitespace-nowrap">{String(r[promptColumnIdx] || '')}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       {csvRows.length - dataStartRowIndex > 7 && (
-                        <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+                        <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white dark:to-slate-900 pointer-events-none" />
                       )}
                     </div>
                   );
@@ -134,27 +134,27 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
             {openDropdownIdx != null && (
               <div key={dropdownBackdropKey} className="fixed inset-0 z-[60]" onClick={() => setOpenDropdownIdx(null)} />
             )}
-            <div className="overflow-visible border rounded relative">
-              <table className="min-w-full text-xs">
+            <div className="overflow-visible border rounded relative border-slate-200 dark:border-slate-700">
+              <table className="min-w-full text-xs text-slate-900 dark:text-slate-100">
                 <thead>
                   <tr>
                     {csvColumns.map((c, i) => (
-                      <th key={i} className="text-left px-2 py-2 border-b whitespace-nowrap align-bottom">
-                        <div className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">{c || `Column ${i + 1}`}</div>
+                      <th key={i} className="text-left px-2 py-2 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap align-bottom">
+                        <div className="mb-2 text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">{c || `Column ${i + 1}`}</div>
                         <div className="relative inline-block">
                           <button
-                            className="rounded-md border pl-2 pr-6 py-1 bg-white text-[11px] hover:bg-slate-50 relative"
+                            className="rounded-md border pl-2 pr-6 py-1 bg-white dark:bg-slate-900 text-[11px] hover:bg-slate-50 dark:hover:bg-slate-800 relative border-slate-200 dark:border-slate-700"
                             onClick={() => { setOpenDropdownIdx(openDropdownIdx === i ? null : i); setReviewError(null); setDropdownBackdropKey(dropdownBackdropKey + 1); }}
                           >
                             {columnRoles[i] === 'email' ? 'Emails' : columnRoles[i] === 'first' ? 'First names' : columnRoles[i] === 'last' ? 'Last names' : columnRoles[i] === 'full' ? 'Full names' : 'Other'}
                             <HiChevronDown className="absolute right-1.5 top-1.5 h-3.5 w-3.5 text-slate-500 pointer-events-none" />
                           </button>
                           {openDropdownIdx === i && (
-                            <div className="absolute z-[70] mt-1 w-44 rounded-md border bg-white shadow-lg">
+                            <div className="absolute z-[70] mt-1 w-44 rounded-md border bg-white dark:bg-slate-900 shadow-lg border-slate-200 dark:border-slate-700">
                               {(['first','last','full','email','other'] as ColumnRole[]).map((opt) => (
                                 <div
                                   key={opt}
-                                  className={`px-3 py-1.5 text-[11px] cursor-pointer hover:bg-slate-50`}
+                                  className={`px-3 py-1.5 text-[11px] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800`}
                                   onClick={() => {
                                     const roles = [...columnRoles];
                                     if (opt === 'full' && !isFullNameColumnValid(i)) {
@@ -182,21 +182,21 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
                 </thead>
                 <tbody>
                   {csvRows.slice(dataStartRowIndex, dataStartRowIndex + 7).map((r, ri) => (
-                    <tr key={ri} className="odd:bg-slate-50">
+                    <tr key={ri} className="odd:bg-slate-50 dark:odd:bg-slate-800/50">
                       {csvColumns.map((_, ci) => (
-                        <td key={ci} className="px-2 py-1 border-b whitespace-nowrap">{String(r[ci] || '')}</td>
+                        <td key={ci} className="px-2 py-1 border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">{String(r[ci] || '')}</td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
               {csvRows.length - dataStartRowIndex > 7 && (
-                <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white pointer-events-none" />
+                <div className="h-10 -mt-10 bg-gradient-to-b from-transparent to-white dark:to-slate-900 pointer-events-none" />
               )}
             </div>
 
             {reviewError && (
-              <div className="text-xs text-rose-600 mt-2">{reviewError}</div>
+              <div className="text-xs text-rose-600 dark:text-rose-400 mt-2">{reviewError}</div>
             )}
 
             <div className="flex items-center justify-end gap-3 pt-3">
