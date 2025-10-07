@@ -109,12 +109,12 @@ export function StudentHeaderRight() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
+      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
       <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-slate-900 dark:border-slate-800 shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-        <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
+        <button className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
           <HiOutlineUserCircle className="h-4 w-4" /> My Profile
         </button>
         <div className="border-t border-slate-200 dark:border-slate-800 my-1" />
@@ -130,7 +130,7 @@ export function StudentHeaderRight() {
             <MdPhoneIphone className="h-4 w-4" /> Device
           </button>
         </div>
-        <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 inline-flex items-center gap-2">
+        <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2">
           <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Log Out
         </button>
       </div>

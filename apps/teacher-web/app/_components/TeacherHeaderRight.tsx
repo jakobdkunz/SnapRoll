@@ -168,7 +168,7 @@ export function TeacherHeaderRight() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 transition inline-flex items-center gap-2">
+      <button onClick={() => setOpen((v) => !v)} className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 transition inline-flex items-center gap-2">
         <HiOutlineUserCircle className="h-5 w-5" />
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
