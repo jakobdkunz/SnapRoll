@@ -149,7 +149,7 @@ export function StudentHeaderRight() {
           </div>
           <div className="space-y-2 text-left">
             <label className="text-sm text-neutral-600 dark:text-neutral-400">Email</label>
-            <TextInput value={currentUser?.email || ''} disabled />
+            <TextInput value={currentUser?.email || ''} disabled className="text-neutral-700 dark:text-neutral-300" />
           </div>
           {studentId && (
             <div className="text-xs text-neutral-600 dark:text-neutral-400">User ID: {studentId}</div>
