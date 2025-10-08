@@ -176,8 +176,8 @@ export function TeacherHeaderRight() {
         <button className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
           <HiOutlineUserCircle className="h-4 w-4" /> My Profile
         </button>
-        <div className="border-t border-slate-200 dark:border-slate-800 my-1" />
-        <div className="px-3 py-2 text-xs uppercase tracking-wide text-slate-500">Appearance</div>
+        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
+        <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Appearance</div>
         <div className="px-1 pb-2">
           <button className="flex w-full items-center gap-2 px-2 py-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-sm" onClick={() => { setOpen(false); setTheme('light'); }}>
             <MdLightMode className="h-4 w-4" /> Light

@@ -190,7 +190,7 @@ export default function DashboardPage() {
             const gradientClass = s.gradient;
             
             return (
-                <Card key={s._id} className="p-3 sm:p-4 flex flex-col overflow-visible group">
+                <Card key={s._id} className="p-3 sm:p-4 flex flex-col overflow-visible group bg-white/90 dark:bg-neutral-900/90">
                   <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
@@ -518,11 +518,11 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               className={`h-10 w-full rounded-md ${g.class} border-2 flex items-center justify-center transition ${
-                gradient === g.id ? 'ring-2 ring-white border-white' : 'border-transparent hover:opacity-90'
+                gradient === g.id ? 'ring-2 ring-neutral-200 dark:ring-neutral-700 border-neutral-200 dark:border-neutral-700' : 'border-transparent hover:opacity-90'
               }`}
               title={g.name}
             >
-              <span className="font-semibold text-white text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/15">{g.name}</span>
+              <span className="font-semibold text-white/90 dark:text-white/90 text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/20">{g.name}</span>
             </button>
           ))}
         </div>
