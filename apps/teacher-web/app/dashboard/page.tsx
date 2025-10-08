@@ -522,7 +522,7 @@ function CustomizeModal({
               }`}
               title={g.name}
             >
-              <span className="font-semibold text-white text-xs drop-shadow-sm">{g.name}</span>
+              <span className="font-semibold text-white text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/15">{g.name}</span>
             </button>
           ))}
         </div>

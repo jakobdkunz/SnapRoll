@@ -195,27 +195,27 @@ export function TeacherHeaderRight() {
       </div>
 
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)}>
-        <Card className="p-6 w-[90vw] max-w-md space-y-4">
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-neutral-900 dark:text-neutral-100">
           <div className="text-lg font-semibold">Your Profile</div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">First name</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">First name</label>
             <TextInput value={firstName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)} />
           </div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">Last name</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">Last name</label>
             <TextInput value={lastName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)} />
           </div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">Email</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">Email</label>
             <TextInput value={currentUser?.email || ''} disabled />
-            <div className="text-xs text-slate-500">To change your email, please contact support.</div>
+            <div className="text-xs text-neutral-600 dark:text-neutral-400">To change your email, please contact support.</div>
           </div>
           {teacherId && (
-            <div className="text-xs text-slate-500">User ID: {teacherId}</div>
+            <div className="text-xs text-neutral-600 dark:text-neutral-400">User ID: {teacherId}</div>
           )}
 
           {devMode && (
-            <div className="pt-4 border-t border-slate-200">
+            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
               <div className="flex items-center justify-between">
                 <div className="text-base font-semibold">Developer Tools</div>
                 <Button variant="secondary" onClick={() => setDevOpen(!devOpen)}>
@@ -225,42 +225,42 @@ export function TeacherHeaderRight() {
               {devOpen && (
                 <div className="mt-3 space-y-3">
                   <div className="space-y-1 text-left">
-                    <label className="text-sm text-slate-600">Demo section name</label>
+                    <label className="text-sm text-neutral-600 dark:text-neutral-400">Demo section name</label>
                     <TextInput value={sectionTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSectionTitle(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">Students</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">Students</label>
                       <TextInput type="number" value={studentCount} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStudentCount(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">Days (back from today)</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">Days (back from today)</label>
                       <TextInput type="number" value={daysBack} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDaysBack(Number(e.target.value || 0))} />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">% Present</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">% Present</label>
                       <TextInput type="number" value={pctPresent} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctPresent(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">% Present (manual)</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">% Present (manual)</label>
                       <TextInput type="number" value={pctPresentManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctPresentManual(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">% Absent (manual)</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">% Absent (manual)</label>
                       <TextInput type="number" value={pctAbsentManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctAbsentManual(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">% Blank (never manual)</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">% Blank (never manual)</label>
                       <TextInput type="number" value={pctBlank} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctBlank(Number(e.target.value || 0))} />
                     </div>
                     <div className="space-y-1 text-left">
-                      <label className="text-sm text-slate-600">% Not Enrolled (manual)</label>
+                      <label className="text-sm text-neutral-600 dark:text-neutral-400">% Not Enrolled (manual)</label>
                       <TextInput type="number" value={pctNotEnrolledManual} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPctNotEnrolledManual(Number(e.target.value || 0))} />
                     </div>
                   </div>
-                  <div className="text-xs text-slate-500">Percentages must add to 100%.</div>
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400">Percentages must add to 100%.</div>
                   <Button onClick={onGenerateDemo} disabled={generating}>
                     {generating ? 'Generating…' : 'Generate demo data'}
                   </Button>
