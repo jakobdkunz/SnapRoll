@@ -356,10 +356,10 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Section Title</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Section Title</label>
               <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCreateTitle(e.target.value); if (createError) setCreateError(null); }} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
               {createError && (
-                <div className="mt-2 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{createError}</div>
+                <div className="mt-2 text-sm text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded p-2">{createError}</div>
               )}
             </div>
             <div>
@@ -407,14 +407,14 @@ export default function DashboardPage() {
               </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Attendance check-in points (optional)</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
                 <TextInput value={createAttendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-                <div className="text-xs text-slate-500 mt-1">Points each student earns for checking into attendance.</div>
+              <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Participation credit points possible (optional)</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
                 <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-                <div className="text-xs text-slate-500 mt-1">Used to compute gradebook participation.</div>
+              <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
               </div>
             </div>
             </div>
@@ -500,7 +500,7 @@ function CustomizeModal({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Section Title</label>
+        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Section Title</label>
         <TextInput 
           value={title} 
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)} 
@@ -510,7 +510,7 @@ function CustomizeModal({
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
+        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Color</label>
         <div className="grid grid-cols-3 gap-2">
           {gradients.map((g) => (
             <button
@@ -573,18 +573,18 @@ function CustomizeModal({
         </div>
 
       <div className="mt-2">
-        <div className="text-sm font-medium text-slate-700 mb-2">Participation Credit</div>
+        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation Credit</div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Attendance check-in points (optional)</label>
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
           <TextInput value={attendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-          <div className="text-xs text-slate-500 mt-1">Points each student earns for checking into attendance.</div>
+          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">Participation credit points possible (optional)</label>
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
           <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-          <div className="text-xs text-slate-500 mt-1">Used to compute gradebook participation.</div>
+          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
         </div>
       </div>
       </div>
@@ -615,13 +615,13 @@ function CustomizeModal({
       </div>
 
       {/* Danger Zone */}
-      <div className="mt-6 border border-rose-200 rounded-lg">
-        <div className="px-3 py-2 text-sm font-medium text-rose-700 bg-rose-50 rounded-t-lg">Danger Zone</div>
+      <div className="mt-6 border border-rose-200 dark:border-rose-900/40 rounded-lg">
+        <div className="px-3 py-2 text-sm font-medium text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 rounded-t-lg">Danger Zone</div>
         <div className="p-3">
-          <div className="text-sm text-slate-600 mb-2">Deleting a section will remove its roster, attendance, and activities.</div>
+          <div className="text-sm text-neutral-700 dark:text-neutral-300 mb-2">Deleting a section will remove its roster, attendance, and activities.</div>
           {!confirmDelete ? (
             <div className="flex justify-end">
-              <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
+              <Button variant="ghost" className="inline-flex items-center gap-2 text-rose-700 dark:text-rose-300 hover:text-white hover:!bg-rose-600" onClick={() => setConfirmDelete(true)}>
                 <HiOutlineTrash className="h-5 w-5" /> Delete Section
         </Button>
             </div>
