@@ -23,18 +23,18 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
 
   return (
     <Modal open={visible} onClose={onClose}>
-      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-xl p-8 w-[95vw] max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded-xl p-8 w-[95vw] max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <svg className="h-6 w-6 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4-4-4m8 8l4-4-4-4" /></svg>
+            <div className="p-2 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
+              <svg className="h-6 w-6 text-neutral-600 dark:text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4-4-4m8 8l4-4-4-4" /></svg>
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Present Slideshow</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300">Broadcast your slideshow to student devices in real-time</p>
+              <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">Present Slideshow</h2>
+              <p className="text-sm text-neutral-600 dark:text-neutral-300">Broadcast your slideshow to student devices in real-time</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">✕</button>
+          <button onClick={onClose} className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors">✕</button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

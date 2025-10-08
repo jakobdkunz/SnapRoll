@@ -22,10 +22,10 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
   const visible = open && !!sectionId;
   return (
     <Modal open={visible} onClose={onClose}>
-      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-lg p-6 w-[90vw] max-w-md mx-4">
+      <div className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded-lg p-6 w-[90vw] max-w-md mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Start Poll</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">✕</button>
+          <button onClick={onClose} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">✕</button>
         </div>
         <div className="space-y-4">
           <div>
