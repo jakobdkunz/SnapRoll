@@ -511,18 +511,18 @@ function CustomizeModal({
       
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-2">
           {gradients.map((g) => (
             <button
               key={g.id}
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
-              className={`w-full h-8 rounded-md ${g.class} border-2 transition ${
+              className={`h-10 w-full rounded-md ${g.class} border-2 flex items-center justify-center transition ${
                 gradient === g.id ? 'ring-2 ring-white border-white' : 'border-transparent hover:opacity-90'
               }`}
               title={g.name}
             >
-              <span className="sr-only">{g.name}</span>
+              <span className="font-semibold text-white text-xs drop-shadow-sm">{g.name}</span>
             </button>
           ))}
         </div>
