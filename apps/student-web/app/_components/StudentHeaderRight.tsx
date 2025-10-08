@@ -136,23 +136,23 @@ export function StudentHeaderRight() {
       </div>
 
       <Modal open={profileOpen} onClose={() => setProfileOpen(false)}>
-        <Card className="p-6 w-[90vw] max-w-md space-y-4">
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-neutral-900 dark:text-neutral-100">
           <div className="text-lg font-semibold">Your Profile</div>
-          <div className="text-sm text-slate-600">These settings are managed by your organization.</div>
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">These settings are managed by your organization.</div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">First name</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">First name</label>
             <TextInput value={firstName} disabled />
           </div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">Last name</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">Last name</label>
             <TextInput value={lastName} disabled />
           </div>
           <div className="space-y-2 text-left">
-            <label className="text-sm text-slate-600">Email</label>
+            <label className="text-sm text-neutral-600 dark:text-neutral-400">Email</label>
             <TextInput value={currentUser?.email || ''} disabled />
           </div>
           {studentId && (
-            <div className="text-xs text-slate-500">User ID: {studentId}</div>
+            <div className="text-xs text-neutral-600 dark:text-neutral-400">User ID: {studentId}</div>
           )}
           {devMode && (
             <div className="pt-2">
@@ -177,7 +177,7 @@ export function StudentHeaderRight() {
                 disabled={devBusy}
               >{devBusy ? 'Resetting…' : 'Reset check-in rate limit'}</Button>
               {devMsg && (
-                <div className="mt-2 text-xs text-slate-600">{devMsg}</div>
+                <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">{devMsg}</div>
               )}
             </div>
           )}
