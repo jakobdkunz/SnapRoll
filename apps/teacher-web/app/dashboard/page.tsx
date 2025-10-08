@@ -529,17 +529,17 @@ function CustomizeModal({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Permitted Elective Absences</label>
+        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Permitted Elective Absences</label>
         <div className="space-y-2">
           <div className="flex gap-2 flex-wrap">
-            <button className={`px-3 py-1.5 rounded border ${permMode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('not_set')}>Not Set</button>
-            <button className={`px-3 py-1.5 rounded border ${permMode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('policy')}>University Policy</button>
-            <button className={`px-3 py-1.5 rounded border ${permMode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setPermMode('custom')}>Custom</button>
+            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'not_set' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('not_set')}>Not Set</button>
+            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('policy')}>University Policy</button>
+            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('custom')}>Custom</button>
           </div>
           {permMode === 'policy' && (
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">Meets</span>
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">Meets</span>
                 <select className="border rounded px-2 py-1 text-sm" value={timesPerWeek} onChange={(e) => setTimesPerWeek(Number(e.target.value) as 1|2|3)}>
                   <option value={1}>1x/week</option>
                   <option value={2}>2x/week</option>
@@ -547,13 +547,13 @@ function CustomizeModal({
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-600">Course length</span>
+                <span className="text-sm text-neutral-600 dark:text-neutral-400">Course length</span>
                 <select className="border rounded px-2 py-1 text-sm" value={duration} onChange={(e) => setDuration(e.target.value as 'semester' | '8week')}>
                   <option value="semester">Semester-long</option>
                   <option value="8week">8-week</option>
                 </select>
               </div>
-              <div className="text-sm text-slate-700">
+              <div className="text-sm text-neutral-700 dark:text-neutral-300">
                 {(() => {
                   const t = timesPerWeek;
                   const d = duration;
@@ -565,7 +565,7 @@ function CustomizeModal({
           )}
           {permMode === 'custom' && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">Number</span>
+              <span className="text-sm text-neutral-600 dark:text-neutral-400">Number</span>
               <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
             </div>
           )}
