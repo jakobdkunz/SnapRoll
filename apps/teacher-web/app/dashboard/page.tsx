@@ -510,22 +510,19 @@ function CustomizeModal({
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Choose Gradient</label>
-        <div className="grid grid-cols-3 gap-2">
+        <label className="block text-sm font-medium text-slate-700 mb-2">Color</label>
+        <div className="space-y-2">
           {gradients.map((g) => (
             <button
               key={g.id}
               onClick={() => setGradient(g.id)}
-              className={`aspect-[3/2] rounded-lg ${g.class} relative overflow-hidden border-2 transition-all ${
-                gradient === g.id ? 'border-white shadow-lg scale-105' : 'border-transparent hover:scale-102'
+              aria-pressed={gradient === g.id}
+              className={`w-full h-8 rounded-md ${g.class} border-2 transition ${
+                gradient === g.id ? 'ring-2 ring-white border-white' : 'border-transparent hover:opacity-90'
               }`}
+              title={g.name}
             >
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative z-10 h-full flex items-center justify-center">
-                <div className="font-futuristic font-bold text-white text-xs text-center px-1">
-                  {g.name}
-                </div>
-              </div>
+              <span className="sr-only">{g.name}</span>
             </button>
           ))}
         </div>
@@ -572,9 +569,12 @@ function CustomizeModal({
               <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
             </div>
           )}
-          <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
+          
         </div>
 
+      <div className="mt-2">
+        <div className="text-sm font-medium text-slate-700 mb-2">Participation Credit</div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">Attendance check-in points (optional)</label>
