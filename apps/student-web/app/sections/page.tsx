@@ -362,7 +362,7 @@ export default function SectionsPage() {
       <Card className="p-6 space-y-3">
         <div className="text-center">
           <div className="font-medium">Attendance</div>
-          <div className="text-slate-500 text-sm">Enter the code you see on the board:</div>
+          <div className="text-neutral-600 dark:text-neutral-400 text-sm">Enter the code you see on the board:</div>
         </div>
         <div className="flex items-center justify-center gap-3">
           <HiOutlineUserGroup className="w-10 h-10 text-slate-900 dark:text-slate-100" />
@@ -370,7 +370,7 @@ export default function SectionsPage() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-400 dark:placeholder:text-slate-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-neutral-900 dark:text-slate-500 dark:border-neutral-800' : 'bg-white text-slate-900 border-slate-300 dark:bg-neutral-900 dark:text-slate-100 dark:border-neutral-800' }`}
+              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-neutral-400 dark:placeholder:text-neutral-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-800' : 'bg-white text-neutral-900 border-neutral-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-800' }`}
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
