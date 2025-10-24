@@ -39,7 +39,7 @@ export function RosterRow(props: RosterRowProps) {
   } = props;
 
   return (
-    <div className="p-3 border rounded-lg bg-white/50 flex flex-col sm:flex-row sm:items-center gap-3">
+    <div className="p-3 border rounded-lg bg-white/50 dark:bg-neutral-900/50 border-slate-200 dark:border-neutral-800 flex flex-col sm:flex-row sm:items-center gap-3">
       {isEditing ? (
         <>
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -77,7 +77,7 @@ export function RosterRow(props: RosterRowProps) {
         <>
           <div className="flex-1 min-w-0">
             <div className="font-medium truncate">{s.firstName} {s.lastName}</div>
-            <div className="text-sm text-slate-500 truncate">{s.email}</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 truncate">{s.email}</div>
           </div>
           <div className="sm:ml-auto w-full sm:w-auto grid grid-cols-2 gap-2">
             <Button variant="ghost" onClick={() => onBeginEdit(s)} className="inline-flex items-center justify-center gap-2">
