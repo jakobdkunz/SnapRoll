@@ -163,7 +163,7 @@ export default function AttendancePage() {
     <div ref={containerRef} className="relative" style={{ height: 'calc(100vh - 120px - 80px)' }}>
       {/* Animated, washed-out section gradient background */}
       <div className={`pointer-events-none fixed inset-0 ${sectionGradient}`} style={{ opacity: 0.45 }} />
-      <div className="pointer-events-none fixed inset-0 bg-white/12" />
+      <div className="pointer-events-none fixed inset-0 bg-white/12 dark:bg-black/30" />
       <div
         className="pointer-events-none fixed -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]"
         style={{
@@ -182,7 +182,7 @@ export default function AttendancePage() {
       `}</style>
       <div className="relative z-10 flex flex-col h-full">
         <div className="grid grid-cols-[1fr,auto,1fr] items-center mb-6">
-          <Button variant="ghost" className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl justify-self-start" onClick={() => router.back()}>
+          <Button variant="ghost" className="inline-flex items-center gap-2 bg-white/80 dark:bg-neutral-900/80 hover:bg-white dark:hover:bg-neutral-800 text-slate-900 dark:text-neutral-100 border border-slate-200 dark:border-neutral-800 rounded-xl justify-self-start" onClick={() => router.back()}>
             <HiOutlineArrowLeft className="h-5 w-5" /> Back
           </Button>
           <div className="justify-self-center text-center">
@@ -190,8 +190,8 @@ export default function AttendancePage() {
           </div>
           <div className="justify-self-end">
             {joinCode && (
-              <div className="inline-flex items-center gap-2 bg-white/80 border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700">
-                <span className="uppercase tracking-wide text-slate-500">Join code</span>
+              <div className="inline-flex items-center gap-2 bg-white/80 dark:bg-neutral-900/80 border border-slate-200 dark:border-neutral-800 rounded-xl px-3 py-1.5 text-sm text-slate-700 dark:text-neutral-200">
+                <span className="uppercase tracking-wide text-slate-500 dark:text-slate-400">Join code</span>
                 <span className="tabular-nums font-semibold">{joinCode}</span>
               </div>
             )}
@@ -200,7 +200,7 @@ export default function AttendancePage() {
 
         {devMode && (
           <div className="mb-4">
-            <Card className="p-4 bg-white/80 backdrop-blur">
+            <Card className="p-4 bg-white/80 dark:bg-neutral-900/80 backdrop-blur">
               <div className="flex items-end gap-3 flex-wrap">
                 <div className="text-sm text-slate-600">Developer day picker</div>
                 <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ export default function AttendancePage() {
         
         {/* Attendance Code Widget - Centered */}
         <div className="flex-1 flex items-center justify-center">
-          <Card className="p-6 sm:p-10 text-center bg-white/80 backdrop-blur">
+          <Card className="p-6 sm:p-10 text-center bg-white/80 dark:bg-neutral-900/80 backdrop-blur">
             <div className="text-sm uppercase tracking-wide text-slate-500">
               Attendance Code
             </div>
@@ -242,7 +242,7 @@ export default function AttendancePage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-6 text-slate-600 text-base flex items-center justify-center gap-6">
+                  <div className="mt-6 text-slate-600 dark:text-slate-300 text-base flex items-center justify-center gap-6">
                   <span className="inline-flex items-center gap-2">
                     <HiOutlineGlobeAlt className="h-6 w-6" />
                     <span>Enter at&nbsp;<span className="font-medium">FlameLink.org</span></span>
@@ -256,7 +256,7 @@ export default function AttendancePage() {
 
         {/* Progress Bar Widget - Bottom */}
         <div className="mb-20 flex justify-center">
-          <Card className="p-6 w-full max-w-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur">
+          <Card className="p-6 w-full max-w-3xl bg-white/80 dark:bg-neutral-900/80 backdrop-blur">
             {status ? (
               <>
                 <div className="text-center mb-4">

@@ -241,7 +241,7 @@ export default function DashboardPage() {
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenuFor(null)} aria-hidden>
                             {/* anchored menu */}
                             <div
-                              className="absolute z-50 max-h-[60vh] overflow-auto min-w-[12rem] bg-white border rounded-xl shadow-soft p-1"
+                              className="absolute z-50 max-h-[60vh] overflow-auto min-w-[12rem] bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-soft p-1"
                               role="menu"
                               aria-label="Activities"
                               ref={(el) => {
@@ -267,7 +267,7 @@ export default function DashboardPage() {
                               }}
                             >
                               <button
-                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 inline-flex items-center gap-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                                 <HiOutlineCloud className="h-5 w-5" /> Word Cloud
                               </button>
                               <button
-                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 inline-flex items-center gap-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
@@ -292,7 +292,7 @@ export default function DashboardPage() {
                                 <HiOutlineChartBar className="h-5 w-5" /> Poll
                               </button>
                               <button
-                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 inline-flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 inline-flex items-center gap-2"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
