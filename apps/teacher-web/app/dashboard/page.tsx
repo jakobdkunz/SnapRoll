@@ -363,17 +363,17 @@ export default function DashboardPage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Permitted Elective Absences</label>
+              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Permitted Elective Absences</label>
               <div className="space-y-2">
                 <div className="flex gap-2 flex-wrap">
-                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'not_set' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'not_set' }))}>Not Set</button>
-                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'policy' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
-                  <button className={`px-3 py-1.5 rounded border ${createAbsences.mode === 'custom' ? '!bg-slate-900 !text-white border-slate-900' : 'border-slate-300 text-slate-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'not_set' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'not_set' }))}>Not Set</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
                 </div>
                 {createAbsences.mode === 'policy' && (
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-600">Meets</span>
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400">Meets</span>
                       <select className="border rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
                         <option value={1}>1x/week</option>
                         <option value={2}>2x/week</option>
@@ -381,13 +381,13 @@ export default function DashboardPage() {
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-600">Course length</span>
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400">Course length</span>
                       <select className="border rounded px-2 py-1 text-sm" value={createAbsences.duration} onChange={(e) => setCreateAbsences((p) => ({ ...p, duration: e.target.value as 'semester' | '8week' }))}>
                         <option value="semester">Semester-long</option>
                         <option value="8week">8-week</option>
                       </select>
                     </div>
-                    <div className="text-sm text-slate-700">
+                    <div className="text-sm text-neutral-700 dark:text-neutral-300">
                       {(() => {
                         const t = createAbsences.timesPerWeek;
                         const d = createAbsences.duration;
@@ -399,22 +399,25 @@ export default function DashboardPage() {
                 )}
                 {createAbsences.mode === 'custom' && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600">Number</span>
+                    <span className="text-sm text-neutral-600 dark:text-neutral-400">Number</span>
                     <TextInput value={createAbsences.custom || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAbsences((p) => ({ ...p, custom: e.target.value }))} placeholder="e.g., 3" />
                   </div>
                 )}
-                <div className="text-xs text-slate-500">Set the number of elective absences permitted in your course. The student and instructor will be able to see how many have been used.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400">Set the number of elective absences permitted in your course. The instructor and students will see how many have been used.</div>
               </div>
+            <div className="mt-2">
+              <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation Credit</div>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
                 <TextInput value={createAttendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-              <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
               </div>
               <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
                 <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-              <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
               </div>
             </div>
             </div>
