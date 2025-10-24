@@ -493,7 +493,7 @@ export default function HistoryPage() {
         </colgroup>
         <thead>
           <tr>
-            <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-950 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+            <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
             <th className="p-0 bg-white dark:bg-neutral-950" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
             {days.map((day) => (
               <th
@@ -517,7 +517,7 @@ export default function HistoryPage() {
         <tbody>
           {students.map((student: Student, i: number) => (
             <tr key={student.id} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
-              <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-950 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+              <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
                 <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
                 <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
                 <div className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">

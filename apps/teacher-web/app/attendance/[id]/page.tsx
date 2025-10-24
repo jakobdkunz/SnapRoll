@@ -231,10 +231,10 @@ export default function AttendancePage() {
                 <div className="mt-4 flex items-center justify-center">
                   <div className={`transition-transform duration-200 ${codePulse ? 'scale-105' : 'scale-100'}`}>
                     <div className="flex items-center">
-                      <HiOutlineUserGroup className="w-24 h-24 text-black flex-shrink-0 mr-6 sm:mr-8" />
+                      <HiOutlineUserGroup className="w-24 h-24 text-slate-800 dark:text-slate-200 flex-shrink-0 mr-6 sm:mr-8" />
                       <div className="flex gap-3 sm:gap-4">
                         {code.split('').map((ch, i) => (
-                          <div key={i} className="rounded-2xl bg-white shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none">
+                          <div key={i} className="rounded-2xl bg-white dark:bg-neutral-800 shadow-soft px-4 sm:px-6 py-3 sm:py-5 tabular-nums font-extrabold text-[3.5rem] sm:text-[5rem] leading-none text-slate-900 dark:text-neutral-100">
                             {ch}
                           </div>
                         ))}
