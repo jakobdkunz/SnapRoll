@@ -20,6 +20,8 @@ export default defineSchema({
     permittedAbsences: v.optional(v.number()),
     // Participation configuration
     participationCountsAttendance: v.optional(v.boolean()),
+    // Back-compat: keep this optional field to allow deployment with existing data; not used anymore
+    attendanceCheckinPoints: v.optional(v.number()),
     participationCreditPointsPossible: v.optional(v.number()),
   })
     .index("by_teacher", ["teacherId"])
