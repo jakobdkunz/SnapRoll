@@ -512,20 +512,22 @@ function CustomizeModal({
 }) {
   const [title, setTitle] = useState<string>(section.title ?? "");
   const [gradient, setGradient] = useState<string>(section.gradient ?? "gradient-1");
-  const [permMode, setPermMode] = useState<'not_set' | 'policy' | 'custom'>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? 'custom' : 'not_set');
+  const [permMode, setPermMode] = useState<'policy' | 'custom'>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? 'custom' : 'policy');
+  const [absencesEnabled, setAbsencesEnabled] = useState<boolean>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number');
   const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(3);
   const [duration, setDuration] = useState<'semester' | '8week'>('semester');
   const [customAbsences, setCustomAbsences] = useState<string>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number' ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences) : '');
   const [attendancePoints, setAttendancePoints] = useState<string>(typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number' ? String((section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints) : '');
   const [participationPossible, setParticipationPossible] = useState<string>(typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number' ? String((section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible) : '');
+  const [participationEnabled, setParticipationEnabled] = useState<boolean>(typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number' || typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Section Title</label>
         <TextInput 
+          className="text-lg leading-tight font-bold"
           value={title} 
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)} 
           onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && title.trim()) { e.preventDefault(); onSave(title, gradient); } }}
@@ -553,10 +555,18 @@ function CustomizeModal({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Permitted Elective Absences</label>
+        <div className="flex items-center justify-between mb-2">
+          <div className="inline-flex items-center gap-2">
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absences Permitted</span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted.">?</span>
+          </div>
+          <button onClick={() => setAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${absencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={absencesEnabled} aria-label="Toggle elective absences">
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${absencesEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+          </button>
+        </div>
+        {absencesEnabled && (
         <div className="space-y-2">
           <div className="flex gap-2 flex-wrap">
-            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'not_set' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('not_set')}>Not Set</button>
             <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('policy')}>University Policy</button>
             <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('custom')}>Custom</button>
           </div>
@@ -593,24 +603,36 @@ function CustomizeModal({
               <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
             </div>
           )}
-          
+          <div className="text-xs text-neutral-600 dark:text-neutral-400"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted. Visible to instructors and students.">?</span></div>
         </div>
+        )}
+      </div>
 
       <div className="mt-2">
-        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation Credit</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="inline-flex items-center gap-2">
+            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Participation Credit</span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Configure points for attendance and participation.">?</span>
+          </div>
+          <button onClick={() => setParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${participationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={participationEnabled} aria-label="Toggle participation credit">
+            <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${participationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+          </button>
+        </div>
       </div>
+      {participationEnabled && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points</label>
           <TextInput value={attendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
+          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Points each student earns for checking into attendance.">?</span></div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
+          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible</label>
           <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
+          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Used to compute gradebook participation.">?</span></div>
         </div>
       </div>
+      )}
       </div>
       
       <div className="flex gap-2 pt-4 justify-end">
@@ -619,19 +641,21 @@ function CustomizeModal({
         </Button>
         <Button onClick={() => {
           let permitted: number | null | undefined = undefined;
-          if (permMode === 'policy') {
-            permitted = timesPerWeek === 3 ? (duration === 'semester' ? 4 : 2) : (timesPerWeek === 2 ? (duration === 'semester' ? 3 : 1) : 1);
-          } else if (permMode === 'custom') {
-            const n = Number(customAbsences);
-            permitted = Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined;
-          } else if (permMode === 'not_set') {
+          if (absencesEnabled) {
+            if (permMode === 'policy') {
+              permitted = timesPerWeek === 3 ? (duration === 'semester' ? 4 : 2) : (timesPerWeek === 2 ? (duration === 'semester' ? 3 : 1) : 1);
+            } else if (permMode === 'custom') {
+              const n = Number(customAbsences);
+              permitted = Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined;
+            }
+          } else {
             permitted = null;
           }
           // Compute numeric extras and send in onSave to persist in same mutation
           const ap = Number(attendancePoints);
           const pp = Number(participationPossible);
-          const attendanceCheckinPoints = Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
-          const participationCreditPointsPossible = Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
+          const attendanceCheckinPoints = participationEnabled && Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
+          const participationCreditPointsPossible = participationEnabled && Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
           onSave(title, gradient, permitted, attendanceCheckinPoints, participationCreditPointsPossible);
         }} disabled={!title.trim()}>
           Save Changes
