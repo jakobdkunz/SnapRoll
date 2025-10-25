@@ -304,7 +304,7 @@ export default function DashboardPage() {
                                 role="menuitem"
                               >
                                 <HiOutlinePlayCircle className="h-5 w-5" /> Present Slideshow
-                  </button>
+                              </button>
                 </div>
                           </div>
                         )}
