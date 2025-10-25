@@ -123,7 +123,7 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null, attendanceCheckinPoints?: number | null, participationCreditPointsPossible?: number | null) {
+  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null, participationCountsAttendance?: boolean | null, participationCreditPointsPossible?: number | null) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
     await updateSection({
@@ -132,7 +132,7 @@ export default function DashboardPage() {
       gradient,
       permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences,
       clearPermittedAbsences: permittedAbsences == null,
-      attendanceCheckinPoints: attendanceCheckinPoints == null ? undefined : attendanceCheckinPoints,
+      participationCountsAttendance: participationCountsAttendance == null ? undefined : !!participationCountsAttendance,
       participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
     });
     handleCloseCustomize();
@@ -375,9 +375,16 @@ export default function DashboardPage() {
                 if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
                 try {
                   const gradient = pickAutoGradient();
-                  await createSection({ title: t, gradient });
+                  const participationCountsAttendance = createParticipationEnabled && createAttendanceCounts ? true : false;
+                  const participationCreditPointsPossible = createParticipationEnabled ? (Number.isFinite(Number(createParticipationPossible)) ? Math.max(0, Math.min(10000, Math.floor(Number(createParticipationPossible)))) : undefined) : undefined;
+                  await createSection({ title: t, gradient, participationCountsAttendance, participationCreditPointsPossible });
                   setCreateModalOpen(false);
                   setCreateTitle('');
+                  setCreateAbsences({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
+                  setCreateAbsencesEnabled(false);
+                  setCreateParticipationEnabled(false);
+                  setCreateParticipationPossible('');
+                  setCreateAttendanceCounts(false);
                   setCreateError(null);
                 } catch (e: unknown) {
                   const msg = e instanceof Error ? e.message : 'Failed to create section.';
@@ -405,7 +412,7 @@ function CustomizeModal({
     title: string,
     gradient: string,
     permittedAbsences?: number | null,
-    attendanceCheckinPoints?: number | null,
+    participationCountsAttendance?: boolean | null,
     participationCreditPointsPossible?: number | null
   ) => void;
   onCancel: () => void;
@@ -419,7 +426,7 @@ function CustomizeModal({
   const [duration, setDuration] = useState<'semester' | '8week'>('semester');
   const [customAbsences, setCustomAbsences] = useState<string>(absencesEnabled ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences || '') : '');
   const [participationEnabled, setParticipationEnabled] = useState<boolean>(
-    typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number' ||
+    typeof (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === 'boolean' ||
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
   );
   const [attendancePoints, setAttendancePoints] = useState<string>(
@@ -566,9 +573,10 @@ function CustomizeModal({
           }
           const ap = Number(attendancePoints);
           const pp = Number(participationPossible);
-          const attendanceCheckinPoints = participationEnabled && attendanceCounts && Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
+          // Interpret attendanceCounts as a boolean flag persisted on section
+          const participationCountsAttendance = participationEnabled ? attendanceCounts : null;
           const participationCreditPointsPossible = participationEnabled && Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
-          onSave(title, gradient, permitted, attendanceCheckinPoints, participationCreditPointsPossible);
+          onSave(title, gradient, permitted, participationCountsAttendance, participationCreditPointsPossible);
         }} disabled={!title.trim()}>
           Save Changes
         </Button>

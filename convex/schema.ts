@@ -18,8 +18,8 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     // Optional permitted elective absences for the section
     permittedAbsences: v.optional(v.number()),
-    // Gamification configuration
-    attendanceCheckinPoints: v.optional(v.number()),
+    // Participation configuration
+    participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
   })
     .index("by_teacher", ["teacherId"])
