@@ -524,7 +524,11 @@ export default function HistoryPage() {
                   Absences: <span className="font-medium text-slate-700 dark:text-slate-300">{student.totalAbsences ?? '—'}</span>
                 </div>
               </td>
-              <td className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+              <td
+                className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800"
+                style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }}
+                aria-hidden
+              />
               {days.map((day, j) => {
                 const record = studentRecords[i]?.records[j];
                 return (
