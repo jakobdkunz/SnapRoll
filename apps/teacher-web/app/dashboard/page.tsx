@@ -340,22 +340,19 @@ export default function DashboardPage() {
 
             {/* Participation Credit */}
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1">
                 <div className="inline-flex items-center gap-2">
-                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Participation Credit</span>
-                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Participation Credit</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
                 </div>
                 <button onClick={() => setCreateParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createParticipationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createParticipationEnabled} aria-label="Toggle participation credit">
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createParticipationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
                 </button>
               </div>
               {createParticipationEnabled && (
-              <div className="space-y-4">
+              <div className="space-y-3 pl-3 border-l border-neutral-200 dark:border-neutral-800">
                 <div>
-                  <label className="inline-flex items-center gap-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-                    <span>Total points available</span>
-                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
-                  </label>
+                  <label className="block text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1">Total points available</label>
                   <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
                 </div>
                 <div className="flex items-center justify-between">
@@ -435,6 +432,9 @@ function CustomizeModal({
       ? String((section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible)
       : ''
   );
+  const [attendanceCounts, setAttendanceCounts] = useState<boolean>(
+    typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number'
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -469,18 +469,19 @@ function CustomizeModal({
         </div>
       </div>
 
+      {/* Elective Absence tracking */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <div className="inline-flex items-center gap-2">
-            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absences Permitted</span>
-            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted.">?</span>
+            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Elective Absence tracking</span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Track Elective Absences used by each student, and monitor whether students use more than the permitted number.">?</span>
           </div>
-          <button onClick={() => setAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${absencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={absencesEnabled} aria-label="Toggle elective absences">
+          <button onClick={() => setAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${absencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={absencesEnabled} aria-label="Toggle elective absence tracking">
             <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${absencesEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
           </button>
         </div>
         {absencesEnabled && (
-        <div className="space-y-2">
+        <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
           <div className="flex gap-2 flex-wrap">
             <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('policy')}>University Policy</button>
             <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('custom')}>Custom</button>
@@ -518,36 +519,36 @@ function CustomizeModal({
               <TextInput value={customAbsences} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomAbsences(e.target.value)} placeholder="e.g., 3" />
             </div>
           )}
-          <div className="text-xs text-neutral-600 dark:text-neutral-400"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted. Visible to instructors and students.">?</span></div>
         </div>
         )}
       </div>
 
-      <div className="mt-2">
-        <div className="flex items-center justify-between mb-2">
+      {/* Participation Credit */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
           <div className="inline-flex items-center gap-2">
-            <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Participation Credit</span>
-            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Configure points for attendance and participation.">?</span>
+            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Participation Credit</span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
           </div>
           <button onClick={() => setParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${participationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={participationEnabled} aria-label="Toggle participation credit">
             <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${participationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
           </button>
         </div>
-      </div>
-      {participationEnabled && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points</label>
-          <TextInput value={attendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Points each student earns for checking into attendance.">?</span></div>
+        {participationEnabled && (
+        <div className="space-y-3 pl-3 border-l border-neutral-200 dark:border-neutral-800">
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1">Total points available</label>
+            <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-neutral-700 dark:text-neutral-300">Attendance counts toward Participation Credit</span>
+            <button onClick={() => setAttendanceCounts(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${attendanceCounts ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={attendanceCounts} aria-label="Toggle attendance counts toward participation">
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${attendanceCounts ? 'translate-x-5' : 'translate-x-1'}`} />
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible</label>
-          <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-          <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Used to compute gradebook participation.">?</span></div>
-        </div>
+        )}
       </div>
-      )}
 
       <div className="flex gap-2 pt-4 justify-end">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
@@ -565,7 +566,7 @@ function CustomizeModal({
           }
           const ap = Number(attendancePoints);
           const pp = Number(participationPossible);
-          const attendanceCheckinPoints = participationEnabled && Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
+          const attendanceCheckinPoints = participationEnabled && attendanceCounts && Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : null;
           const participationCreditPointsPossible = participationEnabled && Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
           onSave(title, gradient, permitted, attendanceCheckinPoints, participationCreditPointsPossible);
         }} disabled={!title.trim()}>
