@@ -206,6 +206,143 @@ export const getSectionHistory = query({
   },
 });
 
+// Participation grid and totals calculation
+export const getParticipationBySection = query({
+  args: {
+    sectionId: v.id("sections"),
+    offset: v.number(),
+    limit: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
+
+    const section = await ctx.db.get(args.sectionId);
+    const totalPoints = Number((section as any)?.participationCreditPointsPossible || 0);
+    const countsAttendance = !!(section as any)?.participationCountsAttendance;
+
+    // Active class days (hasActivity true) in ascending order
+    const allDays = (await ctx.db
+      .query("classDays")
+      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+      .filter((q) => q.eq(q.field("hasActivity"), true))
+      .collect()).sort((a, b) => (a.date as number) - (b.date as number));
+
+    const totalDays = allDays.length;
+    const page = allDays.slice(args.offset, args.offset + args.limit);
+    const pageIds = page.map(d => d._id as Id<'classDays'>);
+
+    // Enrollments/students
+    const enrollments = await ctx.db.query('enrollments').withIndex('by_section', (q) => q.eq('sectionId', args.sectionId)).collect();
+    const studentIds = enrollments.map(e => e.studentId as Id<'users'>);
+    const studentDocs = await Promise.all(studentIds.map(id => ctx.db.get(id)));
+    const students = studentDocs.filter(Boolean) as Doc<'users'>[];
+
+    // Attendance per page day
+    const attendanceByDayStudent = new Map<string, Doc<'attendanceRecords'>>();
+    const manualByDayStudent = new Map<string, Doc<'manualStatusChanges'>>();
+    const manualLists = await Promise.all(pageIds.map(id => ctx.db.query('manualStatusChanges').withIndex('by_classDay', (q)=> q.eq('classDayId', id)).collect()));
+    for (const ml of manualLists) for (const mc of ml) manualByDayStudent.set(`${mc.classDayId}-${mc.studentId}`, mc as Doc<'manualStatusChanges'>);
+    const attendanceLists = await Promise.all(pageIds.map(id => ctx.db.query('attendanceRecords').withIndex('by_classDay', (q)=> q.eq('classDayId', id)).collect()));
+    for (const al of attendanceLists) for (const ar of al) attendanceByDayStudent.set(`${ar.classDayId}-${ar.studentId}`, ar as Doc<'attendanceRecords'>);
+
+    // Sessions per page day
+    const sessionsByDay = new Map<Id<'classDays'>, { pollIds: Id<'pollSessions'>[]; wcIds: Id<'wordCloudSessions'>[] }>();
+    for (const day of page) {
+      const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
+      const pollSessions = await ctx.db.query('pollSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
+      const wcSessions = await ctx.db.query('wordCloudSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
+      sessionsByDay.set(day._id as Id<'classDays'>, { pollIds: pollSessions.map(s=> s._id as Id<'pollSessions'>), wcIds: wcSessions.map(s=> s._id as Id<'wordCloudSessions'>) });
+    }
+
+    // Answers lookups
+    const pollAnswerBySessionStudent = new Set<string>();
+    const wcAnswerBySessionStudent = new Set<string>();
+    for (const day of page) {
+      const sess = sessionsByDay.get(day._id as Id<'classDays'>)!;
+      for (const pid of sess.pollIds) {
+        const answers = await ctx.db.query('pollAnswers').withIndex('by_session', (q)=> q.eq('sessionId', pid)).collect();
+        for (const a of answers) pollAnswerBySessionStudent.add(`${pid}-${a.studentId}`);
+      }
+      for (const wid of sess.wcIds) {
+        const answers = await ctx.db.query('wordCloudAnswers').withIndex('by_session', (q)=> q.eq('sessionId', wid)).collect();
+        for (const a of answers) wcAnswerBySessionStudent.add(`${wid}-${a.studentId}`);
+      }
+    }
+
+    // Precompute course-level denominators
+    let totalCourseShares = 0;
+    if (!countsAttendance) {
+      // Sum of all activities across all active days
+      for (const day of allDays) {
+        const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
+        const pollSessions = await ctx.db.query('pollSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
+        const wcSessions = await ctx.db.query('wordCloudSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
+        totalCourseShares += pollSessions.length + wcSessions.length;
+      }
+      if (totalCourseShares <= 0) totalCourseShares = 1;
+    }
+
+    // Build per-student records
+    const records = students.map((s) => {
+      const rows = page.map((day) => {
+        const k = `${day._id}-${s._id}`;
+        const ar = attendanceByDayStudent.get(k);
+        const mc = manualByDayStudent.get(k);
+        const original = ar?.status || 'BLANK';
+        const hasManual = !!mc && mc.status !== 'BLANK';
+        let effective = hasManual ? (mc!.status as any) : (original as any);
+        const wasPresent = effective === 'PRESENT';
+        const sess = sessionsByDay.get(day._id as Id<'classDays'>)!;
+        const activityShares = sess.pollIds.reduce((acc, id)=> acc + (pollAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0) +
+          sess.wcIds.reduce((acc, id)=> acc + (wcAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0);
+        const daySharesTotal = (countsAttendance ? 1 : 0) + sess.pollIds.length + sess.wcIds.length;
+        const daySharesEarned = (countsAttendance && wasPresent ? 1 : 0) + (wasPresent ? activityShares : 0);
+        return { classDayId: day._id as Id<'classDays'>, sharesEarned: daySharesEarned, sharesTotal: daySharesTotal, absent: !wasPresent };
+      });
+      return { studentId: s._id as Id<'users'>, rows };
+    });
+
+    // Totals per student
+    const totals = records.map((r) => {
+      if (countsAttendance) {
+        // Student-present days count for denominator
+        let presentDays = 0;
+        for (const row of r.rows) if (!row.absent) presentDays++;
+        if (presentDays <= 0) return { studentId: r.studentId, points: 0 };
+        const perDay = totalPoints / presentDays;
+        let pts = 0;
+        for (const row of r.rows) {
+          if (row.absent) continue;
+          const denom = row.sharesTotal <= 0 ? 1 : row.sharesTotal;
+          pts += perDay * (row.sharesEarned / denom);
+        }
+        return { studentId: r.studentId, points: Math.round(pts) };
+      } else {
+        // Activity-only shares across course
+        if (totalCourseShares <= 0) return { studentId: r.studentId, points: 0 };
+        let earned = 0;
+        for (const row of r.rows) {
+          if (row.absent) continue;
+          // When disabled, attendance doesn't count, only activities
+          earned += Math.max(0, row.sharesEarned - 0); // already excludes attendance when disabled
+        }
+        const pts = (earned / totalCourseShares) * totalPoints;
+        return { studentId: r.studentId, points: Math.round(pts) };
+      }
+    });
+
+    return {
+      days: page.map((d) => ({ id: d._id as Id<'classDays'>, date: new Date(getEasternDayBounds(d.date as number).startMs).toISOString().split('T')[0] })),
+      records,
+      totals,
+      totalDays,
+      offset: args.offset,
+      limit: args.limit,
+    };
+  },
+});
+
 export const getStudentHistory = query({
   args: {
     studentId: v.id("users"),
