@@ -31,6 +31,8 @@ export default function DashboardPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createAttendancePoints, setCreateAttendancePoints] = useState<string>('');
   const [createParticipationPossible, setCreateParticipationPossible] = useState<string>('');
+  const [createAbsencesEnabled, setCreateAbsencesEnabled] = useState<boolean>(false);
+  const [createParticipationEnabled, setCreateParticipationEnabled] = useState<boolean>(false);
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
@@ -351,22 +353,29 @@ export default function DashboardPage() {
       <Modal open={createModalOpen} onClose={() => setCreateModalOpen(false)}>
         <div className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded-lg p-6 max-w-xl w-[92vw] mx-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Create Section</h2>
+            <h2 className="text-lg font-semibold">New Section</h2>
             <button onClick={() => setCreateModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300">✕</button>
           </div>
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Section Title</label>
-              <TextInput value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCreateTitle(e.target.value); if (createError) setCreateError(null); }} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
+              <TextInput className="text-lg leading-tight font-bold" value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCreateTitle(e.target.value); if (createError) setCreateError(null); }} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
               {createError && (
                 <div className="mt-2 text-sm text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded p-2">{createError}</div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Permitted Elective Absences</label>
+              <div className="flex items-center justify-between mb-2">
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absences Permitted</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted.">?</span>
+                </div>
+                <button onClick={() => setCreateAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createAbsencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createAbsencesEnabled} aria-label="Toggle elective absences">
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createAbsencesEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              {createAbsencesEnabled && (
               <div className="space-y-2">
                 <div className="flex gap-2 flex-wrap">
-                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'not_set' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'not_set' }))}>Not Set</button>
                   <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
                   <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
                 </div>
@@ -403,23 +412,35 @@ export default function DashboardPage() {
                     <TextInput value={createAbsences.custom || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAbsences((p) => ({ ...p, custom: e.target.value }))} placeholder="e.g., 3" />
                   </div>
                 )}
-                <div className="text-xs text-neutral-600 dark:text-neutral-400">Set the number of elective absences permitted in your course. The instructor and students will see how many have been used.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Set how many elective absences are permitted. Visible to instructors and students.">?</span></div>
               </div>
-            <div className="mt-2">
-              <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation Credit</div>
+              )}
             </div>
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-2">
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Participation Credit</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Configure points for attendance and participation.">?</span>
+                </div>
+                <button onClick={() => setCreateParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createParticipationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createParticipationEnabled} aria-label="Toggle participation credit">
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createParticipationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+            </div>
+            {createParticipationEnabled && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points (optional)</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Attendance check-in points</label>
                 <TextInput value={createAttendancePoints} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAttendancePoints(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 3" />
-                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Points each student earns for checking into attendance.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Points each student earns for checking into attendance.">?</span></div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible (optional)</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Participation credit points possible</label>
                 <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">Used to compute gradebook participation.</div>
+                <div className="text-xs text-neutral-600 dark:text-neutral-400 mt-1"><span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Used to compute gradebook participation.">?</span></div>
               </div>
             </div>
+            )}
             </div>
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
@@ -430,11 +451,11 @@ export default function DashboardPage() {
                 if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
                 try {
                   const gradient = pickAutoGradient();
-                  const permittedAbsences = createAbsences.mode === 'not_set' ? undefined : (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })());
+                  const permittedAbsences = !createAbsencesEnabled ? undefined : (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })());
                   const ap = Number(createAttendancePoints);
-                  const attendanceCheckinPoints = Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : undefined;
+                  const attendanceCheckinPoints = !createParticipationEnabled ? undefined : (Number.isFinite(ap) ? Math.max(0, Math.min(10000, Math.floor(ap))) : undefined);
                   const pp = Number(createParticipationPossible);
-                  const participationCreditPointsPossible = Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : undefined;
+                  const participationCreditPointsPossible = !createParticipationEnabled ? undefined : (Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : undefined);
                   await createSection({ title: t, gradient, permittedAbsences, attendanceCheckinPoints, participationCreditPointsPossible });
                   setCreateModalOpen(false);
                   setCreateTitle('');
