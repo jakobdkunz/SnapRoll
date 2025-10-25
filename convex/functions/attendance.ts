@@ -3,7 +3,6 @@ import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
-import { ensureAttendanceOpportunity, assignIfNeeded } from "./_pointsLib";
 
 type RateLimitBucket = {
   _id: Id<'rateLimits'>;
@@ -196,13 +195,7 @@ export const checkIn = mutation({
       await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
       // Mark class day as active on any successful check-in
       try { await ctx.db.patch(classDay._id, { hasActivity: true }); } catch (err) { void err; }
-      // Award points if configured for this section, only if not already assigned for this day
-      const section = await ctx.db.get(classDay.sectionId as Id<'sections'>);
-      const pts = Number((section as any)?.attendanceCheckinPoints || 0);
-      if (pts > 0) {
-        const oppId = await ensureAttendanceOpportunity(ctx as any, { sectionId: classDay.sectionId as Id<'sections'>, classDayId: classDay._id as Id<'classDays'>, points: pts, sourceDate: classDay.date as number });
-        await assignIfNeeded(ctx as any, { opportunityId: oppId, sectionId: classDay.sectionId as Id<'sections'>, studentId });
-      }
+      // No direct points awarded for attendance; handled by participation system
       return { ok: true, recordId: existingRecord._id };
     } else {
       // Create new record (success)
@@ -225,13 +218,7 @@ export const checkIn = mutation({
       await ctx.db.patch(bucket!._id, { count: 0, windowStart: now, blockedUntil: undefined });
       // Mark class day as active on first successful check-in
       try { await ctx.db.patch(classDay._id, { hasActivity: true }); } catch (err) { void err; }
-      // Award points if configured for this section
-      const section = await ctx.db.get(classDay.sectionId as Id<'sections'>);
-      const pts = Number((section as any)?.attendanceCheckinPoints || 0);
-      if (pts > 0) {
-        const oppId = await ensureAttendanceOpportunity(ctx as any, { sectionId: classDay.sectionId as Id<'sections'>, classDayId: classDay._id as Id<'classDays'>, points: pts, sourceDate: classDay.date as number });
-        await assignIfNeeded(ctx as any, { opportunityId: oppId, sectionId: classDay.sectionId as Id<'sections'>, studentId });
-      }
+      // No direct points awarded for attendance; handled by participation system
       return { ok: true, recordId: id };
     }
   },

@@ -34,14 +34,24 @@ export default function HistoryPage() {
   const [offset, setOffset] = useState<number>(0);
   // Server-side window equals the number of columns that fit
   const [limit, setLimit] = useState<number>(12);
-
-  // Convex hooks
+  const [activeTab, setActiveTab] = useState<'attendance' | 'participation'>('attendance');
   const sectionId = params.id as unknown as Id<'sections'>;
   const history = useQuery(
     api.functions.history.getSectionHistory,
     isAuthReady && params.id ? { sectionId, offset, limit } : "skip"
-  );
+  ) as any;
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
+  const participation = useQuery(
+    api.functions.history.getParticipationBySection,
+    isAuthReady && params.id && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
+  ) as {
+    days: { id: string; date: string }[];
+    records: { studentId: string; rows: { classDayId: string; sharesEarned: number; sharesTotal: number; absent: boolean }[] }[];
+    totals: { studentId: string; points: number }[];
+    totalDays: number;
+    offset: number;
+    limit: number;
+  } | undefined;
   //
   const containerRef = useRef<HTMLDivElement | null>(null);
   const firstThRef = useRef<HTMLTableCellElement | null>(null);
@@ -459,21 +469,25 @@ export default function HistoryPage() {
             : '0 of 0 class days'}
         </div>
         <div className="flex items-center gap-4">
+          <div className="inline-flex rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`} onClick={() => setActiveTab('participation')}>Participation</button>
+          </div>
           <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
             <HiOutlineDocumentArrowDown className="h-5 w-5" />
             <span className="hidden sm:inline">Export CSV</span>
           </Button>
-          {/* Older page (older dates are at lower offsets; disable at 0) */}
+          {/* Older page */}
           <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>
           </Button>
-          {/* Newer page (newer dates increase offset; disable at end) */}
+          {/* Newer page */}
           <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
             <span className="hidden sm:inline">Next</span> →
           </Button>
         </div>
       </div>
-      {/* Blank-state when no history exists or when there are days but no students */}
+      {/* Blank-state */}
       {initialized && !isFetching && (totalDays === 0 || students.length === 0) ? (
         <div className="py-12 grid place-items-center">
           <div className="text-center max-w-md">
@@ -483,81 +497,136 @@ export default function HistoryPage() {
         </div>
       ) : (
       <div ref={containerRef} className="relative overflow-hidden w-full">
-      <table className="border-separate border-spacing-0 table-fixed w-full">
-        <colgroup>
-          <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
-          <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
-          {days.map((day) => (
-            <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
-            <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
-            {days.map((day) => (
-              <th
-                key={day.id}
-                className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap sr-day-col"
-                style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
-              >
-                {isRefreshing ? (
-                  hasRefreshDelayElapsed ? (
-                    <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
-                  ) : (
-                    <span className="inline-block h-4 w-14 sm:w-20" />
-                  )
-                ) : (
-                  isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {students.map((student: Student, i: number) => (
-            <tr key={student.id} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
-              <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
-                <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
-                <div className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                  Absences: <span className="font-medium text-slate-700 dark:text-slate-300">{student.totalAbsences ?? '—'}</span>
-                </div>
-              </td>
-              <td
-                className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800"
-                style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }}
-                aria-hidden
-              />
-              {days.map((day, j) => {
-                const record = studentRecords[i]?.records[j];
-                return (
-                  <td
-                    key={`${student.id}-${day.id}`}
-                    className="pl-1 pr-2 py-2 text-center"
+        {activeTab === 'attendance' ? (
+          // Attendance table (existing)
+          <table className="border-separate border-spacing-0 table-fixed w-full">
+            <colgroup>
+              <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+              {days.map((day: any) => (
+                <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+                <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                {days.map((day: any) => (
+                  <th
+                    key={day.id}
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap sr-day-col"
                     style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
                   >
                     {isRefreshing ? (
                       hasRefreshDelayElapsed ? (
-                        <Skeleton className="h-6 w-8 mx-auto rounded" />
+                        <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
                       ) : (
-                        <span className="inline-block h-6 w-8" />
+                        <span className="inline-block h-4 w-14 sm:w-20" />
                       )
-                    ) : record ? (
-                      renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date)
                     ) : (
-                      <span className="text-slate-400">–</span>
+                      isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)
                     )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student: Student, i: number) => (
+                <tr key={student.id} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
+                  <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+                    <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
+                    <div className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+                      Absences: <span className="font-medium text-slate-700 dark:text-slate-300">{student.totalAbsences ?? '—'}</span>
+                    </div>
                   </td>
+                  <td
+                    className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800"
+                    style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }}
+                    aria-hidden
+                  />
+                  {days.map((day: any, j: number) => {
+                    const record = studentRecords[i]?.records[j];
+                    return (
+                      <td
+                        key={`${student.id}-${day.id}`}
+                        className="pl-1 pr-2 py-2 text-center"
+                        style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                      >
+                        {isRefreshing ? (
+                          hasRefreshDelayElapsed ? (
+                            <Skeleton className="h-6 w-8 mx-auto rounded" />
+                          ) : (
+                            <span className="inline-block h-6 w-8" />
+                          )
+                        ) : record ? (
+                          renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date)
+                        ) : (
+                          <span className="text-slate-400">–</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          // Participation table
+          <table className="border-separate border-spacing-0 table-fixed w-full">
+            <colgroup>
+              <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+              {(participation?.days || []).map((day: any) => (
+                <col key={`colp-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+              ))}
+              <col style={{ width: 96, minWidth: 96, maxWidth: 96 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+                <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                {(participation?.days || []).map((day: any) => (
+                  <th key={`pth-${day.id}`} className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap">{isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)}</th>
+                ))}
+                <th className="pl-1 pr-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 text-center whitespace-nowrap">Total Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student: Student, i: number) => {
+                const rec = (participation?.records || []).find(r => String(r.studentId) === String(student.id));
+                const total = (participation?.totals || []).find(t => String(t.studentId) === String(student.id))?.points ?? 0;
+                return (
+                  <tr key={`p-${student.id}`} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
+                    <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+                      <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
+                    </td>
+                    <td className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    {(participation?.days || []).map((day: any, j: number) => {
+                      const row = rec?.rows?.[j];
+                      return (
+                        <td key={`pc-${student.id}-${day.id}`} className="pl-1 pr-2 py-2 text-center" style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}>
+                          {!participation ? (
+                            hasRefreshDelayElapsed ? <Skeleton className="h-6 w-10 mx-auto rounded" /> : <span className="inline-block h-6 w-10" />
+                          ) : row ? (
+                            row.absent ? <Badge tone="red">Absent</Badge> : <span className="text-sm">{row.sharesEarned}/{Math.max(1, row.sharesTotal)}</span>
+                          ) : (
+                            <span className="text-slate-400">–</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="pl-1 pr-2 py-2 text-center font-medium">{total}</td>
+                  </tr>
                 );
               })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {isRefreshing && hasRefreshDelayElapsed && (
-        <div className="absolute inset-0 pointer-events-none" />
-      )}
+            </tbody>
+          </table>
+        )}
+        {isRefreshing && hasRefreshDelayElapsed && (
+          <div className="absolute inset-0 pointer-events-none" />
+        )}
       </div>
       )}
       <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
