@@ -296,8 +296,13 @@ export const getParticipationBySection = query({
         const sess = sessionsByDay.get(day._id as Id<'classDays'>)!;
         const activityShares = sess.pollIds.reduce((acc, id)=> acc + (pollAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0) +
           sess.wcIds.reduce((acc, id)=> acc + (wcAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0);
-        const daySharesTotal = (countsAttendance ? 1 : 0) + sess.pollIds.length + sess.wcIds.length;
-        const daySharesEarned = (countsAttendance && wasPresent ? 1 : 0) + (wasPresent ? activityShares : 0);
+        let daySharesTotal = (countsAttendance ? 1 : 0) + sess.pollIds.length + sess.wcIds.length;
+        let daySharesEarned = (countsAttendance && wasPresent ? 1 : 0) + (wasPresent ? activityShares : 0);
+        if (countsAttendance && wasPresent && daySharesTotal === 1) {
+          // No activities happened; attendance itself should be 1/1
+          daySharesTotal = 1;
+          daySharesEarned = 1;
+        }
         return { classDayId: day._id as Id<'classDays'>, sharesEarned: daySharesEarned, sharesTotal: daySharesTotal, absent: !wasPresent };
       });
       return { studentId: s._id as Id<'users'>, rows };
