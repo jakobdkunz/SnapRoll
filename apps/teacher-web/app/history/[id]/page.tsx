@@ -457,6 +457,19 @@ export default function HistoryPage() {
           cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
         </div>
       )}
+      {/* Tabs header above card to mimic browser tabs */}
+      <div className="flex items-center justify-between mb-0 px-2 sm:px-4">
+        <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-neutral-200 dark:border-neutral-800">
+          <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
+          <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
+            <HiOutlineDocumentArrowDown className="h-5 w-5" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+        </div>
+      </div>
       <div className="flex items-center justify-between mb-3">
         <div className={`text-sm text-slate-600 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           {totalDays > 0
@@ -469,14 +482,6 @@ export default function HistoryPage() {
             : '0 of 0 class days'}
         </div>
         <div className="flex items-center gap-4">
-          <div className="inline-flex rounded-md border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-            <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
-            <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-neutral-100 dark:bg-neutral-800 font-medium' : ''}`} onClick={() => setActiveTab('participation')}>Participation</button>
-          </div>
-          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
-            <HiOutlineDocumentArrowDown className="h-5 w-5" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </Button>
           {/* Older page */}
           <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
             ← <span className="hidden sm:inline">Previous</span>

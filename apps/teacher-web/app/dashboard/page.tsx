@@ -9,6 +9,9 @@ import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
 import type { Doc } from '../../../../convex/_generated/dataModel';
+import WordCloudStartModal from './_components/WordCloudStartModal';
+import PollStartModal from './_components/PollStartModal';
+import SlideshowPresentModal from './_components/SlideshowPresentModal';
 
 type SectionDoc = Doc<'sections'>;
 
@@ -225,10 +228,17 @@ export default function DashboardPage() {
                         <HiOutlineDocumentChartBar className="h-5 w-5" /> View Report
                       </Button>
                     </div>
-                    <div className="flex gap-2 items-stretch flex-wrap">
-                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => { setWcSectionId(s._id); setWcOpen(true); }}>
+                    <div className="flex gap-2 items-stretch flex-wrap relative">
+                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => setOpenMenuFor(s._id)} aria-expanded={openMenuFor===s._id}>
                         <HiOutlineSparkles className="h-5 w-5" /> Activities
                       </Button>
+                      {openMenuFor === s._id && (
+                        <div data-interact-menu={openMenuFor===s._id? 'open':'closed'} className="absolute z-50 top-full left-0 mt-1 w-48 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg">
+                          <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setWcSectionId(s._id); setWcOpen(true); setOpenMenuFor(null); }}>Start Word Cloud</button>
+                          <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setPollSectionId(s._id as Id<'sections'>); setPollOpen(true); setOpenMenuFor(null); }}>Start Poll</button>
+                          <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setSlideSectionId(s._id as Id<'sections'>); setSlideOpen(true); setOpenMenuFor(null); }}>Present Slideshow</button>
+                        </div>
+                      )}
                       {/* Attendance button with responsive label */}
                       <Button className="flex-1 truncate" onClick={() => router.push(`/attendance/${s._id}`)}>
                         <span className="hidden sm:inline">Take Attendance</span>
@@ -377,7 +387,8 @@ export default function DashboardPage() {
                   const gradient = pickAutoGradient();
                   const participationCountsAttendance = createParticipationEnabled && createAttendanceCounts ? true : false;
                   const participationCreditPointsPossible = createParticipationEnabled ? (Number.isFinite(Number(createParticipationPossible)) ? Math.max(0, Math.min(10000, Math.floor(Number(createParticipationPossible)))) : undefined) : undefined;
-                  await createSection({ title: t, gradient, participationCountsAttendance, participationCreditPointsPossible });
+                  const permittedAbsences = createAbsencesEnabled ? (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })()) : undefined;
+                  await createSection({ title: t, gradient, participationCountsAttendance, participationCreditPointsPossible, permittedAbsences });
                   setCreateModalOpen(false);
                   setCreateTitle('');
                   setCreateAbsences({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
@@ -395,6 +406,11 @@ export default function DashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Activity modals */}
+      <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId as any} />
+      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId as any} />
+      <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId as any} />
     </div>
   );
 }
