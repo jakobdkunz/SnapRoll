@@ -84,6 +84,7 @@ export const convexApi = {
     toggleOpportunityUndone: api.functions.history.toggleOpportunityUndone,
     getStudentPointsBySection: api.functions.history.getStudentPointsBySection,
     getStudentPointsSummary: api.functions.history.getStudentPointsSummary,
+    getParticipationBySection: api.functions.history.getParticipationBySection,
   },
   
   // Poll functions
