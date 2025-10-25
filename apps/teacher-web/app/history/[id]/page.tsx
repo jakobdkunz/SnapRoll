@@ -494,7 +494,7 @@ export default function HistoryPage() {
         <thead>
           <tr>
             <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
-            <th className="p-0 bg-white dark:bg-neutral-950" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+            <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
             {days.map((day) => (
               <th
                 key={day.id}
@@ -524,7 +524,7 @@ export default function HistoryPage() {
                   Absences: <span className="font-medium text-slate-700 dark:text-slate-300">{student.totalAbsences ?? '—'}</span>
                 </div>
               </td>
-              <td className="p-0 bg-white dark:bg-neutral-950" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+              <td className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
               {days.map((day, j) => {
                 const record = studentRecords[i]?.records[j];
                 return (
