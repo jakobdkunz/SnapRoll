@@ -240,32 +240,8 @@ export default function DashboardPage() {
                           <HiChevronDown className={`h-4 w-4 opacity-70 transition-transform ${openMenuFor === s._id ? 'rotate-180' : ''}`} />
                         </Button>
                         {openMenuFor === s._id && (
-                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenuFor(null)} aria-hidden>
-                            {/* anchored menu */}
-                            <div
-                              className="absolute z-50 max-h-[60vh] overflow-auto min-w-[12rem] bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-soft p-1"
-                              role="menu"
-                              aria-label="Activities"
-                              ref={(el) => {
-                                if (!el) return;
-                                const btn = document.querySelector(`[data-activities-trigger="${s._id}"]`) as HTMLElement | null;
-                                const rect = btn?.getBoundingClientRect();
-                                const vw = window.innerWidth;
-                                const vh = window.innerHeight;
-                                if (rect) {
-                                  const spaceBelow = vh - rect.bottom;
-                                  el.style.width = `${rect.width}px`;
-                                  const provisionalTop = spaceBelow < 220 ? rect.top - el.offsetHeight - 8 : rect.bottom + 8;
-                                  const top = Math.max(8, Math.min(vh - el.offsetHeight - 8, provisionalTop));
-                                  const left = Math.min(vw - rect.width - 8, Math.max(8, rect.left));
-                                  el.style.top = `${top}px`;
-                                  el.style.left = `${left}px`;
-                                } else {
-                                  el.style.bottom = '96px';
-                                  el.style.left = '16px';
-                                }
-                              }}
-                            >
+                          <div className="absolute z-50 mt-2 w-full" role="menu" aria-label="Activities">
+                            <div className="max-h-[60vh] overflow-auto bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-soft p-1">
                               <button
                                 className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 inline-flex items-center gap-2"
                                 onClick={(e) => {
