@@ -35,6 +35,7 @@ export default function DashboardPage() {
   const [createParticipationPossible, setCreateParticipationPossible] = useState<string>('');
   const [createAbsencesEnabled, setCreateAbsencesEnabled] = useState<boolean>(false);
   const [createParticipationEnabled, setCreateParticipationEnabled] = useState<boolean>(false);
+  const [createAttendanceCounts, setCreateAttendanceCounts] = useState<boolean>(false);
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
@@ -277,10 +278,97 @@ export default function DashboardPage() {
             <button onClick={() => setCreateModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300" aria-label="Close">✕</button>
           </div>
           <div className="space-y-6">
+            {/* Title */}
             <TextInput className="text-lg leading-tight font-bold" value={createTitle} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCreateTitle(e.target.value); if (createError) setCreateError(null); }} placeholder="Enter section title" onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter' && createTitle.trim()) { e.preventDefault(); (document.getElementById('create-section-submit') as HTMLButtonElement | null)?.click(); } }} />
             {createError && (
               <div className="mt-2 text-sm text-rose-800 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded p-2">{createError}</div>
             )}
+
+            {/* Elective Absence tracking */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absence tracking</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Track Elective Absences used by each student, and monitor whether students use more than the permitted number.">?</span>
+                </div>
+                <button onClick={() => setCreateAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createAbsencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createAbsencesEnabled} aria-label="Toggle elective absence tracking">
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createAbsencesEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              {createAbsencesEnabled && (
+              <div className="space-y-2">
+                <div className="flex gap-2 flex-wrap">
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
+                </div>
+                {createAbsences.mode === 'policy' && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400">Meets</span>
+                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
+                        <option value={1}>1x/week</option>
+                        <option value={2}>2x/week</option>
+                        <option value={3}>3x/week</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-neutral-600 dark:text-neutral-400">Course length</span>
+                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.duration} onChange={(e) => setCreateAbsences((p) => ({ ...p, duration: e.target.value as 'semester' | '8week' }))}>
+                        <option value="semester">Semester-long</option>
+                        <option value="8week">8-week</option>
+                      </select>
+                    </div>
+                    <div className="text-sm text-neutral-700 dark:text-neutral-300">
+                      {(() => {
+                        const t = createAbsences.timesPerWeek;
+                        const d = createAbsences.duration;
+                        const value = t === 3 ? (d === 'semester' ? 4 : 2) : t === 2 ? (d === 'semester' ? 3 : 1) : 1;
+                        return <span>Permitted: <span className="font-medium">{value}</span></span>;
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {createAbsences.mode === 'custom' && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutral-600 dark:text-neutral-400">Number</span>
+                    <TextInput value={createAbsences.custom || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateAbsences((p) => ({ ...p, custom: e.target.value }))} placeholder="e.g., 3" />
+                  </div>
+                )}
+              </div>
+              )}
+            </div>
+
+            {/* Participation Credit */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Participation Credit</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
+                </div>
+                <button onClick={() => setCreateParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createParticipationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createParticipationEnabled} aria-label="Toggle participation credit">
+                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createParticipationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                </button>
+              </div>
+              {createParticipationEnabled && (
+              <div className="space-y-4">
+                <div>
+                  <label className="inline-flex items-center gap-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
+                    <span>Total points available</span>
+                    <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
+                  </label>
+                  <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-neutral-700 dark:text-neutral-300">Attendance counts toward Participation Credit</span>
+                  <button onClick={() => setCreateAttendanceCounts(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createAttendanceCounts ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createAttendanceCounts} aria-label="Toggle attendance counts toward participation">
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createAttendanceCounts ? 'translate-x-5' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              </div>
+              )}
+            </div>
+
+            {/* Actions */}
             <div className="flex gap-2 pt-2 justify-end">
               <Button variant="ghost" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
               <Button id="create-section-submit" onClick={async () => {
