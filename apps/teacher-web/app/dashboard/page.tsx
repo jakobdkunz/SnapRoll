@@ -254,9 +254,7 @@ export default function DashboardPage() {
                                 const vh = window.innerHeight;
                                 if (rect) {
                                   const spaceBelow = vh - rect.bottom;
-                                  // Match width to the button (same as Take Attendance, since they share flex widths)
                                   el.style.width = `${rect.width}px`;
-                                  // Place below unless not enough space
                                   const provisionalTop = spaceBelow < 220 ? rect.top - el.offsetHeight - 8 : rect.bottom + 8;
                                   const top = Math.max(8, Math.min(vh - el.offsetHeight - 8, provisionalTop));
                                   const left = Math.min(vw - rect.width - 8, Math.max(8, rect.left));
@@ -285,7 +283,6 @@ export default function DashboardPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setOpenMenuFor(null);
-                                  // open poll modal for this section
                                   setPollSectionId(s._id);
                                   setPollOpen(true);
                                 }}
@@ -305,7 +302,7 @@ export default function DashboardPage() {
                               >
                                 <HiOutlinePlayCircle className="h-5 w-5" /> Present Slideshow
                               </button>
-                </div>
+                            </div>
                           </div>
                         )}
                       </div>
