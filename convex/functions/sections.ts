@@ -143,6 +143,7 @@ export const update = mutation({
     clearPermittedAbsences: v.optional(v.boolean()),
     participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
+    clearParticipation: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await requireCurrentUser(ctx);
@@ -174,9 +175,14 @@ export const update = mutation({
       if (!Number.isFinite(n) || n < 0 || n > 10000) throw new Error("Participation credit points must be 0-10000");
       safe.participationCreditPointsPossible = Math.floor(n);
     }
-    // If explicitly clearing, unset the optional field
+    // If explicitly clearing permitted absences, unset the optional field
     if (args.clearPermittedAbsences) {
       const patchAny: any = { ...safe, permittedAbsences: undefined };
+      return await ctx.db.patch(id, patchAny);
+    }
+    // If explicitly clearing participation config, unset both optional fields
+    if (args.clearParticipation) {
+      const patchAny: any = { ...safe, participationCountsAttendance: undefined, participationCreditPointsPossible: undefined };
       return await ctx.db.patch(id, patchAny);
     }
     return await ctx.db.patch(id, safe);

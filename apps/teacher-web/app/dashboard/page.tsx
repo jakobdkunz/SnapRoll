@@ -3,8 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
-import dynamic from 'next/dynamic';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiChevronDown, HiOutlineCloud, HiOutlineTrash, HiOutlineChartBar, HiOutlinePlayCircle } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
@@ -34,7 +33,7 @@ export default function DashboardPage() {
   const [createTitle, setCreateTitle] = useState('');
   const [createAbsences, setCreateAbsences] = useState<{ mode: 'not_set' | 'policy' | 'custom'; timesPerWeek: 1 | 2 | 3; duration: 'semester' | '8week'; custom?: string }>({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createAttendancePoints, setCreateAttendancePoints] = useState<string>('');
+  // removed unused attendance points state
   const [createParticipationPossible, setCreateParticipationPossible] = useState<string>('');
   const [createAbsencesEnabled, setCreateAbsencesEnabled] = useState<boolean>(false);
   const [createParticipationEnabled, setCreateParticipationEnabled] = useState<boolean>(false);
@@ -129,7 +128,9 @@ export default function DashboardPage() {
   async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null, participationCountsAttendance?: boolean | null, participationCreditPointsPossible?: number | null) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
-    await updateSection({
+    const clearParticipation = participationCountsAttendance == null && participationCreditPointsPossible == null;
+    type UpdateArgs = Parameters<typeof updateSection>[0] & { clearParticipation?: boolean };
+    await (updateSection as unknown as (args: UpdateArgs) => Promise<unknown>)({
       id: sid,
       title: title.trim(),
       gradient,
@@ -137,6 +138,7 @@ export default function DashboardPage() {
       clearPermittedAbsences: permittedAbsences == null,
       participationCountsAttendance: participationCountsAttendance == null ? undefined : !!participationCountsAttendance,
       participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
+      clearParticipation: clearParticipation ? true : undefined,
     });
     handleCloseCustomize();
   }
@@ -408,9 +410,9 @@ export default function DashboardPage() {
       </Modal>
 
       {/* Activity modals */}
-      <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId as any} />
-      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId as any} />
-      <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId as any} />
+      <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId} />
+      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
+      <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId} />
     </div>
   );
 }
@@ -445,18 +447,14 @@ function CustomizeModal({
     typeof (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === 'boolean' ||
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
   );
-  const [attendancePoints, setAttendancePoints] = useState<string>(
-    typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number'
-      ? String((section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints)
-      : ''
-  );
+  // Legacy attendance points removed; attendance contribution now a boolean flag
   const [participationPossible, setParticipationPossible] = useState<string>(
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
       ? String((section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible)
       : ''
   );
   const [attendanceCounts, setAttendanceCounts] = useState<boolean>(
-    typeof (section as unknown as { attendanceCheckinPoints?: number }).attendanceCheckinPoints === 'number'
+    (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === true
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -587,7 +585,6 @@ function CustomizeModal({
           } else {
             permitted = null;
           }
-          const ap = Number(attendancePoints);
           const pp = Number(participationPossible);
           // Interpret attendanceCounts as a boolean flag persisted on section
           const participationCountsAttendance = participationEnabled ? attendanceCounts : null;

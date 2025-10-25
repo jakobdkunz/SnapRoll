@@ -451,18 +451,22 @@ export default function HistoryPage() {
   // Render shell with loading overlay instead of blank screen
   return (
     <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
-    <Card className="py-4 px-2 sm:px-4">
+    <div className="relative">
+    {/* Overlay tabs attached to the Card top edge */}
+    <div className="absolute -top-3 left-2 sm:left-4 z-10">
+      <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-neutral-200 dark:border-neutral-800">
+        <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
+        <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
+      </div>
+    </div>
+    <Card className="pt-8 pb-4 px-2 sm:px-4">
       {process.env.NEXT_PUBLIC_DEBUG_HISTORY === 'true' && debug && (
         <div className={`mb-2 text-xs text-slate-500 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
         </div>
       )}
-      {/* Tabs header above card to mimic browser tabs */}
-      <div className="flex items-center justify-between mb-0 px-2 sm:px-4">
-        <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-neutral-200 dark:border-neutral-800">
-          <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
-          <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
-        </div>
+      {/* Header actions */}
+      <div className="flex items-center justify-end mb-0 px-2 sm:px-4">
         <div className="flex items-center gap-2 sm:gap-4">
           <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
             <HiOutlineDocumentArrowDown className="h-5 w-5" />
@@ -653,6 +657,7 @@ export default function HistoryPage() {
         </Card>
       </Modal>
     </Card>
+    </div>
     </div>
   );
 }
