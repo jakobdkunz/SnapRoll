@@ -125,17 +125,34 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function saveCustomization(title: string, gradient: string, permittedAbsences?: number | null, participationCountsAttendance?: boolean | null, participationCreditPointsPossible?: number | null) {
+  async function saveCustomization(
+    title: string,
+    gradient: string,
+    permittedAbsences?: number | null,
+    participationCountsAttendance?: boolean | null,
+    participationCreditPointsPossible?: number | null,
+    permittedAbsencesMode?: 'policy' | 'custom',
+    policyTimesPerWeek?: 1 | 2 | 3,
+    policyDuration?: 'semester' | '8week'
+  ) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
     const clearParticipation = participationCountsAttendance == null && participationCreditPointsPossible == null;
-    type UpdateArgs = Parameters<typeof updateSection>[0] & { clearParticipation?: boolean };
+    type UpdateArgs = Parameters<typeof updateSection>[0] & {
+      clearParticipation?: boolean;
+      permittedAbsencesMode?: 'policy' | 'custom';
+      policyTimesPerWeek?: 1 | 2 | 3;
+      policyDuration?: 'semester' | '8week';
+    };
     await (updateSection as unknown as (args: UpdateArgs) => Promise<unknown>)({
       id: sid,
       title: title.trim(),
       gradient,
       permittedAbsences: permittedAbsences == null ? undefined : permittedAbsences,
       clearPermittedAbsences: permittedAbsences == null,
+      permittedAbsencesMode: permittedAbsences == null ? undefined : permittedAbsencesMode,
+      policyTimesPerWeek: permittedAbsences == null ? undefined : policyTimesPerWeek,
+      policyDuration: permittedAbsences == null ? undefined : policyDuration,
       participationCountsAttendance: participationCountsAttendance == null ? undefined : !!participationCountsAttendance,
       participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
       clearParticipation: clearParticipation ? true : undefined,
@@ -390,7 +407,26 @@ export default function DashboardPage() {
                   const participationCountsAttendance = createParticipationEnabled ? (createAttendanceCounts ? true : false) : undefined;
                   const participationCreditPointsPossible = createParticipationEnabled ? (Number.isFinite(Number(createParticipationPossible)) ? Math.max(0, Math.min(10000, Math.floor(Number(createParticipationPossible)))) : undefined) : undefined;
                   const permittedAbsences = createAbsencesEnabled ? (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })()) : undefined;
-                  await createSection({ title: t, gradient, participationCountsAttendance, participationCreditPointsPossible, permittedAbsences });
+                  const permittedAbsencesMode = createAbsencesEnabled
+                    ? (createAbsences.mode === 'policy' || createAbsences.mode === 'custom' ? createAbsences.mode : undefined)
+                    : undefined;
+                  const policyTimesPerWeek = createAbsencesEnabled && createAbsences.mode === 'policy' ? createAbsences.timesPerWeek : undefined;
+                  const policyDuration = createAbsencesEnabled && createAbsences.mode === 'policy' ? createAbsences.duration : undefined;
+                  type CreateArgs = Parameters<typeof createSection>[0] & {
+                    permittedAbsencesMode?: 'policy' | 'custom';
+                    policyTimesPerWeek?: 1 | 2 | 3;
+                    policyDuration?: 'semester' | '8week';
+                  };
+                  await (createSection as unknown as (args: CreateArgs) => Promise<unknown>)({
+                    title: t,
+                    gradient,
+                    participationCountsAttendance,
+                    participationCreditPointsPossible,
+                    permittedAbsences,
+                    permittedAbsencesMode,
+                    policyTimesPerWeek,
+                    policyDuration,
+                  });
                   setCreateModalOpen(false);
                   setCreateTitle('');
                   setCreateAbsences({ mode: 'not_set', timesPerWeek: 3, duration: 'semester', custom: '' });
@@ -431,7 +467,10 @@ function CustomizeModal({
     gradient: string,
     permittedAbsences?: number | null,
     participationCountsAttendance?: boolean | null,
-    participationCreditPointsPossible?: number | null
+    participationCreditPointsPossible?: number | null,
+    permittedAbsencesMode?: 'policy' | 'custom',
+    policyTimesPerWeek?: 1 | 2 | 3,
+    policyDuration?: 'semester' | '8week'
   ) => void;
   onCancel: () => void;
   onDelete: (id: string) => Promise<void> | void;
@@ -439,9 +478,12 @@ function CustomizeModal({
   const [title, setTitle] = useState<string>(section.title ?? "");
   const [gradient, setGradient] = useState<string>(section.gradient ?? "gradient-1");
   const [absencesEnabled, setAbsencesEnabled] = useState<boolean>(typeof (section as unknown as { permittedAbsences?: number }).permittedAbsences === 'number');
-  const [permMode, setPermMode] = useState<'policy' | 'custom'>(absencesEnabled ? 'custom' : 'policy');
-  const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(3);
-  const [duration, setDuration] = useState<'semester' | '8week'>('semester');
+  const initialMode = (section as unknown as { permittedAbsencesMode?: 'policy' | 'custom' }).permittedAbsencesMode;
+  const [permMode, setPermMode] = useState<'policy' | 'custom'>(absencesEnabled ? (initialMode ?? 'custom') : 'policy');
+  const initialTimes = (section as unknown as { policyTimesPerWeek?: 1|2|3 }).policyTimesPerWeek ?? 3;
+  const initialDuration = (section as unknown as { policyDuration?: 'semester' | '8week' }).policyDuration ?? 'semester';
+  const [timesPerWeek, setTimesPerWeek] = useState<1|2|3>(initialTimes as 1|2|3);
+  const [duration, setDuration] = useState<'semester' | '8week'>(initialDuration as 'semester' | '8week');
   const [customAbsences, setCustomAbsences] = useState<string>(absencesEnabled ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences || '') : '');
   const [participationEnabled, setParticipationEnabled] = useState<boolean>(
     (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === true ||
@@ -589,7 +631,10 @@ function CustomizeModal({
           // Interpret attendanceCounts as a boolean flag persisted on section
           const participationCountsAttendance = participationEnabled ? attendanceCounts : null;
           const participationCreditPointsPossible = participationEnabled && Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
-          onSave(title, gradient, permitted, participationCountsAttendance, participationCreditPointsPossible);
+          const absMode = !absencesEnabled ? undefined : permMode;
+          const policyTPW = !absencesEnabled || permMode !== 'policy' ? undefined : timesPerWeek;
+          const policyDur = !absencesEnabled || permMode !== 'policy' ? undefined : duration;
+          onSave(title, gradient, permitted, participationCountsAttendance, participationCreditPointsPossible, absMode, policyTPW, policyDur);
         }} disabled={!title.trim()}>
           Save Changes
         </Button>
