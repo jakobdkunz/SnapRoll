@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 </button>
               </div>
               {createAbsencesEnabled && (
-              <div className="space-y-2">
+              <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
                 <div className="flex gap-2 flex-wrap">
                   <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
                   <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
