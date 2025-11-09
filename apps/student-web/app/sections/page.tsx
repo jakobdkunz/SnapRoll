@@ -73,7 +73,11 @@ export default function SectionsPage() {
     })) as Section[];
   }, [sectionsData]);
 
-  const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const input0Ref = useRef<HTMLInputElement>(null);
+  const input1Ref = useRef<HTMLInputElement>(null);
+  const input2Ref = useRef<HTMLInputElement>(null);
+  const input3Ref = useRef<HTMLInputElement>(null);
+  const inputRefs = [input0Ref, input1Ref, input2Ref, input3Ref];
 
   const [digits, setDigits] = useState<string[]>(['', '', '', '']);
   const [checking, setChecking] = useState(false);
@@ -97,7 +101,7 @@ export default function SectionsPage() {
         if (r.ok) {
           setConfirmMsg(`Checked in successfully!`);
           setDigits(['', '', '', '']);
-          inputRefs[0].current?.focus();
+          input0Ref.current?.focus();
           setBlockedUntil(null);
         } else {
           const msg = r.error || 'Failed to check in.';
@@ -117,7 +121,7 @@ export default function SectionsPage() {
         // Back-compat: server returned a recordId string
         setConfirmMsg(`Checked in successfully!`);
         setDigits(['', '', '', '']);
-        inputRefs[0].current?.focus();
+        input0Ref.current?.focus();
         setBlockedUntil(null);
       } else {
         setCheckinError('Failed to check in. Please try again.');
@@ -370,7 +374,7 @@ export default function SectionsPage() {
             <input
               key={i}
               ref={inputRefs[i]}
-              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-neutral-400 dark:placeholder:text-neutral-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-800' : 'bg-white text-neutral-900 border-neutral-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-800' }`}
+              className={`w-12 h-12 text-center text-xl rounded-xl border shadow-sm focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-neutral-400 dark:placeholder:text-neutral-500 ${ ((blockedUntil !== null && blockedUntil > Date.now()) || checking) ? 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700' : 'bg-white text-neutral-900 border-neutral-300 dark:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700' }`}
               inputMode="numeric"
               pattern="\\d*"
               maxLength={1}
