@@ -453,8 +453,8 @@ export default function HistoryPage() {
     <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
     <div className="relative">
     {/* Overlay tabs attached to the Card top edge */}
-    <div className="absolute -top-3 left-2 sm:left-4 z-10">
-      <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-neutral-200 dark:border-neutral-800">
+    <div className="absolute top-0 -translate-y-full left-2 sm:left-4 z-10">
+      <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-slate-200 dark:border-neutral-800">
         <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
         <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
       </div>
