@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
@@ -250,6 +250,7 @@ export default function DashboardPage() {
                     <div className="flex gap-2 items-stretch flex-wrap relative">
                       <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => setOpenMenuFor(s._id)} aria-expanded={openMenuFor===s._id}>
                         <HiOutlineSparkles className="h-5 w-5" /> Activities
+                        <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${openMenuFor===s._id ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </Button>
                       {openMenuFor === s._id && (
                         <div data-interact-menu={openMenuFor===s._id? 'open':'closed'} className="absolute z-50 top-full left-0 mt-1 w-48 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg">
