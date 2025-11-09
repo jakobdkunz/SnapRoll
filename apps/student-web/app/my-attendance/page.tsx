@@ -536,7 +536,7 @@ export default function MyAttendancePage() {
                                   onMouseLeave={hideTooltip}
                                   onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
                                   onTouchEnd={hideTooltip}
-                                  title={tooltipText}
+                                  aria-label={tooltipText || undefined}
                                 >
                                   {status === 'PRESENT' ? (
                                     <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>
@@ -626,7 +626,7 @@ export default function MyAttendancePage() {
                               onMouseLeave={hideTooltip}
                               onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
                               onTouchEnd={hideTooltip}
-                              title={tooltipText}
+                              aria-label={tooltipText || undefined}
                             >
                               {status === 'PRESENT' ? (
                                 <Badge tone="green">{display}{showManual ? '*' : ''}</Badge>

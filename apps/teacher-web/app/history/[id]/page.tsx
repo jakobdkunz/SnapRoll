@@ -405,7 +405,7 @@ export default function HistoryPage() {
         onClick={() => { try { selectEl?.click(); } catch { /* ignore */ } }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { selectEl?.click(); } catch { /* ignore */ } } }}
         tabIndex={0}
-        title={tooltipText}
+        aria-label={tooltipText || undefined}
       >
         <select
           ref={(el) => { selectEl = el; }}
