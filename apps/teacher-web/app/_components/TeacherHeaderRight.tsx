@@ -189,6 +189,7 @@ export function TeacherHeaderRight() {
             <MdPhoneIphone className="h-4 w-4" /> Device
           </button>
         </div>
+        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
         <button onClick={() => { setOpen(false); logout(); }} className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2">
           <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Log Out
         </button>
