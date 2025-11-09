@@ -9,6 +9,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams } from 'next/navigation';
+import { SectionHeader } from '../../modify/[id]/_components/SectionHeader';
 
 type Student = { id: string; firstName: string; lastName: string; email: string; totalAbsences?: number };
 type Record = { 
@@ -82,6 +83,21 @@ export default function HistoryPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const convex = useConvex();
   const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
+  // Section header state
+  const section = useQuery(
+    api.functions.sections.get,
+    isAuthReady && params.id ? { id: sectionId } : "skip"
+  ) as any;
+  const [sectionLoaded, setSectionLoaded] = useState(false);
+  const [sectionTitle, setSectionTitle] = useState<string>('Section');
+  const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
+  useEffect(() => {
+    if (section) {
+      setSectionLoaded(true);
+      setSectionTitle(section.title || 'Section');
+      setSectionGradient(section.gradient || 'gradient-1');
+    }
+  }, [section]);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -450,30 +466,22 @@ export default function HistoryPage() {
 
   // Render shell with loading overlay instead of blank screen
   return (
-    <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
-    <div className="relative">
-    {/* Overlay tabs attached to the Card top edge */}
-    <div className="absolute top-0 -translate-y-full left-2 sm:left-4 z-10">
-      <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-slate-200 dark:border-neutral-800">
-        <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
-        <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
-      </div>
-    </div>
-    <Card className="pt-8 pb-4 px-2 sm:px-4">
+    <div className="space-y-6">
+      <SectionHeader loaded={sectionLoaded} title={sectionTitle} gradient={sectionGradient} />
+      <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+        {/* Tabs just above the card, visually attached */}
+        <div className="pl-2 sm:pl-4 mb-0">
+          <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-slate-200 dark:border-neutral-800">
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
+          </div>
+        </div>
+        <Card className="-mt-[1px] pt-4 pb-4 px-2 sm:px-4">
       {process.env.NEXT_PUBLIC_DEBUG_HISTORY === 'true' && debug && (
         <div className={`mb-2 text-xs text-slate-500 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
         </div>
       )}
-      {/* Header actions */}
-      <div className="flex items-center justify-end mb-0 px-2 sm:px-4">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
-            <HiOutlineDocumentArrowDown className="h-5 w-5" />
-            <span className="hidden sm:inline">Export CSV</span>
-          </Button>
-        </div>
-      </div>
       <div className="flex items-center justify-between mb-3">
         <div className={`text-sm text-slate-600 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
           {totalDays > 0
@@ -485,15 +493,21 @@ export default function HistoryPage() {
               })()
             : '0 of 0 class days'}
         </div>
-        <div className="flex items-center gap-4">
-          {/* Older page */}
-          <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
-            ← <span className="hidden sm:inline">Previous</span>
+        <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
+          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
+            <HiOutlineDocumentArrowDown className="h-5 w-5" />
+            <span className="hidden sm:inline">Export CSV</span>
           </Button>
-          {/* Newer page */}
-          <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
-            <span className="hidden sm:inline">Next</span> →
-          </Button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Older page */}
+            <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+              ← <span className="hidden sm:inline">Previous</span>
+            </Button>
+            {/* Newer page */}
+            <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
+              <span className="hidden sm:inline">Next</span> →
+            </Button>
+          </div>
         </div>
       </div>
       {/* Blank-state */}
