@@ -327,14 +327,14 @@ export default function DashboardPage() {
               {createAbsencesEnabled && (
               <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
                 <div className="flex gap-2 flex-wrap">
-                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
-                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
+                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
                 </div>
                 {createAbsences.mode === 'policy' && (
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-neutral-600 dark:text-neutral-400">Meets</span>
-                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
+                      <select className="border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded px-2 py-1 text-sm" value={createAbsences.timesPerWeek} onChange={(e) => setCreateAbsences((p) => ({ ...p, timesPerWeek: Number(e.target.value) as 1|2|3 }))}>
                         <option value={1}>1x/week</option>
                         <option value={2}>2x/week</option>
                         <option value={3}>3x/week</option>
@@ -342,7 +342,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-neutral-600 dark:text-neutral-400">Course length</span>
-                      <select className="border rounded px-2 py-1 text-sm" value={createAbsences.duration} onChange={(e) => setCreateAbsences((p) => ({ ...p, duration: e.target.value as 'semester' | '8week' }))}>
+                      <select className="border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded px-2 py-1 text-sm" value={createAbsences.duration} onChange={(e) => setCreateAbsences((p) => ({ ...p, duration: e.target.value as 'semester' | '8week' }))}>
                         <option value="semester">Semester-long</option>
                         <option value="8week">8-week</option>
                       </select>
@@ -546,14 +546,14 @@ function CustomizeModal({
         {absencesEnabled && (
         <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
           <div className="flex gap-2 flex-wrap">
-            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('policy')}>University Policy</button>
-            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800'}`} onClick={() => setPermMode('custom')}>Custom</button>
+            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setPermMode('policy')}>University Policy</button>
+            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setPermMode('custom')}>Custom</button>
           </div>
           {permMode === 'policy' && (
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-600 dark:text-neutral-400">Meets</span>
-                <select className="border rounded px-2 py-1 text-sm" value={timesPerWeek} onChange={(e) => setTimesPerWeek(Number(e.target.value) as 1|2|3)}>
+                <select className="border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded px-2 py-1 text-sm" value={timesPerWeek} onChange={(e) => setTimesPerWeek(Number(e.target.value) as 1|2|3)}>
                   <option value={1}>1x/week</option>
                   <option value={2}>2x/week</option>
                   <option value={3}>3x/week</option>
@@ -561,7 +561,7 @@ function CustomizeModal({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-neutral-600 dark:text-neutral-400">Course length</span>
-                <select className="border rounded px-2 py-1 text-sm" value={duration} onChange={(e) => setDuration(e.target.value as 'semester' | '8week')}>
+                <select className="border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded px-2 py-1 text-sm" value={duration} onChange={(e) => setDuration(e.target.value as 'semester' | '8week')}>
                   <option value="semester">Semester-long</option>
                   <option value="8week">8-week</option>
                 </select>
