@@ -327,8 +327,26 @@ export default function DashboardPage() {
               {createAbsencesEnabled && (
               <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
                 <div className="flex gap-2 flex-wrap">
-                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}>University Policy</button>
-                  <button className={`px-3 py-1.5 rounded border transition-colors ${createAbsences.mode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}>Custom</button>
+                  <button
+                    className={`px-3 py-1.5 rounded border transition-colors ${
+                      createAbsences.mode === 'policy'
+                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-500 dark:hover:bg-blue-500'
+                        : 'border-neutral-300 text-neutral-700 hover:bg-blue-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-blue-900/40'
+                    }`}
+                    onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'policy' }))}
+                  >
+                    University Policy
+                  </button>
+                  <button
+                    className={`px-3 py-1.5 rounded border transition-colors ${
+                      createAbsences.mode === 'custom'
+                        ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-500 dark:hover:bg-blue-500'
+                        : 'border-neutral-300 text-neutral-700 hover:bg-blue-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-blue-900/40'
+                    }`}
+                    onClick={() => setCreateAbsences((p) => ({ ...p, mode: 'custom' }))}
+                  >
+                    Custom
+                  </button>
                 </div>
                 {createAbsences.mode === 'policy' && (
                   <div className="flex flex-wrap items-center gap-3">
@@ -546,8 +564,26 @@ function CustomizeModal({
         {absencesEnabled && (
         <div className="space-y-2 pl-3 border-l border-neutral-200 dark:border-neutral-800">
           <div className="flex gap-2 flex-wrap">
-            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'policy' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setPermMode('policy')}>University Policy</button>
-            <button className={`px-3 py-1.5 rounded border transition-colors ${permMode === 'custom' ? 'bg-neutral-900 text-neutral-100 border-neutral-900 dark:bg-neutral-700 dark:text-neutral-100 dark:border-neutral-600' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-100 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-700'}`} onClick={() => setPermMode('custom')}>Custom</button>
+            <button
+              className={`px-3 py-1.5 rounded border transition-colors ${
+                permMode === 'policy'
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-500 dark:hover:bg-blue-500'
+                  : 'border-neutral-300 text-neutral-700 hover:bg-blue-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-blue-900/40'
+              }`}
+              onClick={() => setPermMode('policy')}
+            >
+              University Policy
+            </button>
+            <button
+              className={`px-3 py-1.5 rounded border transition-colors ${
+                permMode === 'custom'
+                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:text-white dark:border-blue-500 dark:hover:bg-blue-500'
+                  : 'border-neutral-300 text-neutral-700 hover:bg-blue-50 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-blue-900/40'
+              }`}
+              onClick={() => setPermMode('custom')}
+            >
+              Custom
+            </button>
           </div>
           {permMode === 'policy' && (
             <div className="flex flex-wrap items-center gap-3">
