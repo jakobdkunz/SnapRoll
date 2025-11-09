@@ -51,6 +51,9 @@ export const create = mutation({
     title: v.string(),
     gradient: v.optional(v.string()),
     permittedAbsences: v.optional(v.number()),
+    permittedAbsencesMode: v.optional(v.union(v.literal("policy"), v.literal("custom"))),
+    policyTimesPerWeek: v.optional(v.number()),
+    policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
     participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
   },
@@ -81,6 +84,9 @@ export const create = mutation({
       teacherId: user._id,
       joinCode,
       permittedAbsences: args.permittedAbsences,
+      permittedAbsencesMode: args.permittedAbsencesMode,
+      policyTimesPerWeek: args.policyTimesPerWeek,
+      policyDuration: args.policyDuration,
       participationCountsAttendance: args.participationCountsAttendance === true,
       participationCreditPointsPossible: typeof args.participationCreditPointsPossible === 'number' ? Math.max(0, Math.floor(args.participationCreditPointsPossible)) : undefined,
     });
@@ -141,6 +147,9 @@ export const update = mutation({
     gradient: v.optional(v.string()),
     permittedAbsences: v.optional(v.number()),
     clearPermittedAbsences: v.optional(v.boolean()),
+    permittedAbsencesMode: v.optional(v.union(v.literal("policy"), v.literal("custom"))),
+    policyTimesPerWeek: v.optional(v.number()),
+    policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
     participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
     clearParticipation: v.optional(v.boolean()),
@@ -151,7 +160,16 @@ export const update = mutation({
     const { id, ...updates } = args;
     const section = await ctx.db.get(id);
     if (!section || section.teacherId !== user._id) throw new Error("Forbidden");
-    const safe: { title?: string; gradient?: string; permittedAbsences?: number; participationCountsAttendance?: boolean; participationCreditPointsPossible?: number } = {};
+    const safe: {
+      title?: string;
+      gradient?: string;
+      permittedAbsences?: number;
+      permittedAbsencesMode?: "policy" | "custom";
+      policyTimesPerWeek?: number;
+      policyDuration?: "semester" | "8week";
+      participationCountsAttendance?: boolean;
+      participationCreditPointsPossible?: number;
+    } = {};
     if (updates.title !== undefined) {
       const t = (updates.title || "").trim();
       if (t.length === 0 || t.length > 200) throw new Error("Title must be 1-200 chars");
@@ -167,6 +185,17 @@ export const update = mutation({
       if (!Number.isFinite(n) || n < 0 || n > 60) throw new Error("Permitted absences must be 0-60");
       safe.permittedAbsences = Math.floor(n);
     }
+    if (updates.permittedAbsencesMode !== undefined) {
+      safe.permittedAbsencesMode = updates.permittedAbsencesMode;
+    }
+    if (updates.policyTimesPerWeek !== undefined) {
+      const n = Number(updates.policyTimesPerWeek);
+      if (!Number.isFinite(n) || n < 1 || n > 3) throw new Error("policyTimesPerWeek must be 1, 2, or 3");
+      safe.policyTimesPerWeek = Math.floor(n);
+    }
+    if (updates.policyDuration !== undefined) {
+      safe.policyDuration = updates.policyDuration;
+    }
     if (updates.participationCountsAttendance !== undefined) {
       safe.participationCountsAttendance = !!updates.participationCountsAttendance;
     }
@@ -177,7 +206,13 @@ export const update = mutation({
     }
     // If explicitly clearing permitted absences, unset the optional field
     if (args.clearPermittedAbsences) {
-      const patchAny: any = { ...safe, permittedAbsences: undefined };
+      const patchAny: any = {
+        ...safe,
+        permittedAbsences: undefined,
+        permittedAbsencesMode: undefined,
+        policyTimesPerWeek: undefined,
+        policyDuration: undefined,
+      };
       return await ctx.db.patch(id, patchAny);
     }
     // If explicitly clearing participation config, unset both optional fields

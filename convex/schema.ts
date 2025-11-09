@@ -18,6 +18,11 @@ export default defineSchema({
     joinCode: v.optional(v.string()),
     // Optional permitted elective absences for the section
     permittedAbsences: v.optional(v.number()),
+    // How permittedAbsences was configured
+    permittedAbsencesMode: v.optional(v.union(v.literal("policy"), v.literal("custom"))),
+    // If policy mode, capture the policy parameters used
+    policyTimesPerWeek: v.optional(v.number()),
+    policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
     // Participation configuration
     participationCountsAttendance: v.optional(v.boolean()),
     // Back-compat: keep this optional field to allow deployment with existing data; not used anymore
