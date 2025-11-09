@@ -317,7 +317,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <div className="inline-flex items-center gap-2">
-                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absence tracking</span>
+                  <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Elective Absence limit</span>
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-600 dark:text-neutral-300" title="Track Elective Absences used by each student, and monitor whether students use more than the permitted number.">?</span>
                 </div>
                 <button onClick={() => setCreateAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createAbsencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createAbsencesEnabled} aria-label="Toggle elective absence tracking">
@@ -536,7 +536,7 @@ function CustomizeModal({
       <div>
         <div className="flex items-center justify-between mb-1">
           <div className="inline-flex items-center gap-2">
-            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Elective Absence tracking</span>
+            <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Elective Absence limit</span>
             <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Track Elective Absences used by each student, and monitor whether students use more than the permitted number.">?</span>
           </div>
           <button onClick={() => setAbsencesEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${absencesEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={absencesEnabled} aria-label="Toggle elective absence tracking">
