@@ -387,7 +387,7 @@ export default function DashboardPage() {
                 if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
                 try {
                   const gradient = pickAutoGradient();
-                  const participationCountsAttendance = createParticipationEnabled && createAttendanceCounts ? true : false;
+                  const participationCountsAttendance = createParticipationEnabled ? (createAttendanceCounts ? true : false) : undefined;
                   const participationCreditPointsPossible = createParticipationEnabled ? (Number.isFinite(Number(createParticipationPossible)) ? Math.max(0, Math.min(10000, Math.floor(Number(createParticipationPossible)))) : undefined) : undefined;
                   const permittedAbsences = createAbsencesEnabled ? (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })()) : undefined;
                   await createSection({ title: t, gradient, participationCountsAttendance, participationCreditPointsPossible, permittedAbsences });
@@ -444,7 +444,7 @@ function CustomizeModal({
   const [duration, setDuration] = useState<'semester' | '8week'>('semester');
   const [customAbsences, setCustomAbsences] = useState<string>(absencesEnabled ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences || '') : '');
   const [participationEnabled, setParticipationEnabled] = useState<boolean>(
-    typeof (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === 'boolean' ||
+    (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === true ||
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
   );
   // Legacy attendance points removed; attendance contribution now a boolean flag
