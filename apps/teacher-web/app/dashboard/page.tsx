@@ -575,16 +575,16 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               aria-label={g.name}
-              className={`relative aspect-[3/2] w-full rounded-lg border-2 transition flex items-center justify-center overflow-hidden ${
+              className={`relative aspect-[3/2] w-full rounded-lg border-0 transition flex items-center justify-center overflow-hidden ${
                 gradient === g.id
-                  ? 'ring-2 ring-offset-2 ring-blue-600 ring-offset-white dark:ring-offset-neutral-900 border-transparent'
+                  ? 'ring-2 ring-blue-600'
                   : 'border-transparent hover:opacity-95'
               }`}
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
               {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
-              <div className="absolute inset-[2px] z-10 grid place-items-center overflow-hidden rounded-lg">
+              <div className="absolute inset-0 z-10 grid place-items-center overflow-hidden rounded-lg">
                 <div
                   className={`relative rounded-lg ${g.class} overflow-hidden`}
                   style={{
