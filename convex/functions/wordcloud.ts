@@ -3,7 +3,6 @@ import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireTeacher, requireTeacherOwnsSection, requireStudentEnrollment, requireCurrentUser } from "./_auth";
 import { checkAndIncrementRateLimit } from "./_rateLimit";
-import { ensureSessionOpportunity, assignIfNeeded } from "./_pointsLib";
 
 export const startWordCloud = mutation({
   args: {
@@ -11,7 +10,7 @@ export const startWordCloud = mutation({
     prompt: v.string(),
     showPromptToStudents: v.optional(v.boolean()),
     allowMultipleAnswers: v.optional(v.boolean()),
-    points: v.optional(v.number()),
+    countForParticipationCredit: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const teacher = await requireTeacher(ctx);
@@ -34,11 +33,8 @@ export const startWordCloud = mutation({
       showPromptToStudents: args.showPromptToStudents ?? true,
       allowMultipleAnswers: args.allowMultipleAnswers ?? false,
       createdAt: Date.now(),
-      points: typeof args.points === 'number' ? Math.max(0, Math.floor(args.points)) : undefined,
+      countsForParticipation: !!args.countForParticipationCredit,
     });
-    if (typeof args.points === 'number' && args.points > 0) {
-      await ensureSessionOpportunity(ctx, { sectionId: args.sectionId as Id<'sections'>, sessionId: id as Id<'wordCloudSessions'>, kind: 'wordcloud', points: Math.floor(args.points) });
-    }
     return id;
   },
 });
@@ -126,13 +122,6 @@ export const submitAnswer = mutation({
       text,
       createdAt: Date.now(),
     });
-    // Award points if configured and opportunity exists; only once per session per student
-    const sessionFresh = await ctx.db.get(args.sessionId);
-    const pts = Number((sessionFresh as any)?.points || 0);
-    if (pts > 0) {
-      const oppId = await ensureSessionOpportunity(ctx, { sectionId: sessionFresh!.sectionId as Id<'sections'>, sessionId: args.sessionId, kind: 'wordcloud', points: pts });
-      await assignIfNeeded(ctx, { opportunityId: oppId, sectionId: sessionFresh!.sectionId as Id<'sections'>, studentId: caller._id });
-    }
     return ansId;
   },
 });

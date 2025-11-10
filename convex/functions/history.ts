@@ -250,9 +250,19 @@ export const getParticipationBySection = query({
     const sessionsByDay = new Map<Id<'classDays'>, { pollIds: Id<'pollSessions'>[]; wcIds: Id<'wordCloudSessions'>[] }>();
     for (const day of page) {
       const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
-      const pollSessions = await ctx.db.query('pollSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
-      const wcSessions = await ctx.db.query('wordCloudSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
-      sessionsByDay.set(day._id as Id<'classDays'>, { pollIds: pollSessions.map(s=> s._id as Id<'pollSessions'>), wcIds: wcSessions.map(s=> s._id as Id<'wordCloudSessions'>) });
+      const pollSessions = await ctx.db
+        .query('pollSessions')
+        .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+        .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+        .collect();
+      const wcSessions = await ctx.db
+        .query('wordCloudSessions')
+        .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+        .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+        .collect();
+      const filteredPollIds = pollSessions.filter(s => (s as any)?.countsForParticipation === true).map(s=> s._id as Id<'pollSessions'>);
+      const filteredWcIds = wcSessions.filter(s => (s as any)?.countsForParticipation === true).map(s=> s._id as Id<'wordCloudSessions'>);
+      sessionsByDay.set(day._id as Id<'classDays'>, { pollIds: filteredPollIds, wcIds: filteredWcIds });
     }
 
     // Answers lookups
@@ -276,9 +286,18 @@ export const getParticipationBySection = query({
       // Sum of all activities across all active days
       for (const day of allDays) {
         const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
-        const pollSessions = await ctx.db.query('pollSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
-        const wcSessions = await ctx.db.query('wordCloudSessions').withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId)).filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs))).collect();
-        totalCourseShares += pollSessions.length + wcSessions.length;
+        const pollSessions = await ctx.db
+          .query('pollSessions')
+          .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+          .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+          .collect();
+        const wcSessions = await ctx.db
+          .query('wordCloudSessions')
+          .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+          .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+          .collect();
+        totalCourseShares += pollSessions.filter(s => (s as any)?.countsForParticipation === true).length +
+          wcSessions.filter(s => (s as any)?.countsForParticipation === true).length;
       }
       if (totalCourseShares <= 0) totalCourseShares = 1;
     }
