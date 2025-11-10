@@ -97,7 +97,8 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
-    points: v.optional(v.number()),
+    // Whether this session should count toward Participation Credit
+    countsForParticipation: v.boolean(),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),
@@ -121,7 +122,8 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
-    points: v.optional(v.number()),
+    // Whether this session should count toward Participation Credit
+    countsForParticipation: v.boolean(),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),

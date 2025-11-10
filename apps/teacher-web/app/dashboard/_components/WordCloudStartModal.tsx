@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Modal, Button, TextInput } from '@flamelink/ui';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 
@@ -11,10 +11,13 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
   const [prompt, setPrompt] = useState('One word to describe how you feel');
   const [showPrompt, setShowPrompt] = useState(true);
   const [allowMultiple, setAllowMultiple] = useState(false);
+  const [countForCredit, setCountForCredit] = useState(false);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
   const visible = open && !!sectionId;
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'> } : 'skip') as any;
+  const participationEnabled = !!(section && ((section.participationCountsAttendance === true) || typeof section.participationCreditPointsPossible === 'number'));
 
   function hasId(v: unknown): v is { _id: string } {
     return typeof v === 'object' && v !== null && typeof (v as Record<string, unknown>)._id === 'string';
@@ -32,14 +35,26 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Prompt</label>
             <TextInput value={prompt} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)} placeholder="Enter prompt" />
           </div>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={showPrompt} onChange={(e) => setShowPrompt(e.target.checked)} />
+          <div className="flex items-center justify-between">
             <span>Show prompt on student devices</span>
-          </label>
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={allowMultiple} onChange={(e) => setAllowMultiple(e.target.checked)} />
+            <button onClick={() => setShowPrompt(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showPrompt ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={showPrompt} aria-label="Toggle show prompt">
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${showPrompt ? 'translate-x-5' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
             <span>Allow multiple answers</span>
-          </label>
+            <button onClick={() => setAllowMultiple(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${allowMultiple ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={allowMultiple} aria-label="Toggle allow multiple answers">
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${allowMultiple ? 'translate-x-5' : 'translate-x-1'}`} />
+            </button>
+          </div>
+          {participationEnabled && (
+            <div className="flex items-center justify-between">
+              <span>Count for Participation Credit</span>
+              <button onClick={() => setCountForCredit(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${countForCredit ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={countForCredit} aria-label="Toggle count for participation credit">
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${countForCredit ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          )}
           {error && (
             <div className="text-sm text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">{error}</div>
           )}
@@ -50,7 +65,7 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
               try {
                 setWorking(true);
                 setError(null);
-                const sessionId = await startWordCloud({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple });
+                const sessionId = await (startWordCloud as unknown as (args: any) => Promise<unknown>)({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple, countForParticipationCredit: participationEnabled ? countForCredit : false });
                 onClose();
                 const idStr = hasId(sessionId) ? sessionId._id : String(sessionId);
                 setTimeout(() => router.push(`/wordcloud/live/${idStr}`), 120);
