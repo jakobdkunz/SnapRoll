@@ -575,7 +575,7 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               aria-label={g.name}
-              className={`relative aspect-[3/2] w-full rounded-md border-2 transition flex items-center justify-center overflow-hidden ${
+              className={`relative aspect-[3/2] w-full rounded-lg border-2 transition flex items-center justify-center overflow-hidden ${
                 gradient === g.id
                   ? 'ring-2 ring-offset-2 ring-blue-600 ring-offset-white dark:ring-offset-neutral-900 border-transparent'
                   : 'border-transparent hover:opacity-95'
@@ -584,11 +584,11 @@ function CustomizeModal({
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
               {/* Inset gradient layer prevents edge artifacts against transparent borders */}
-              <span className={`absolute inset-[2px] rounded-md ${g.class} bg-clip-padding`} aria-hidden="true" />
+              <span className={`absolute inset-[2px] rounded-lg ${g.class} bg-clip-padding`} aria-hidden="true" />
               {/* Subtle dark overlay to match card appearance */}
-              <span className="absolute inset-[2px] rounded-md bg-black/10" aria-hidden="true" />
+              <span className="absolute inset-[2px] rounded-lg bg-black/10" aria-hidden="true" />
               {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
-              <div className="absolute inset-[2px] z-10 grid place-items-center overflow-hidden">
+              <div className="absolute inset-[2px] z-10 grid place-items-center overflow-hidden rounded-lg">
                 <div
                   className="relative"
                   style={{
