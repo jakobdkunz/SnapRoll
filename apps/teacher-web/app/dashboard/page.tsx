@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown, HiCheck } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
@@ -552,12 +552,25 @@ function CustomizeModal({
               key={g.id}
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
-              className={`h-10 w-full rounded-md ${g.class} border-2 flex items-center justify-center transition ${
-                gradient === g.id ? 'ring-2 ring-neutral-200 dark:ring-neutral-700 border-neutral-200 dark:border-neutral-700' : 'border-transparent hover:opacity-90'
+              className={`relative h-10 w-full rounded-md border-2 transition flex items-center justify-center overflow-hidden ${
+                gradient === g.id
+                  ? 'ring-2 ring-offset-2 ring-blue-600 ring-offset-white dark:ring-offset-neutral-900 border-transparent'
+                  : 'border-transparent ring-1 ring-inset ring-black/10 dark:ring-white/10 hover:opacity-95'
               }`}
               title={g.name}
             >
-              <span className="font-semibold text-white/90 dark:text-white/90 text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/20">{g.name}</span>
+              {/* Inset gradient layer prevents edge artifacts against transparent borders */}
+              <span className={`absolute inset-[2px] rounded-md ${g.class} bg-clip-padding`} aria-hidden="true" />
+              {/* Label */}
+              <span className="relative z-10 font-semibold text-white/90 dark:text-white/90 text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/20">
+                {g.name}
+              </span>
+              {/* Checkmark indicator when selected */}
+              {gradient === g.id && (
+                <span className="absolute top-1 right-1 z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-blue-600 dark:bg-neutral-900/90">
+                  <HiCheck className="h-4 w-4" />
+                </span>
+              )}
             </button>
           ))}
         </div>
