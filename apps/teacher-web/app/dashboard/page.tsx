@@ -564,14 +564,14 @@ function CustomizeModal({
               {/* Subtle dark overlay to match card appearance */}
               <span className="absolute inset-[2px] rounded-md bg-black/10" aria-hidden="true" />
               {/* Title preview (scaled down for proportional look) */}
-              <div className="relative z-10 grid place-items-center text-white text-center px-1">
-                <div className="font-bold text-[10px] leading-tight line-clamp-2">
+              <div className="relative z-10 grid place-items-center text-white text-center px-0.5">
+                <div className="font-bold text-[8px] leading-tight line-clamp-2">
                   {title || 'Section'}
                 </div>
               </div>
               {/* Corner accent dots (scaled down for proportional look) */}
-              <span className="absolute top-1 left-1 w-[8px] h-[8px] bg-white/20 rounded-full" aria-hidden="true" />
-              <span className="absolute bottom-1 right-1 w-[6px] h-[6px] bg-white/30 rounded-full" aria-hidden="true" />
+              <span className="absolute top-[3px] left-[3px] w-[6px] h-[6px] bg-white/20 rounded-full" aria-hidden="true" />
+              <span className="absolute bottom-[3px] right-[3px] w-[4px] h-[4px] bg-white/30 rounded-full" aria-hidden="true" />
             </button>
           ))}
         </div>
