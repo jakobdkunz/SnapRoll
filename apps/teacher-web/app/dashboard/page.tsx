@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
-import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown, HiCheck } from 'react-icons/hi2';
+import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
@@ -68,7 +68,6 @@ export default function DashboardPage() {
     // First row
     { id: 'gradient-3', name: 'Blue Cyan', class: 'gradient-3' },
     { id: 'gradient-4', name: 'Green Teal', class: 'gradient-4' },
-    { id: 'gradient-5', name: 'Pink Yellow', class: 'gradient-5' },
     { id: 'gradient-1', name: 'Purple Blue', class: 'gradient-1' },
     { id: 'gradient-9', name: 'Sunset', class: 'gradient-9' },
     { id: 'gradient-6', name: 'Teal Pink', class: 'gradient-6' },
@@ -546,31 +545,22 @@ function CustomizeModal({
 
       <div>
         <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Color</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {gradients.map((g) => (
             <button
               key={g.id}
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
-              className={`relative h-10 w-full rounded-md border-2 transition flex items-center justify-center overflow-hidden ${
+              aria-label={g.name}
+              className={`relative aspect-[3/2] w-full rounded-md border-2 transition flex items-center justify-center overflow-hidden ${
                 gradient === g.id
                   ? 'ring-2 ring-offset-2 ring-blue-600 ring-offset-white dark:ring-offset-neutral-900 border-transparent'
-                  : 'border-transparent ring-1 ring-inset ring-black/10 dark:ring-white/10 hover:opacity-95'
+                  : 'border-transparent hover:opacity-95'
               }`}
               title={g.name}
             >
               {/* Inset gradient layer prevents edge artifacts against transparent borders */}
               <span className={`absolute inset-[2px] rounded-md ${g.class} bg-clip-padding`} aria-hidden="true" />
-              {/* Label */}
-              <span className="relative z-10 font-semibold text-white/90 dark:text-white/90 text-xs drop-shadow-sm px-2 py-1 rounded-md bg-black/20">
-                {g.name}
-              </span>
-              {/* Checkmark indicator when selected */}
-              {gradient === g.id && (
-                <span className="absolute top-1 right-1 z-10 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-blue-600 dark:bg-neutral-900/90">
-                  <HiCheck className="h-4 w-4" />
-                </span>
-              )}
             </button>
           ))}
         </div>
