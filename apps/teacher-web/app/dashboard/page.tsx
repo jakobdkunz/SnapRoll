@@ -248,7 +248,14 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                     <div className="flex gap-2 items-stretch flex-wrap relative">
-                      <Button variant="ghost" className="flex-1 inline-flex items-center justify-center gap-2" onClick={() => setOpenMenuFor(s._id)} aria-expanded={openMenuFor===s._id}>
+                      <Button
+                        variant="ghost"
+                        className="flex-1 inline-flex items-center justify-center gap-2"
+                        onMouseDown={(e) => { e.stopPropagation(); }}
+                        onClick={() => setOpenMenuFor(openMenuFor===s._id ? null : s._id)}
+                        aria-expanded={openMenuFor===s._id}
+                        aria-haspopup="menu"
+                      >
                         <HiOutlineSparkles className="h-5 w-5" /> Activities
                         <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${openMenuFor===s._id ? 'rotate-180' : ''}`} aria-hidden="true" />
                       </Button>
