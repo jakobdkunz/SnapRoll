@@ -583,14 +583,10 @@ function CustomizeModal({
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
-              {/* Inset gradient layer prevents edge artifacts against transparent borders */}
-              <span className={`absolute inset-[2px] rounded-lg ${g.class} bg-clip-padding`} aria-hidden="true" />
-              {/* Subtle dark overlay to match card appearance */}
-              <span className="absolute inset-[2px] rounded-lg bg-black/10" aria-hidden="true" />
               {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
               <div className="absolute inset-[2px] z-10 grid place-items-center overflow-hidden rounded-lg">
                 <div
-                  className="relative"
+                  className={`relative rounded-lg ${g.class} overflow-hidden`}
                   style={{
                     width: previewMetrics ? `${previewMetrics.width}px` : '178%',
                     height: previewMetrics ? `${previewMetrics.height}px` : '118%',
@@ -601,6 +597,8 @@ function CustomizeModal({
                     position: 'absolute',
                   }}
                 >
+                  {/* Subtle dark overlay to match card appearance */}
+                  <div className="absolute inset-0 bg-black/10" aria-hidden="true" />
                   <div className="absolute inset-0 grid place-items-center text-white text-center px-2">
                     <div className="font-bold text-lg leading-tight px-2">
                       {title || 'Section'}
