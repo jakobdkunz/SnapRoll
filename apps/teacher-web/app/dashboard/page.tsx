@@ -266,7 +266,9 @@ export default function DashboardPage() {
                         <div data-interact-menu={openMenuFor===s._id? 'open':'closed'} className="absolute z-50 top-full left-0 mt-1 w-48 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg">
                           <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setWcSectionId(s._id); setWcOpen(true); setOpenMenuFor(null); }}>Start Word Cloud</button>
                           <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setPollSectionId(s._id as Id<'sections'>); setPollOpen(true); setOpenMenuFor(null); }}>Start Poll</button>
-                          <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setSlideSectionId(s._id as Id<'sections'>); setSlideOpen(true); setOpenMenuFor(null); }}>Present Slideshow</button>
+                          {(process.env.NEXT_PUBLIC_ENABLE_SLIDESHOW ?? 'false') === 'true' && (
+                            <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setSlideSectionId(s._id as Id<'sections'>); setSlideOpen(true); setOpenMenuFor(null); }}>Present Slideshow</button>
+                          )}
                         </div>
                       )}
                       {/* Attendance button with responsive label */}
