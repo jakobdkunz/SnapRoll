@@ -112,6 +112,8 @@ export default function DashboardPage() {
     function onDocClick(e: MouseEvent) {
       const target = e.target as HTMLElement | null;
       if (!target) return;
+      // Ignore clicks on the Activities trigger itself to avoid race with toggle logic
+      if (target.closest('[data-activities-trigger="true"]')) return;
       const menu = document.querySelector('[data-interact-menu="open"]');
       if (!menu) return;
       if (!menu.contains(target)) setOpenMenuFor(null);
@@ -255,6 +257,7 @@ export default function DashboardPage() {
                         onClick={() => setOpenMenuFor(openMenuFor===s._id ? null : s._id)}
                         aria-expanded={openMenuFor===s._id}
                         aria-haspopup="menu"
+                        data-activities-trigger="true"
                       >
                         <HiOutlineSparkles className="h-5 w-5" /> Activities
                         <HiOutlineChevronDown className={`h-4 w-4 transition-transform ${openMenuFor===s._id ? 'rotate-180' : ''}`} aria-hidden="true" />
