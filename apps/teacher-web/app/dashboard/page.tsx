@@ -76,6 +76,18 @@ export default function DashboardPage() {
     { id: 'gradient-8', name: 'Sky Blue', class: 'gradient-8' },
   ];
 
+  // High-contrast selection ring color per gradient
+  const ringByGradient: Record<string, string> = {
+    'gradient-1': 'ring-amber-400',   // Purple/Blue → amber ring
+    'gradient-2': 'ring-rose-600',    // Pink/Red → deep rose ring
+    'gradient-3': 'ring-white',       // Blue/Cyan → white ring
+    'gradient-4': 'ring-emerald-700', // Green/Teal → deep emerald ring
+    'gradient-6': 'ring-fuchsia-600', // Teal/Pink → fuchsia ring
+    'gradient-7': 'ring-amber-600',   // Peach → darker amber ring
+    'gradient-8': 'ring-white',       // Sky Blue → white ring
+    'gradient-9': 'ring-blue-700',    // Sunset → deep blue ring
+  };
+
   function pickAutoGradient(): string {
     const available = gradients.map((g) => g.id);
     const used = new Set((sections || []).map((s) => s.gradient || ''));
@@ -577,8 +589,8 @@ function CustomizeModal({
               aria-label={g.name}
               className={`relative aspect-[3/2] w-full rounded-lg border-0 transition flex items-center justify-center overflow-hidden ${
                 gradient === g.id
-                  ? 'ring-2 ring-blue-600'
-                  : 'border-transparent hover:opacity-95'
+                  ? `ring-2 ${ringByGradient[g.id] || 'ring-blue-600'}`
+                  : 'hover:opacity-95'
               }`}
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
