@@ -563,15 +563,15 @@ function CustomizeModal({
               <span className={`absolute inset-[2px] rounded-md ${g.class} bg-clip-padding`} aria-hidden="true" />
               {/* Subtle dark overlay to match card appearance */}
               <span className="absolute inset-[2px] rounded-md bg-black/10" aria-hidden="true" />
-              {/* Title preview (matches dashboard card styles) */}
-              <div className="relative z-10 grid place-items-center text-white text-center px-2">
-                <div className="font-bold text-lg leading-tight line-clamp-2">
+              {/* Title preview (scaled down for proportional look) */}
+              <div className="relative z-10 grid place-items-center text-white text-center px-1">
+                <div className="font-bold text-[10px] leading-tight line-clamp-2">
                   {title || 'Section'}
                 </div>
               </div>
-              {/* Corner accent dots (match dashboard) */}
-              <span className="absolute top-2 left-2 w-3 h-3 bg-white/20 rounded-full" aria-hidden="true" />
-              <span className="absolute bottom-2 right-2 w-2 h-2 bg-white/30 rounded-full" aria-hidden="true" />
+              {/* Corner accent dots (scaled down for proportional look) */}
+              <span className="absolute top-1 left-1 w-[8px] h-[8px] bg-white/20 rounded-full" aria-hidden="true" />
+              <span className="absolute bottom-1 right-1 w-[6px] h-[6px] bg-white/30 rounded-full" aria-hidden="true" />
             </button>
           ))}
         </div>
