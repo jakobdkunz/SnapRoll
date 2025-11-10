@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
@@ -219,7 +219,7 @@ export default function DashboardPage() {
             
             return (
                 <Card key={s._id} className="p-3 sm:p-4 flex flex-col overflow-visible group bg-white/90 dark:bg-neutral-900/90">
-                  <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`}>
+                  <div className={`aspect-[3/2] rounded-lg ${gradientClass} mb-3 sm:mb-4 grid place-items-center text-white relative overflow-hidden`} data-dashboard-card="true">
                   <div className="absolute inset-0 bg-black/10"></div>
                   <div className="relative z-10 text-center">
                     <div className="font-bold text-lg leading-tight px-2">
@@ -530,6 +530,29 @@ function CustomizeModal({
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Preview metrics derived from an on-page card so wrapping matches exactly
+  const firstSwatchRef = useRef<HTMLButtonElement | null>(null);
+  const [previewMetrics, setPreviewMetrics] = useState<{ scale: number; width: number; height: number } | null>(null);
+  useEffect(() => {
+    function measure() {
+      try {
+        const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
+        const swatchEl = firstSwatchRef.current;
+        if (!cardEl || !swatchEl) return;
+        const cardRect = cardEl.getBoundingClientRect();
+        const swatchRect = swatchEl.getBoundingClientRect();
+        if (cardRect.width > 0) {
+          const scale = swatchRect.width / cardRect.width;
+          setPreviewMetrics({ scale, width: cardRect.width, height: cardRect.height });
+        }
+      } catch {
+        // noop
+      }
+    }
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -546,7 +569,7 @@ function CustomizeModal({
       <div>
         <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">Color</label>
         <div className="grid grid-cols-4 gap-2">
-          {gradients.map((g) => (
+          {gradients.map((g, idx) => (
             <button
               key={g.id}
               onClick={() => setGradient(g.id)}
@@ -558,16 +581,28 @@ function CustomizeModal({
                   : 'border-transparent hover:opacity-95'
               }`}
               title={g.name}
+              ref={idx === 0 ? firstSwatchRef : undefined}
             >
               {/* Inset gradient layer prevents edge artifacts against transparent borders */}
               <span className={`absolute inset-[2px] rounded-md ${g.class} bg-clip-padding`} aria-hidden="true" />
               {/* Subtle dark overlay to match card appearance */}
               <span className="absolute inset-[2px] rounded-md bg-black/10" aria-hidden="true" />
-              {/* Scaled mini-card overlay so proportions (type, dots) match dashboard */}
-              <div className="absolute inset-[2px] z-10 grid place-items-center">
-                <div className="relative w-full h-full origin-center scale-[0.56]">
+              {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
+              <div className="absolute inset-[2px] z-10 grid place-items-center overflow-hidden">
+                <div
+                  className="relative"
+                  style={{
+                    width: previewMetrics ? `${previewMetrics.width}px` : '178%',
+                    height: previewMetrics ? `${previewMetrics.height}px` : '118%',
+                    transform: `translate(-50%, -50%) scale(${previewMetrics ? previewMetrics.scale : 0.56})`,
+                    transformOrigin: 'center',
+                    left: '50%',
+                    top: '50%',
+                    position: 'absolute',
+                  }}
+                >
                   <div className="absolute inset-0 grid place-items-center text-white text-center px-2">
-                    <div className="font-bold text-lg leading-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                    <div className="font-bold text-lg leading-tight px-2">
                       {title || 'Section'}
                     </div>
                   </div>
