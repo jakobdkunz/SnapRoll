@@ -606,8 +606,8 @@ function CustomizeModal({
                       {title || 'Section'}
                     </div>
                   </div>
-                  <span className="absolute top-[10px] left-[10px] w-3 h-3 bg-white/20 rounded-full" aria-hidden="true" />
-                  <span className="absolute bottom-[10px] right-[10px] w-2 h-2 bg-white/30 rounded-full" aria-hidden="true" />
+                  <span className="absolute top-[14px] left-[14px] w-3 h-3 bg-white/20 rounded-full" aria-hidden="true" />
+                  <span className="absolute bottom-[14px] right-[14px] w-2 h-2 bg-white/30 rounded-full" aria-hidden="true" />
                 </div>
               </div>
             </button>
