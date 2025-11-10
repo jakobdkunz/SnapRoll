@@ -565,7 +565,7 @@ function CustomizeModal({
               <span className="absolute inset-[2px] rounded-md bg-black/10" aria-hidden="true" />
               {/* Scaled mini-card overlay so proportions (type, dots) match dashboard */}
               <div className="absolute inset-[2px] z-10 grid place-items-center">
-                <div className="relative w-full h-full origin-center scale-[0.48]">
+                <div className="relative w-full h-full origin-center scale-[0.6]">
                   <div className="absolute inset-0 grid place-items-center text-white text-center px-2">
                     <div className="font-bold text-lg leading-tight">
                       {title || 'Section'}
