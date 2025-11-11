@@ -592,7 +592,7 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               aria-label={g.name}
-              className={`relative aspect-[3/2] w-full rounded-lg border-0 transition overflow-hidden ${gradient === g.id ? 'p-[3px] bg-white dark:bg-neutral-900 ring-4 ring-black dark:ring-white' : 'hover:opacity-95'}`}
+              className={`relative aspect-[3/2] w-full rounded-lg border-0 transition overflow-hidden ${gradient === g.id ? 'ring-4 ring-black dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'hover:opacity-95'}`}
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
