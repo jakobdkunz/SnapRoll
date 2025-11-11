@@ -532,8 +532,7 @@ export default function ModifyPage() {
           setMappingStep={setMappingStep}
         />
       )}
-      {confirmClearOpen && (
-        <Modal open={confirmClearOpen} onClose={() => { if (!confirmWorking) setConfirmClearOpen(false); }}>
+      <Modal open={confirmClearOpen} onClose={() => { if (!confirmWorking) setConfirmClearOpen(false); }}>
           <div className="w-[min(92vw,520px)] bg-white rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
             <div className="text-lg font-semibold mb-1">Remove all students?</div>
             <div className="text-sm text-slate-600 mb-4">This action cannot be undone.</div>
@@ -561,7 +560,6 @@ export default function ModifyPage() {
             </div>
           </div>
         </Modal>
-      )}
       {toastVisible && (
         <div className="fixed bottom-4 left-4 z-[60]">
           <div className="bg-white text-slate-900 border border-slate-200 rounded-xl shadow-soft px-4 py-3 flex items-center gap-3">
