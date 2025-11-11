@@ -37,7 +37,6 @@ export default function DashboardPage() {
   const [createParticipationPossible, setCreateParticipationPossible] = useState<string>('');
   const [createAbsencesEnabled, setCreateAbsencesEnabled] = useState<boolean>(false);
   const [createParticipationEnabled, setCreateParticipationEnabled] = useState<boolean>(false);
-  const [createAttendanceCounts, setCreateAttendanceCounts] = useState<boolean>(false);
   const [openMenuFor, setOpenMenuFor] = useState<Id<'sections'> | null>(null);
   const [wcOpen, setWcOpen] = useState(false);
   const [wcSectionId, setWcSectionId] = useState<Id<'sections'> | null>(null);
@@ -130,7 +129,6 @@ export default function DashboardPage() {
     title: string,
     gradient: string,
     permittedAbsences?: number | null,
-    participationCountsAttendance?: boolean | null,
     participationCreditPointsPossible?: number | null,
     permittedAbsencesMode?: 'policy' | 'custom',
     policyTimesPerWeek?: 1 | 2 | 3,
@@ -138,7 +136,7 @@ export default function DashboardPage() {
   ) {
     if (!customizeModal.section || !title.trim()) return;
     const sid = customizeModal.section._id as Id<'sections'>;
-    const clearParticipation = participationCountsAttendance == null && participationCreditPointsPossible == null;
+    const clearParticipation = participationCreditPointsPossible == null;
     type UpdateArgs = Parameters<typeof updateSection>[0] & {
       clearParticipation?: boolean;
       permittedAbsencesMode?: 'policy' | 'custom';
@@ -154,7 +152,6 @@ export default function DashboardPage() {
       permittedAbsencesMode: permittedAbsences == null ? undefined : permittedAbsencesMode,
       policyTimesPerWeek: permittedAbsences == null ? undefined : policyTimesPerWeek,
       policyDuration: permittedAbsences == null ? undefined : policyDuration,
-      participationCountsAttendance: participationCountsAttendance == null ? undefined : !!participationCountsAttendance,
       participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
       clearParticipation: clearParticipation ? true : undefined,
     });
@@ -402,7 +399,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between mb-1">
                 <div className="inline-flex items-center gap-2">
                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Participation Credit</span>
-                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit through activities, up to the maximum you set.">?</span>
                 </div>
                 <button onClick={() => setCreateParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createParticipationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createParticipationEnabled} aria-label="Toggle participation credit">
                   <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createParticipationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
@@ -413,12 +410,6 @@ export default function DashboardPage() {
                 <div>
                   <label className="block text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1">Total points available</label>
                   <TextInput value={createParticipationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCreateParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-700 dark:text-neutral-300">Attendance counts toward Participation Credit</span>
-                  <button onClick={() => setCreateAttendanceCounts(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${createAttendanceCounts ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={createAttendanceCounts} aria-label="Toggle attendance counts toward participation">
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${createAttendanceCounts ? 'translate-x-5' : 'translate-x-1'}`} />
-                  </button>
                 </div>
               </div>
               )}
@@ -434,7 +425,6 @@ export default function DashboardPage() {
                 if (t.length > 200) { setCreateError('Title must be 1–200 characters.'); return; }
                 try {
                   const gradient = pickAutoGradient();
-                  const participationCountsAttendance = createParticipationEnabled ? (createAttendanceCounts ? true : false) : undefined;
                   const participationCreditPointsPossible = createParticipationEnabled ? (Number.isFinite(Number(createParticipationPossible)) ? Math.max(0, Math.min(10000, Math.floor(Number(createParticipationPossible)))) : undefined) : undefined;
                   const permittedAbsences = createAbsencesEnabled ? (createAbsences.mode === 'policy' ? (() => { const tw = createAbsences.timesPerWeek; const d = createAbsences.duration; return tw === 3 ? (d === 'semester' ? 4 : 2) : tw === 2 ? (d === 'semester' ? 3 : 1) : 1; })() : (() => { const n = Number(createAbsences.custom); return Number.isFinite(n) ? Math.max(0, Math.min(60, Math.floor(n))) : undefined; })()) : undefined;
                   const permittedAbsencesMode = createAbsencesEnabled
@@ -450,7 +440,6 @@ export default function DashboardPage() {
                   await (createSection as unknown as (args: CreateArgs) => Promise<unknown>)({
                     title: t,
                     gradient,
-                    participationCountsAttendance,
                     participationCreditPointsPossible,
                     permittedAbsences,
                     permittedAbsencesMode,
@@ -463,7 +452,6 @@ export default function DashboardPage() {
                   setCreateAbsencesEnabled(false);
                   setCreateParticipationEnabled(false);
                   setCreateParticipationPossible('');
-                  setCreateAttendanceCounts(false);
                   setCreateError(null);
                 } catch (e: unknown) {
                   const msg = e instanceof Error ? e.message : 'Failed to create section.';
@@ -496,7 +484,6 @@ function CustomizeModal({
     title: string,
     gradient: string,
     permittedAbsences?: number | null,
-    participationCountsAttendance?: boolean | null,
     participationCreditPointsPossible?: number | null,
     permittedAbsencesMode?: 'policy' | 'custom',
     policyTimesPerWeek?: 1 | 2 | 3,
@@ -516,7 +503,6 @@ function CustomizeModal({
   const [duration, setDuration] = useState<'semester' | '8week'>(initialDuration as 'semester' | '8week');
   const [customAbsences, setCustomAbsences] = useState<string>(absencesEnabled ? String((section as unknown as { permittedAbsences?: number }).permittedAbsences || '') : '');
   const [participationEnabled, setParticipationEnabled] = useState<boolean>(
-    (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === true ||
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
   );
   // Legacy attendance points removed; attendance contribution now a boolean flag
@@ -524,9 +510,6 @@ function CustomizeModal({
     typeof (section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible === 'number'
       ? String((section as unknown as { participationCreditPointsPossible?: number }).participationCreditPointsPossible)
       : ''
-  );
-  const [attendanceCounts, setAttendanceCounts] = useState<boolean>(
-    (section as unknown as { participationCountsAttendance?: boolean }).participationCountsAttendance === true
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -703,7 +686,7 @@ function CustomizeModal({
         <div className="flex items-center justify-between mb-1">
           <div className="inline-flex items-center gap-2">
             <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">Participation Credit</span>
-            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit for their participation and/or attendance, up to the maximum you set.">?</span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-xs text-neutral-700 dark:text-neutral-300" title="Let students earn participation credit through activities, up to the maximum you set.">?</span>
           </div>
           <button onClick={() => setParticipationEnabled(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${participationEnabled ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={participationEnabled} aria-label="Toggle participation credit">
             <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${participationEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
@@ -714,12 +697,6 @@ function CustomizeModal({
           <div>
             <label className="block text-xs uppercase tracking-wide text-neutral-600 dark:text-neutral-400 mb-1">Total points available</label>
             <TextInput value={participationPossible} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setParticipationPossible(e.target.value.replace(/[^0-9]/g, '').slice(0,5))} placeholder="e.g., 50" />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-neutral-700 dark:text-neutral-300">Attendance counts toward Participation Credit</span>
-            <button onClick={() => setAttendanceCounts(v => !v)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${attendanceCounts ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`} aria-pressed={attendanceCounts} aria-label="Toggle attendance counts toward participation">
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white dark:bg-neutral-200 transition ${attendanceCounts ? 'translate-x-5' : 'translate-x-1'}`} />
-            </button>
           </div>
         </div>
         )}
@@ -740,13 +717,11 @@ function CustomizeModal({
             permitted = null;
           }
           const pp = Number(participationPossible);
-          // Interpret attendanceCounts as a boolean flag persisted on section
-          const participationCountsAttendance = participationEnabled ? attendanceCounts : null;
           const participationCreditPointsPossible = participationEnabled && Number.isFinite(pp) ? Math.max(0, Math.min(10000, Math.floor(pp))) : null;
           const absMode = !absencesEnabled ? undefined : permMode;
           const policyTPW = !absencesEnabled || permMode !== 'policy' ? undefined : timesPerWeek;
           const policyDur = !absencesEnabled || permMode !== 'policy' ? undefined : duration;
-          onSave(title, gradient, permitted, participationCountsAttendance, participationCreditPointsPossible, absMode, policyTPW, policyDur);
+          onSave(title, gradient, permitted, participationCreditPointsPossible, absMode, policyTPW, policyDur);
         }} disabled={!title.trim()}>
           Save Changes
         </Button>

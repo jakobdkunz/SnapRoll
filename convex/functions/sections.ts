@@ -54,7 +54,6 @@ export const create = mutation({
     permittedAbsencesMode: v.optional(v.union(v.literal("policy"), v.literal("custom"))),
     policyTimesPerWeek: v.optional(v.number()),
     policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
-    participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -87,7 +86,6 @@ export const create = mutation({
       permittedAbsencesMode: args.permittedAbsencesMode,
       policyTimesPerWeek: args.policyTimesPerWeek,
       policyDuration: args.policyDuration,
-      participationCountsAttendance: args.participationCountsAttendance === true,
       participationCreditPointsPossible: typeof args.participationCreditPointsPossible === 'number' ? Math.max(0, Math.floor(args.participationCreditPointsPossible)) : undefined,
     });
   },
@@ -150,7 +148,6 @@ export const update = mutation({
     permittedAbsencesMode: v.optional(v.union(v.literal("policy"), v.literal("custom"))),
     policyTimesPerWeek: v.optional(v.number()),
     policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
-    participationCountsAttendance: v.optional(v.boolean()),
     participationCreditPointsPossible: v.optional(v.number()),
     clearParticipation: v.optional(v.boolean()),
   },
@@ -167,7 +164,6 @@ export const update = mutation({
       permittedAbsencesMode?: "policy" | "custom";
       policyTimesPerWeek?: number;
       policyDuration?: "semester" | "8week";
-      participationCountsAttendance?: boolean;
       participationCreditPointsPossible?: number;
     } = {};
     if (updates.title !== undefined) {
@@ -196,9 +192,6 @@ export const update = mutation({
     if (updates.policyDuration !== undefined) {
       safe.policyDuration = updates.policyDuration;
     }
-    if (updates.participationCountsAttendance !== undefined) {
-      safe.participationCountsAttendance = !!updates.participationCountsAttendance;
-    }
     if (updates.participationCreditPointsPossible !== undefined) {
       const n = Number(updates.participationCreditPointsPossible);
       if (!Number.isFinite(n) || n < 0 || n > 10000) throw new Error("Participation credit points must be 0-10000");
@@ -217,7 +210,7 @@ export const update = mutation({
     }
     // If explicitly clearing participation config, unset both optional fields
     if (args.clearParticipation) {
-      const patchAny: any = { ...safe, participationCountsAttendance: undefined, participationCreditPointsPossible: undefined };
+      const patchAny: any = { ...safe, participationCreditPointsPossible: undefined };
       return await ctx.db.patch(id, patchAny);
     }
     return await ctx.db.patch(id, safe);

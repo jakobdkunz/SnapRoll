@@ -14,7 +14,7 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
   const [working, setWorking] = useState(false);
   const startPollMutation = useMutation(api.functions.polls.startPoll);
   const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'> } : 'skip') as any;
-  const participationEnabled = !!(section && ((section.participationCountsAttendance === true) || typeof section.participationCreditPointsPossible === 'number'));
+  const participationEnabled = !!(section && (typeof section.participationCreditPointsPossible === 'number'));
   function setOptionAt(i: number, val: string) {
     setOptions((prev: string[]) => prev.map((v, idx) => (idx === i ? val : v)));
   }

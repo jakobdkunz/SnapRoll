@@ -17,7 +17,7 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
   const visible = open && !!sectionId;
   const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'> } : 'skip') as any;
-  const participationEnabled = !!(section && ((section.participationCountsAttendance === true) || typeof section.participationCreditPointsPossible === 'number'));
+  const participationEnabled = !!(section && (typeof section.participationCreditPointsPossible === 'number'));
 
   function hasId(v: unknown): v is { _id: string } {
     return typeof v === 'object' && v !== null && typeof (v as Record<string, unknown>)._id === 'string';

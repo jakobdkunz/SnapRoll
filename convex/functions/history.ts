@@ -219,7 +219,6 @@ export const getParticipationBySection = query({
 
     const section = await ctx.db.get(args.sectionId);
     const totalPoints = Number((section as any)?.participationCreditPointsPossible || 0);
-    const countsAttendance = !!(section as any)?.participationCountsAttendance;
 
     // Active class days (hasActivity true) in ascending order
     const allDays = (await ctx.db
@@ -282,25 +281,23 @@ export const getParticipationBySection = query({
 
     // Precompute course-level denominators
     let totalCourseShares = 0;
-    if (!countsAttendance) {
-      // Sum of all activities across all active days
-      for (const day of allDays) {
-        const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
-        const pollSessions = await ctx.db
-          .query('pollSessions')
-          .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
-          .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
-          .collect();
-        const wcSessions = await ctx.db
-          .query('wordCloudSessions')
-          .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
-          .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
-          .collect();
-        totalCourseShares += pollSessions.filter(s => (s as any)?.countsForParticipation === true).length +
-          wcSessions.filter(s => (s as any)?.countsForParticipation === true).length;
-      }
-      if (totalCourseShares <= 0) totalCourseShares = 1;
+    // Sum of all activities across all active days
+    for (const day of allDays) {
+      const { startMs, nextStartMs } = getEasternDayBounds(day.date as number);
+      const pollSessions = await ctx.db
+        .query('pollSessions')
+        .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+        .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+        .collect();
+      const wcSessions = await ctx.db
+        .query('wordCloudSessions')
+        .withIndex('by_section', (q)=> q.eq('sectionId', args.sectionId))
+        .filter((q)=> q.and(q.gte(q.field('createdAt'), startMs), q.lt(q.field('createdAt'), nextStartMs)))
+        .collect();
+      totalCourseShares += pollSessions.filter(s => (s as any)?.countsForParticipation === true).length +
+        wcSessions.filter(s => (s as any)?.countsForParticipation === true).length;
     }
+    if (totalCourseShares <= 0) totalCourseShares = 1;
 
     // Build per-student records
     const records = students.map((s) => {
@@ -315,13 +312,8 @@ export const getParticipationBySection = query({
         const sess = sessionsByDay.get(day._id as Id<'classDays'>)!;
         const activityShares = sess.pollIds.reduce((acc, id)=> acc + (pollAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0) +
           sess.wcIds.reduce((acc, id)=> acc + (wcAnswerBySessionStudent.has(`${id}-${s._id}`) ? 1 : 0), 0);
-        let daySharesTotal = (countsAttendance ? 1 : 0) + sess.pollIds.length + sess.wcIds.length;
-        let daySharesEarned = (countsAttendance && wasPresent ? 1 : 0) + (wasPresent ? activityShares : 0);
-        if (countsAttendance && wasPresent && daySharesTotal === 1) {
-          // No activities happened; attendance itself should be 1/1
-          daySharesTotal = 1;
-          daySharesEarned = 1;
-        }
+        const daySharesTotal = sess.pollIds.length + sess.wcIds.length;
+        const daySharesEarned = wasPresent ? activityShares : 0;
         return { classDayId: day._id as Id<'classDays'>, sharesEarned: daySharesEarned, sharesTotal: daySharesTotal, absent: !wasPresent };
       });
       return { studentId: s._id as Id<'users'>, rows };
@@ -329,31 +321,14 @@ export const getParticipationBySection = query({
 
     // Totals per student
     const totals = records.map((r) => {
-      if (countsAttendance) {
-        // Student-present days count for denominator
-        let presentDays = 0;
-        for (const row of r.rows) if (!row.absent) presentDays++;
-        if (presentDays <= 0) return { studentId: r.studentId, points: 0 };
-        const perDay = totalPoints / presentDays;
-        let pts = 0;
-        for (const row of r.rows) {
-          if (row.absent) continue;
-          const denom = row.sharesTotal <= 0 ? 1 : row.sharesTotal;
-          pts += perDay * (row.sharesEarned / denom);
-        }
-        return { studentId: r.studentId, points: Math.round(pts) };
-      } else {
-        // Activity-only shares across course
-        if (totalCourseShares <= 0) return { studentId: r.studentId, points: 0 };
-        let earned = 0;
-        for (const row of r.rows) {
-          if (row.absent) continue;
-          // When disabled, attendance doesn't count, only activities
-          earned += Math.max(0, row.sharesEarned - 0); // already excludes attendance when disabled
-        }
-        const pts = (earned / totalCourseShares) * totalPoints;
-        return { studentId: r.studentId, points: Math.round(pts) };
+      if (totalCourseShares <= 0) return { studentId: r.studentId, points: 0 };
+      let earned = 0;
+      for (const row of r.rows) {
+        if (row.absent) continue;
+        earned += Math.max(0, row.sharesEarned);
       }
+      const pts = (earned / totalCourseShares) * totalPoints;
+      return { studentId: r.studentId, points: Math.round(pts) };
     });
 
     return {
