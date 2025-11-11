@@ -592,14 +592,14 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               aria-label={g.name}
-              className={`relative aspect-[3/2] w-full rounded-md border-0 transition overflow-hidden ${gradient === g.id ? 'ring-4 ring-black dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'hover:opacity-95'}`}
+              className={`relative aspect-[3/2] w-full rounded border-0 transition overflow-hidden ${gradient === g.id ? 'ring-4 ring-black dark:ring-white ring-offset-2 ring-offset-white dark:ring-offset-neutral-900' : 'hover:opacity-95'}`}
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
               {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
-              <div className="absolute inset-0 z-10 grid place-items-center overflow-hidden rounded-md">
+              <div className="absolute inset-0 z-10 grid place-items-center overflow-hidden rounded">
                 <div
-                  className={`relative rounded-md ${g.class} overflow-hidden`}
+                  className={`relative rounded ${g.class} overflow-hidden`}
                   style={{
                     width: previewMetrics ? `${previewMetrics.width}px` : '178%',
                     height: previewMetrics ? `${previewMetrics.height}px` : '118%',
