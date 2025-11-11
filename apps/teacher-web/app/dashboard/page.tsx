@@ -592,34 +592,20 @@ function CustomizeModal({
               onClick={() => setGradient(g.id)}
               aria-pressed={gradient === g.id}
               aria-label={g.name}
-              className={`relative aspect-[3/2] w-full rounded-lg border-0 transition overflow-hidden ${gradient === g.id ? 'p-[2px] bg-white dark:bg-neutral-900 ring-2 ring-blue-600' : 'hover:opacity-95'}`}
+              className={`relative aspect-[3/2] w-full rounded-lg transition overflow-hidden ${gradient === g.id ? 'ring-4 ring-black dark:ring-white' : 'hover:opacity-95'}`}
               title={g.name}
               ref={idx === 0 ? firstSwatchRef : undefined}
             >
-              {/* Scaled mini-card overlay; layout width/height match real card for identical wrapping */}
-              <div className="absolute inset-0 z-10 grid place-items-center overflow-hidden rounded-lg">
-                <div
-                  className={`relative rounded-lg ${g.class} overflow-hidden`}
-                  style={{
-                    width: previewMetrics ? `${previewMetrics.width}px` : '178%',
-                    height: previewMetrics ? `${previewMetrics.height}px` : '118%',
-                    transform: `translate(-50%, -50%) scale(${previewMetrics ? previewMetrics.scale : 0.56})`,
-                    transformOrigin: 'center',
-                    left: '50%',
-                    top: '50%',
-                    position: 'absolute',
-                  }}
-                >
-                  {/* Subtle dark overlay to match card appearance */}
-                  <div className="absolute inset-0 bg-black/10" aria-hidden="true" />
-                  <div className="absolute inset-0 grid place-items-center text-white text-center px-2">
-                    <div className="font-bold text-lg leading-tight px-2">
-                      {title || 'Section'}
-                    </div>
+              {/* Fill entire rounded area with the gradient preview */}
+              <div className={`absolute inset-0 rounded-lg overflow-hidden ${g.class}`}>
+                <div className="absolute inset-0 bg-black/10" aria-hidden="true" />
+                <div className="absolute inset-0 grid place-items-center text-white text-center px-2">
+                  <div className="font-bold text-lg leading-tight px-2">
+                    {title || 'Section'}
                   </div>
-                  <span className="absolute top-[14px] left-[14px] w-3 h-3 bg-white/20 rounded-full" aria-hidden="true" />
-                  <span className="absolute bottom-[14px] right-[14px] w-2 h-2 bg-white/30 rounded-full" aria-hidden="true" />
                 </div>
+                <span className="absolute top-[14px] left-[14px] w-3 h-3 bg-white/20 rounded-full" aria-hidden="true" />
+                <span className="absolute bottom-[14px] right-[14px] w-2 h-2 bg-white/30 rounded-full" aria-hidden="true" />
               </div>
             </button>
           ))}
