@@ -534,37 +534,39 @@ function CustomizeModal({
   const firstSwatchRef = useRef<HTMLButtonElement | null>(null);
   const [previewMetrics, setPreviewMetrics] = useState<{ scale: number; width: number; height: number } | null>(null);
   useEffect(() => {
-    let rafId = 0;
-    let retries = 0;
-    function measure() {
+    const swatchEl = firstSwatchRef.current;
+    const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
+    if (!swatchEl || !cardEl) return;
+    function compute() {
       try {
-        const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
-        const swatchEl = firstSwatchRef.current;
-        if (!cardEl || !swatchEl) {
-          if (retries < 8) {
-            retries += 1;
-            rafId = requestAnimationFrame(measure);
-          }
-          return;
-        }
         const cardRect = cardEl.getBoundingClientRect();
         const swatchRect = swatchEl.getBoundingClientRect();
         if (cardRect.width > 0 && swatchRect.width > 0) {
           const scale = swatchRect.width / cardRect.width;
           setPreviewMetrics({ scale, width: cardRect.width, height: cardRect.height });
-        } else if (retries < 8) {
-          retries += 1;
-          rafId = requestAnimationFrame(measure);
         }
       } catch {
         // ignore
       }
     }
-    rafId = requestAnimationFrame(measure);
-    const onResize = () => { retries = 0; measure(); };
+    let ro: ResizeObserver | null = null;
+    // Observe swatch width changes; recompute when it lays out
+    try {
+      ro = new ResizeObserver(() => compute());
+      ro.observe(swatchEl);
+    } catch {
+      // Fallback if ResizeObserver unavailable
+      const id = requestAnimationFrame(compute);
+      return () => cancelAnimationFrame(id);
+    }
+    // Also recompute on window resize
+    const onResize = () => compute();
     window.addEventListener('resize', onResize);
+    // Initial compute (after current frame)
+    const id = requestAnimationFrame(compute);
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
+      if (ro) ro.disconnect();
+      cancelAnimationFrame(id);
       window.removeEventListener('resize', onResize);
     };
   }, []);

@@ -19,7 +19,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
     setPortalEl(document.body);
   }, []);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     let raf1 = 0;
     let raf2 = 0;
     let exitTimeoutId = 0 as unknown as number;
