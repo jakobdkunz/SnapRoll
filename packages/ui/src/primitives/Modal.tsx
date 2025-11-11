@@ -23,7 +23,6 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
     let raf1 = 0;
     let raf2 = 0;
     let exitTimeoutId = 0 as unknown as number;
-    let onTransitionEnd: ((this: HTMLDivElement, ev: TransitionEvent) => any) | null = null;
     if (open) {
       setMounted(true);
       if (!portalEl) {
@@ -42,20 +41,10 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       return () => { if (raf1) cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
     }
     setVisible(false);
-    // Prefer unmounting when transitions finish; fallback to timeout
-    const node = containerRef.current;
-    if (node) {
-      onTransitionEnd = (e: TransitionEvent) => {
-        if (e.target === node && (e.propertyName === 'opacity' || e.propertyName === 'transform')) {
-          setMounted(false);
-        }
-      };
-      node.addEventListener('transitionend', onTransitionEnd, { once: true });
-    }
-    exitTimeoutId = window.setTimeout(() => setMounted(false), 240);
+    // Unmount after the CSS duration has elapsed (Safari can prematurely fire transitionend)
+    exitTimeoutId = window.setTimeout(() => setMounted(false), 220);
     return () => {
       if (exitTimeoutId) window.clearTimeout(exitTimeoutId);
-      if (node && onTransitionEnd) node.removeEventListener('transitionend', onTransitionEnd);
     };
   }, [open, portalEl]);
 
