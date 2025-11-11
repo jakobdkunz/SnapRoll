@@ -23,6 +23,10 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
     let timeoutId = 0 as unknown as number;
     if (open) {
       setMounted(true);
+      if (!portalEl) {
+        // Wait until the portal target exists before starting the enter animation.
+        return () => {};
+      }
       setVisible(false);
       raf1 = window.requestAnimationFrame(() => {
         raf2 = window.requestAnimationFrame(() => setVisible(true));
@@ -30,9 +34,9 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       return () => { if (raf1) cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2); };
     }
     setVisible(false);
-    timeoutId = window.setTimeout(() => setMounted(false), 180);
+    timeoutId = window.setTimeout(() => setMounted(false), 200);
     return () => { if (timeoutId) window.clearTimeout(timeoutId); };
-  }, [open]);
+  }, [open, portalEl]);
 
   React.useEffect(() => {
     function onEsc(e: KeyboardEvent) {
@@ -50,7 +54,7 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, children }) => {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
+      style={{ willChange: 'opacity', paddingBottom: 'env(safe-area-inset-bottom)', paddingTop: 'env(safe-area-inset-top)' }}
     >
       {/* Oversized overlay to cover iOS toolbars */}
       <div className="absolute left-0 right-0 bg-black/50" style={{ top: '-60vh', bottom: '-60vh' }} />
