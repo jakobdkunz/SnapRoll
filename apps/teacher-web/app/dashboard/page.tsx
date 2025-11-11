@@ -534,11 +534,11 @@ function CustomizeModal({
   const firstSwatchRef = useRef<HTMLButtonElement | null>(null);
   const [previewMetrics, setPreviewMetrics] = useState<{ scale: number; width: number; height: number } | null>(null);
   useEffect(() => {
-    const swatchEl = firstSwatchRef.current;
-    const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
-    if (!swatchEl || !cardEl) return;
     function compute() {
       try {
+        const swatchEl = firstSwatchRef.current;
+        const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
+        if (!swatchEl || !cardEl) return;
         const cardRect = cardEl.getBoundingClientRect();
         const swatchRect = swatchEl.getBoundingClientRect();
         if (cardRect.width > 0 && swatchRect.width > 0) {
@@ -550,14 +550,14 @@ function CustomizeModal({
       }
     }
     let ro: ResizeObserver | null = null;
-    // Observe swatch width changes; recompute when it lays out
-    try {
-      ro = new ResizeObserver(() => compute());
-      ro.observe(swatchEl);
-    } catch {
-      // Fallback if ResizeObserver unavailable
-      const id = requestAnimationFrame(compute);
-      return () => cancelAnimationFrame(id);
+    const swatchEl = firstSwatchRef.current;
+    if (swatchEl && 'ResizeObserver' in window) {
+      try {
+        ro = new ResizeObserver(() => compute());
+        ro.observe(swatchEl);
+      } catch {
+        // ignore and fallback
+      }
     }
     // Also recompute on window resize
     const onResize = () => compute();
