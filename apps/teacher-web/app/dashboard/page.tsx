@@ -534,24 +534,39 @@ function CustomizeModal({
   const firstSwatchRef = useRef<HTMLButtonElement | null>(null);
   const [previewMetrics, setPreviewMetrics] = useState<{ scale: number; width: number; height: number } | null>(null);
   useEffect(() => {
+    let rafId = 0;
+    let retries = 0;
     function measure() {
       try {
         const cardEl = document.querySelector('[data-dashboard-card="true"]') as HTMLElement | null;
         const swatchEl = firstSwatchRef.current;
-        if (!cardEl || !swatchEl) return;
+        if (!cardEl || !swatchEl) {
+          if (retries < 8) {
+            retries += 1;
+            rafId = requestAnimationFrame(measure);
+          }
+          return;
+        }
         const cardRect = cardEl.getBoundingClientRect();
         const swatchRect = swatchEl.getBoundingClientRect();
-        if (cardRect.width > 0) {
+        if (cardRect.width > 0 && swatchRect.width > 0) {
           const scale = swatchRect.width / cardRect.width;
           setPreviewMetrics({ scale, width: cardRect.width, height: cardRect.height });
+        } else if (retries < 8) {
+          retries += 1;
+          rafId = requestAnimationFrame(measure);
         }
       } catch {
-        // noop
+        // ignore
       }
     }
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
+    rafId = requestAnimationFrame(measure);
+    const onResize = () => { retries = 0; measure(); };
+    window.addEventListener('resize', onResize);
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   return (
