@@ -5,6 +5,7 @@ export default ({ config }: { config: ExpoConfig }) => ({
   name: 'SnapRoll Student',
   slug: 'student-mobile',
   scheme: 'snaproll',
+  plugins: ['expo-router'],
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.flamelink.snaproll.student'
