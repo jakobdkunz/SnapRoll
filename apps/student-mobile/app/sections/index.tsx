@@ -5,12 +5,36 @@ import { useCurrentUser, useStudentSections, useActiveInteractive, useJoinByCode
 import type { Id } from '@flamelink/convex-client';
 import { useAttendanceActions } from '@flamelink/student-core';
 import { router } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
+import { useMutation } from 'convex/react';
+import { api } from '@flamelink/convex-client';
 
 export default function SectionsScreen() {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
 
+  const { isLoaded, isSignedIn } = useAuth();
   const currentUser = useCurrentUser();
+  const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const didUpsertRef = React.useRef(false);
+  
+  React.useEffect(() => {
+    if (didUpsertRef.current) return;
+    if (!isLoaded || !isSignedIn) return;
+    if (currentUser === undefined) return;
+    if (!currentUser) {
+      (async () => {
+        try {
+          didUpsertRef.current = true;
+          await upsertUser({ role: 'STUDENT' });
+        } catch (e) {
+          // Best-effort upsert; ignore failures in UI but log for debugging
+          console.error(e);
+        }
+      })();
+    }
+  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
+
   const effectiveUserId = (currentUser?._id as Id<'users'> | undefined);
   const sections = useStudentSections();
   const interactive = useActiveInteractive();

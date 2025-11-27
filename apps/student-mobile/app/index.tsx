@@ -1,24 +1,21 @@
-import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '@clerk/clerk-expo';
 
 export default function Index() {
-  const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    // Ensure component is mounted before navigating
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (isMounted) {
-      // Use setTimeout to ensure navigation happens after layout is ready
-      const timer = setTimeout(() => {
-        router.replace('/sections');
-      }, 0);
-      return () => clearTimeout(timer);
+    if (!isLoaded) return;
+    // AuthGuard will handle redirects, but we can also handle it here for the root
+    if (isSignedIn) {
+      router.replace('/sections');
+    } else {
+      router.replace('/sign-in');
     }
-  }, [isMounted]);
+  }, [isLoaded, isSignedIn, router]);
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

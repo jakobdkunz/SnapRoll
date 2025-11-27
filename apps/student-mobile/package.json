@@ -25,6 +25,7 @@
     "expo-constants": "~18.0.10",
     "expo-modules-core": "~3.0.26",
     "expo-router": "~6.0.15",
+    "expo-web-browser": "^15.0.9",
     "nativewind": "^4.0.36",
     "react": "19.1.0",
     "react-dom": "19.1.0",
