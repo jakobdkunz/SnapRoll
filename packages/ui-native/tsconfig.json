@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-native",
-    "types": ["react", "react-native"]
+    "skipLibCheck": true
   },
   "include": ["src"]
 }

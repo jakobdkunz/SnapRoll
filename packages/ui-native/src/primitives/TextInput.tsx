@@ -1,10 +1,10 @@
 import * as React from 'react';
-import { TextInput as RNTextInput, TextInputProps, useColorScheme } from 'react-native';
+import { TextInput as RNTextInput, TextInputProps } from 'react-native';
 
 export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(function TextInput(props, ref) {
   const { style, ...rest } = props;
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  // Default to light mode since Appearance API requires native modules
+  const isDark = false;
   return (
     <RNTextInput
       ref={ref}

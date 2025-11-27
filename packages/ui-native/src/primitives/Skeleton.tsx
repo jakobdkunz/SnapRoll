@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { View, ViewProps, useColorScheme } from 'react-native';
+import { View, ViewProps } from 'react-native';
 
 export function Skeleton({ style, ...rest }: ViewProps) {
-  const scheme = useColorScheme();
-  const isDark = scheme === 'dark';
+  // Default to light mode since Appearance API requires native modules
+  const isDark = false;
   return (
     <View
       {...rest}

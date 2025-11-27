@@ -6,12 +6,19 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
+// Explicitly set project root - this is critical for monorepo
+config.projectRoot = projectRoot;
 config.watchFolders = [workspaceRoot];
-config.resolver.disableHierarchicalLookup = true;
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
+
+// Ensure resolver can find dependencies in both project and workspace node_modules
+config.resolver = {
+  ...config.resolver,
+  // Don't disable hierarchical lookup - we need it for monorepo
+  nodeModulesPaths: [
+    path.resolve(projectRoot, 'node_modules'),
+    path.resolve(workspaceRoot, 'node_modules'),
+  ],
+};
 
 // Transpile monorepo packages
 config.transformer.unstable_allowRequireContext = true;
