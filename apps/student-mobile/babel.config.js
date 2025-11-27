@@ -1,13 +1,10 @@
 module.exports = function (api) {
   api.cache(true);
   
-  // For NativeWind v4, jsxImportSource in the preset + Metro's withNativeWind
-  // should be sufficient. The nativewind/babel plugin causes issues because
-  // it returns { plugins: [...] } which Babel can't use directly.
+  // NativeWind v4 works with Metro's withNativeWind wrapper
+  // We don't need jsxImportSource or nativewind/babel plugin
   return {
-    presets: [
-      ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
-    ],
+    presets: ['babel-preset-expo'],
     plugins: [
       // react-native-reanimated plugin must be listed last
       'react-native-reanimated/plugin',
