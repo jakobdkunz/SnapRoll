@@ -28,3 +28,6 @@ export function AuthGuard() {
   return null;
 }
 
+// Default export for Expo Router
+export default AuthGuard;
+
