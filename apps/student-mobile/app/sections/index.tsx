@@ -60,95 +60,96 @@ export default function SectionsScreen() {
   if (!mounted) return null;
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-      <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 18, fontWeight: '600' }}>
-          Welcome, {(currentUser && (currentUser.firstName || currentUser.lastName)) ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}` : ''}!
-        </Text>
-      </View>
-
-      <Card>
-        <View style={{ gap: 8, alignItems: 'center' }}>
-          <Text style={{ fontWeight: '600' }}>Attendance</Text>
-          <Text style={{ color: '#6B7280' }}>Enter the code you see on the board:</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {digits.map((d, i) => (
-              <TextInput
-                key={i}
-                ref={inputRefs[i]}
-                keyboardType="number-pad"
-                maxLength={1}
-                value={d}
-                onChangeText={(v) => onDigitChange(i, v)}
-                style={{ width: 48, height: 48, textAlign: 'center', fontSize: 20 }}
-              />
-            ))}
-          </View>
-          {confirmMsg ? <Text style={{ color: '#166534' }}>{confirmMsg}</Text> : null}
-          {checkinError && !(blockedUntil && blockedUntil > Date.now()) ? <Text style={{ color: '#991B1B' }}>{checkinError}</Text> : null}
-          <Button onPress={() => router.push('/my-attendance')}>My attendance →</Button>
+    <>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 18, fontWeight: '600' }}>
+            Welcome, {(currentUser && (currentUser.firstName || currentUser.lastName)) ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}` : ''}!
+          </Text>
         </View>
-      </Card>
 
-      <Card>
-        <View style={{ gap: 8 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ color: '#475569' }}>My courses</Text>
-            <Button onPress={() => { setJoinOpen(true); setJoinCode(''); setJoinError(null); }}>+ Enter Join Code</Button>
-          </View>
-          {!currentUser ? (
-            <View style={{ gap: 8 }}>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} style={{ height: 96, borderRadius: 12 }} />
+        <Card>
+          <View style={{ gap: 8, alignItems: 'center' }}>
+            <Text style={{ fontWeight: '600' }}>Attendance</Text>
+            <Text style={{ color: '#6B7280' }}>Enter the code you see on the board:</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {digits.map((d, i) => (
+                <TextInput
+                  key={i}
+                  ref={inputRefs[i]}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  value={d}
+                  onChangeText={(v) => onDigitChange(i, v)}
+                  style={{ width: 48, height: 48, textAlign: 'center', fontSize: 20 }}
+                />
               ))}
             </View>
-          ) : sections.length === 0 ? (
-            <View style={{ alignItems: 'center', padding: 16 }}>
-              <Text style={{ fontWeight: '600' }}>No courses yet</Text>
-              <Text style={{ color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
-                Your instructor hasn’t added you to any courses yet.
-              </Text>
-            </View>
-          ) : (
-            <View style={{ gap: 12 }}>
-              {sections.map((s) => (
-                <Card key={s.id}>
-                  <Text style={{ fontWeight: '600' }}>{s.title}</Text>
-                </Card>
-              ))}
-            </View>
-          )}
-        </View>
-      </Card>
-
-      <Card>
-        {!interactive ? (
-          <View style={{ padding: 12, borderStyle: 'dashed', borderWidth: 2, borderRadius: 12, borderColor: 'rgba(0,0,0,0.12)' }}>
-            <Text style={{ textAlign: 'center', color: '#475569' }}>Your instructors have not started any live activities yet...</Text>
+            {confirmMsg ? <Text style={{ color: '#166534' }}>{confirmMsg}</Text> : null}
+            {checkinError && !(blockedUntil && blockedUntil > Date.now()) ? <Text style={{ color: '#991B1B' }}>{checkinError}</Text> : null}
+            <Button onPress={() => router.push('/my-attendance')}>My attendance →</Button>
           </View>
-        ) : interactive.kind === 'slideshow' ? (
+        </Card>
+
+        <Card>
           <View style={{ gap: 8 }}>
-            <Text style={{ fontWeight: '600', textAlign: 'center' }}>Activities</Text>
-            {(interactive.showOnDevices ?? false) ? (
-              <Button onPress={() => router.push(`/slideshow/view/${interactive.sessionId}`)}>View Slides Live →</Button>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ color: '#475569' }}>My courses</Text>
+              <Button onPress={() => { setJoinOpen(true); setJoinCode(''); setJoinError(null); }}>+ Enter Join Code</Button>
+            </View>
+            {!currentUser ? (
+              <View style={{ gap: 8 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} style={{ height: 96, borderRadius: 12 }} />
+                ))}
+              </View>
+            ) : sections.length === 0 ? (
+              <View style={{ alignItems: 'center', padding: 16 }}>
+                <Text style={{ fontWeight: '600' }}>No courses yet</Text>
+                <Text style={{ color: '#6B7280', textAlign: 'center', marginTop: 6 }}>
+                  Your instructor hasn't added you to any courses yet.
+                </Text>
+              </View>
             ) : (
-              <Text style={{ textAlign: 'center', color: '#6B7280' }}>Viewing on your device is disabled.</Text>
+              <View style={{ gap: 12 }}>
+                {sections.map((s) => (
+                  <Card key={s.id}>
+                    <Text style={{ fontWeight: '600' }}>{s.title}</Text>
+                  </Card>
+                ))}
+              </View>
             )}
           </View>
-        ) : interactive.kind === 'wordcloud' ? (
-          <View style={{ gap: 8 }}>
-            <Text style={{ fontWeight: '600', textAlign: 'center' }}>Word Cloud</Text>
-            {interactive.showPromptToStudents && interactive.prompt ? (
-              <Text style={{ textAlign: 'center', color: '#6B7280' }}>{interactive.prompt}</Text>
-            ) : null}
-          </View>
-        ) : interactive.kind === 'poll' ? (
-          <View style={{ gap: 8 }}>
-            <Text style={{ fontWeight: '600', textAlign: 'center' }}>Poll</Text>
-          </View>
-        ) : null}
-      </Card>
+        </Card>
 
+        <Card>
+          {!interactive ? (
+            <View style={{ padding: 12, borderStyle: 'dashed', borderWidth: 2, borderRadius: 12, borderColor: 'rgba(0,0,0,0.12)' }}>
+              <Text style={{ textAlign: 'center', color: '#475569' }}>Your instructors have not started any live activities yet...</Text>
+            </View>
+          ) : interactive.kind === 'slideshow' ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontWeight: '600', textAlign: 'center' }}>Activities</Text>
+              {(interactive.showOnDevices ?? false) ? (
+                <Button onPress={() => router.push(`/slideshow/view/${interactive.sessionId}`)}>View Slides Live →</Button>
+              ) : (
+                <Text style={{ textAlign: 'center', color: '#6B7280' }}>Viewing on your device is disabled.</Text>
+              )}
+            </View>
+          ) : interactive.kind === 'wordcloud' ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontWeight: '600', textAlign: 'center' }}>Word Cloud</Text>
+              {interactive.showPromptToStudents && interactive.prompt ? (
+                <Text style={{ textAlign: 'center', color: '#6B7280' }}>{interactive.prompt}</Text>
+              ) : null}
+            </View>
+          ) : interactive.kind === 'poll' ? (
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontWeight: '600', textAlign: 'center' }}>Poll</Text>
+            </View>
+          ) : null}
+        </Card>
+      </ScrollView>
       <JoinCodeModal
         open={joinOpen}
         onClose={() => setJoinOpen(false)}
@@ -163,7 +164,7 @@ export default function SectionsScreen() {
         }}
         error={joinError}
       />
-    </ScrollView>
+    </>
   );
 }
 
