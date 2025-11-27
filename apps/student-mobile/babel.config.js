@@ -1,19 +1,31 @@
 module.exports = function (api) {
   api.cache(true);
   
-  // Manually require and extract plugins from nativewind/babel
-  // This avoids the issue where Babel tries to use the result object as a plugin
+  // nativewind/babel returns { plugins: [...] } which can't be used as a plugin string
+  // We need to extract the plugins manually
   const nativewindBabel = require('nativewind/babel');
-  const nativewindConfig = nativewindBabel(api);
+  const nativewindResult = nativewindBabel(api);
   
-  // Extract only the plugins array, filter out nulls and worklets (reanimated includes it)
-  const nativewindPlugins = (nativewindConfig.plugins || [])
-    .filter(Boolean)
-    .filter(plugin => {
-      const pluginStr = typeof plugin === 'string' ? plugin : 
-                       (Array.isArray(plugin) && typeof plugin[0] === 'string' ? plugin[0] : '');
-      return !pluginStr.includes('react-native-worklets');
-    });
+  // Carefully extract plugins, ensuring none have .plugins property
+  const nativewindPlugins = [];
+  for (const plugin of (nativewindResult.plugins || [])) {
+    if (!plugin) continue; // Skip null
+    
+    // Check if this plugin string references worklets (reanimated includes it)
+    const pluginStr = typeof plugin === 'string' ? plugin : 
+                     (Array.isArray(plugin) && typeof plugin[0] === 'string' ? plugin[0] : '');
+    if (pluginStr.includes('react-native-worklets')) continue;
+    
+    // Ensure the plugin itself doesn't have a .plugins property
+    if (typeof plugin === 'object' && plugin !== null && !Array.isArray(plugin)) {
+      if ('plugins' in plugin) {
+        // This plugin has .plugins property - skip it
+        continue;
+      }
+    }
+    
+    nativewindPlugins.push(plugin);
+  }
   
   return {
     presets: [
