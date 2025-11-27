@@ -1,20 +1,17 @@
 import * as React from 'react';
-import { StyleSheet, TextInput as RNTextInput, TextInputProps } from 'react-native';
-
-const baseStyle = StyleSheet.create({
-  input: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1
-  }
-});
+import { TextInput as RNTextInput, TextInputProps, TextStyle, ViewStyle } from 'react-native';
 
 export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(function TextInput(props, ref) {
   const { style, ...rest } = props;
   // Default to light mode since Appearance API requires native modules
   const isDark = false;
-  const themedStyle = {
+  
+  // Create base styles as plain objects to avoid mutation issues
+  const baseStyle: TextStyle = {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)',
     backgroundColor: isDark ? '#111827' : 'white',
     color: isDark ? 'white' : 'black'
@@ -23,7 +20,7 @@ export const TextInput = React.forwardRef<RNTextInput, TextInputProps>(function 
   return (
     <RNTextInput
       ref={ref}
-      style={StyleSheet.compose(StyleSheet.compose(baseStyle.input, themedStyle), style)}
+      style={[baseStyle, style]}
       placeholderTextColor={isDark ? 'rgba(255,255,255,0.6)' : '#9CA3AF'}
       {...rest}
     />
