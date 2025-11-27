@@ -3,7 +3,10 @@
   "compilerOptions": {
     "jsx": "react-native"
   },
-  "include": ["app", "./*.ts", "./*.tsx"]
+  "include": [
+    "app",
+    "./*.ts",
+    "./*.tsx",
+    "nativewind-env.d.ts"
+  ]
 }
-
-
