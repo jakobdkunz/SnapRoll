@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { createConvexClient } from '@flamelink/convex-client';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { AuthProvider as StudentAuthProvider } from '@flamelink/student-core';
+import { AuthGuard } from './_components/AuthGuard';
 import '../global.css';
 
 function getEnv() {
@@ -42,6 +43,7 @@ function ConvexWithAuth({ children }: { children?: React.ReactNode }) {
   return (
     <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
       <StudentAuthProvider value={{ isLoaded: clerk.isLoaded, isSignedIn: clerk.isSignedIn }}>
+        <AuthGuard />
         {children}
       </StudentAuthProvider>
     </ConvexProviderWithClerk>
