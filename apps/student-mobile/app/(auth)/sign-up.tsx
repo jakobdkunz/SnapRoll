@@ -3,10 +3,6 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-nati
 import { Card } from '@flamelink/ui-native';
 import { useAuth, useOAuth } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-
-// Complete the OAuth flow in the browser
-WebBrowser.maybeCompleteAuthSession();
 
 export default function SignUpScreen() {
   const { isLoaded, isSignedIn } = useAuth();
