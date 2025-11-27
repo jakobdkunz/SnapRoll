@@ -12,6 +12,7 @@ export function Modal({ open, onClose, children }: Props) {
 
   // Use absolute positioning overlay as a workaround for native Modal issues
   // This works without requiring native modules to be linked
+  // Note: When used inside a ScrollView, this will be positioned relative to the ScrollView
   return (
     <View
       style={{
