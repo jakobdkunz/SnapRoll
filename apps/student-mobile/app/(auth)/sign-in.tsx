@@ -1,19 +1,16 @@
 import * as React from 'react';
 import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { Button, Card, TextInput } from '@flamelink/ui-native';
-import { useAuth, useOAuth } from '@clerk/clerk-expo';
+import { useAuth, useSignIn } from '@clerk/clerk-expo';
 import { router } from 'expo-router';
 
 export default function SignInScreen() {
   const { isLoaded, isSignedIn } = useAuth();
+  const { signIn, setActive, isLoaded: signInLoaded } = useSignIn();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-
-  // OAuth strategies
-  const { startOAuthFlow: startGoogleOAuth } = useOAuth({ strategy: 'oauth_google' });
-  const { startOAuthFlow: startAppleOAuth } = useOAuth({ strategy: 'oauth_apple' });
 
   React.useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -21,19 +18,26 @@ export default function SignInScreen() {
     }
   }, [isLoaded, isSignedIn]);
 
-  const handleOAuth = async (strategy: 'oauth_google' | 'oauth_apple') => {
+  const handleSignIn = async () => {
+    if (!signInLoaded || !email || !password) return;
+    
     try {
       setLoading(true);
       setError(null);
-      const startOAuth = strategy === 'oauth_google' ? startGoogleOAuth : startAppleOAuth;
-      const { createdSessionId, setActive } = await startOAuth();
       
-      if (createdSessionId) {
-        await setActive!({ session: createdSessionId });
+      const result = await signIn.create({
+        identifier: email,
+        password,
+      });
+
+      if (result.status === 'complete') {
+        await setActive!({ session: result.createdSessionId });
         router.replace('/sections');
+      } else {
+        setError('Sign in incomplete. Please try again.');
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.message || 'Authentication failed');
+      setError(err?.errors?.[0]?.message || 'Sign in failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -66,42 +70,6 @@ export default function SignInScreen() {
             )}
 
             <View style={{ gap: 12 }}>
-              <Pressable
-                onPress={() => !loading && handleOAuth('oauth_google')}
-                disabled={loading}
-                style={({ pressed }) => [
-                  { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#4285F4', borderRadius: 10, opacity: loading || pressed ? 0.7 : 1 }
-                ]}
-              >
-                {loading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={{ color: 'white', fontWeight: '600', textAlign: 'center' }}>Continue with Google</Text>
-                )}
-              </Pressable>
-
-              <Pressable
-                onPress={() => !loading && handleOAuth('oauth_apple')}
-                disabled={loading}
-                style={({ pressed }) => [
-                  { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#000000', borderRadius: 10, opacity: loading || pressed ? 0.7 : 1 }
-                ]}
-              >
-                {loading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={{ color: 'white', fontWeight: '600', textAlign: 'center' }}>Continue with Apple</Text>
-                )}
-              </Pressable>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
-              <Text style={{ color: '#6B7280' }}>OR</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#E5E7EB' }} />
-            </View>
-
-            <View style={{ gap: 12 }}>
               <View style={{ gap: 4 }}>
                 <Text style={{ color: '#374151', fontWeight: '500' }}>Email</Text>
                 <TextInput
@@ -127,18 +95,10 @@ export default function SignInScreen() {
               </View>
 
               <Pressable
-                onPress={async () => {
-                  if (loading || !email || !password) return;
-                  setError(null);
-                  setLoading(true);
-                  // Note: Email/password sign-in requires Clerk's signIn method
-                  // This is a placeholder - you may need to implement this based on your Clerk setup
-                  setError('Email/password sign-in not yet configured. Please use OAuth.');
-                  setLoading(false);
-                }}
-                disabled={loading || !email || !password}
+                onPress={handleSignIn}
+                disabled={loading || !email || !password || !signInLoaded}
                 style={({ pressed }) => [
-                  { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#2563EB', borderRadius: 10, opacity: (loading || !email || !password || pressed) ? 0.7 : 1 }
+                  { paddingVertical: 12, paddingHorizontal: 16, backgroundColor: '#2563EB', borderRadius: 10, opacity: (loading || !email || !password || !signInLoaded || pressed) ? 0.7 : 1 }
                 ]}
               >
                 {loading ? (
