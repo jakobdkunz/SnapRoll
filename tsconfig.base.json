@@ -19,7 +19,9 @@
       "@flamelink/ui": ["packages/ui/src"],
       "@flamelink/lib": ["packages/lib/src"],
       "@flamelink/convex-client": ["packages/convex-client/src"],
-      "@flamelink/config": ["packages/config/src"]
+      "@flamelink/config": ["packages/config/src"],
+      "@flamelink/ui-native": ["packages/ui-native/src"],
+      "@flamelink/student-core": ["packages/student-core/src"]
     }
   }
 }
