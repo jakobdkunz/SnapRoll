@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { createConvexClient } from '@flamelink/convex-client';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { AuthProvider as StudentAuthProvider } from '@flamelink/student-core';
+import '../global.css';
 
 function getEnv() {
   const extra = (Constants?.expoConfig?.extra ?? {}) as { convexUrl?: string; clerkPublishableKey?: string };

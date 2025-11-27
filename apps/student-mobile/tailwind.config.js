@@ -5,6 +5,7 @@ module.exports = {
     '../../packages/ui-native/src/**/*.{js,jsx,ts,tsx}',
     '../../packages/student-core/src/**/*.{js,jsx,ts,tsx}'
   ],
+  presets: [require('nativewind/preset')],
   theme: {
     extend: {}
   },
