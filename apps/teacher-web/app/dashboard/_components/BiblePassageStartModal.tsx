@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Modal, Button, TextInput } from '@flamelink/ui';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 
@@ -26,8 +26,15 @@ const BIBLE_BOOKS = [
 
 const TRANSLATIONS = [
   { id: "web", label: "World English Bible (WEB)" },
+  { id: "webbe", label: "World English Bible, British Edition (WEBBE)" },
+  { id: "oeb-us", label: "Open English Bible (US)" },
+  { id: "oeb-cw", label: "Open English Bible (Commonwealth)" },
   { id: "kjv", label: "King James Version (KJV)" },
   { id: "asv", label: "American Standard Version (ASV)" },
+  { id: "bbe", label: "Bible in Basic English (BBE)" },
+  { id: "darby", label: "Darby Bible" },
+  { id: "dra", label: "Douay-Rheims 1899 American Edition" },
+  { id: "ylt", label: "Young's Literal Translation (YLT, NT only)" },
 ];
 
 export default function BiblePassageStartModal({
@@ -52,7 +59,7 @@ export default function BiblePassageStartModal({
     sectionId ? { id: sectionId as Id<'sections'> } : 'skip'
   ) as { title?: string } | null | undefined;
 
-  const startBible = useMutation(api.functions.bible.startBiblePassage);
+  const startBible = useAction(api.functions.bible.startBiblePassage);
 
   const visible = open && !!sectionId;
 
