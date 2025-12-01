@@ -65,12 +65,24 @@ export const getActiveInteractive = query({
       return all;
     })();
 
-    type SessionTable = "wordCloudSessions" | "pollSessions" | "slideshowSessions";
+    const biblePassages = await (async () => {
+      const all: Array<{ _id: Id<"biblePassageSessions">; sectionId: Id<"sections">; reference: string; translationId: string; translationName: string; text: string; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>> = [];
+      for (const sid of sectionIds) {
+        const row = await ctx.db
+          .query("biblePassageSessions")
+          .withIndex("by_section_active", (q) => q.eq("sectionId", sid).eq("closedAt", undefined))
+          .first();
+        if (row) all.push(row as any);
+      }
+      return all;
+    })();
+
+    type SessionTable = "wordCloudSessions" | "pollSessions" | "slideshowSessions" | "biblePassageSessions";
     type AnySession = { _id: Id<SessionTable>; sectionId: Id<"sections">; createdAt: number; instructorLastSeenAt?: number } & Record<string, unknown>;
     const toLastSeen = (s: AnySession) => (s.instructorLastSeenAt ?? s.createdAt);
     const notStale = (s: AnySession) => (now - toLastSeen(s)) <= STALE_MS;
 
-    const candidates: Array<{ kind: 'wordcloud'|'poll'|'slideshow'; session: AnySession }> = [];
+    const candidates: Array<{ kind: 'wordcloud'|'poll'|'slideshow'|'bible'; session: AnySession }> = [];
     for (const wc of wordClouds) if (notStale(wc)) candidates.push({ kind: 'wordcloud', session: wc as AnySession });
     for (const p of polls) if (notStale(p)) candidates.push({ kind: 'poll', session: p as AnySession });
     for (const ss of slideshows) {
@@ -94,6 +106,11 @@ export const getActiveInteractive = query({
         if (!lastSlide) continue;
       }
       candidates.push({ kind: 'slideshow', session: ss as AnySession });
+    }
+
+    for (const bp of biblePassages) {
+      if (!notStale(bp)) continue;
+      candidates.push({ kind: 'bible', session: bp as AnySession });
     }
 
     if (candidates.length === 0) return null;
@@ -149,11 +166,23 @@ export const getActiveInteractive = query({
         hasSubmitted: Boolean(existingPoll),
       } as const;
     }
+    if (top.kind === 'slideshow') {
+      return {
+        kind: 'slideshow' as const,
+        sessionId: top.session._id,
+        currentSlide: top.session.currentSlide,
+        showOnDevices: top.session.showOnDevices,
+        sectionId: top.session.sectionId,
+      };
+    }
+    // bible passage
     return {
-      kind: 'slideshow' as const,
+      kind: 'bible' as const,
       sessionId: top.session._id,
-      currentSlide: top.session.currentSlide,
-      showOnDevices: top.session.showOnDevices,
+      reference: top.session.reference,
+      translationId: top.session.translationId,
+      translationName: top.session.translationName,
+      text: top.session.text,
       sectionId: top.session.sectionId,
     };
     } catch (err) {

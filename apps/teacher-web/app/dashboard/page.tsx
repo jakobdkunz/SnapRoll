@@ -11,6 +11,7 @@ import type { Doc } from '../../../../convex/_generated/dataModel';
 import WordCloudStartModal from './_components/WordCloudStartModal';
 import PollStartModal from './_components/PollStartModal';
 import SlideshowPresentModal from './_components/SlideshowPresentModal';
+import BiblePassageStartModal from './_components/BiblePassageStartModal';
 
 type SectionDoc = Doc<'sections'>;
 
@@ -44,6 +45,8 @@ export default function DashboardPage() {
   const [pollSectionId, setPollSectionId] = useState<Id<'sections'> | null>(null);
   const [slideOpen, setSlideOpen] = useState(false);
   const [slideSectionId, setSlideSectionId] = useState<Id<'sections'> | null>(null);
+  const [bibleOpen, setBibleOpen] = useState(false);
+  const [bibleSectionId, setBibleSectionId] = useState<Id<'sections'> | null>(null);
 
   // Convex mutations
   const createSection = useMutation(api.functions.sections.create);
@@ -262,6 +265,18 @@ export default function DashboardPage() {
                         <div data-interact-menu={openMenuFor===s._id? 'open':'closed'} className="absolute z-50 top-full left-0 mt-1 w-48 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-lg">
                           <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setWcSectionId(s._id); setWcOpen(true); setOpenMenuFor(null); }}>Start Word Cloud</button>
                           <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setPollSectionId(s._id as Id<'sections'>); setPollOpen(true); setOpenMenuFor(null); }}>Start Poll</button>
+                          {(process.env.NEXT_PUBLIC_ENABLE_BIBLE_ACTIVITY ?? 'false') === 'true' && (
+                            <button
+                              className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                              onClick={() => {
+                                setBibleSectionId(s._id as Id<'sections'>);
+                                setBibleOpen(true);
+                                setOpenMenuFor(null);
+                              }}
+                            >
+                              Bible Passage
+                            </button>
+                          )}
                           {(process.env.NEXT_PUBLIC_ENABLE_SLIDESHOW ?? 'false') === 'true' && (
                             <button className="w-full text-left px-3 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-800" onClick={() => { setSlideSectionId(s._id as Id<'sections'>); setSlideOpen(true); setOpenMenuFor(null); }}>Present Slideshow</button>
                           )}
@@ -467,6 +482,7 @@ export default function DashboardPage() {
       <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId} />
       <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
       <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId} />
+      <BiblePassageStartModal open={bibleOpen} onClose={() => setBibleOpen(false)} sectionId={bibleSectionId} />
     </div>
   );
 }

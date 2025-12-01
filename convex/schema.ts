@@ -97,8 +97,11 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
+    // Legacy field from earlier participation design; kept optional for back-compat
+    points: v.optional(v.number()),
     // Whether this session should count toward Participation Credit
-    countsForParticipation: v.boolean(),
+    // Back-compat: make optional so older sessions without this field remain valid
+    countsForParticipation: v.optional(v.boolean()),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),
@@ -122,8 +125,11 @@ export default defineSchema({
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),
+    // Legacy field from earlier participation design; kept optional for back-compat
+    points: v.optional(v.number()),
     // Whether this session should count toward Participation Credit
-    countsForParticipation: v.boolean(),
+    // Back-compat: make optional so older sessions without this field remain valid
+    countsForParticipation: v.optional(v.boolean()),
   })
     .index("by_section", ["sectionId"])
     .index("by_section_active", ["sectionId", "closedAt"]),
@@ -188,6 +194,20 @@ export default defineSchema({
     blockedUntil: v.optional(v.number()),
   })
     .index("by_user_key", ["userId", "key"]) ,
+
+  // Bible passage live activity sessions
+  biblePassageSessions: defineTable({
+    sectionId: v.id("sections"),
+    reference: v.string(), // e.g., "John 3:16-18"
+    translationId: v.string(), // e.g., "web", "kjv"
+    translationName: v.string(), // Human-readable translation name
+    text: v.string(), // Full passage text as returned by the API
+    createdAt: v.number(),
+    closedAt: v.optional(v.number()),
+    instructorLastSeenAt: v.optional(v.number()),
+  })
+    .index("by_section", ["sectionId"])
+    .index("by_section_active", ["sectionId", "closedAt"]),
 
   // Gamification: Points opportunities (attendance day, poll session, word cloud session)
   pointsOpportunities: defineTable({

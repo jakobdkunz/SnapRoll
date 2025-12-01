@@ -201,6 +201,7 @@ export default function SectionsPage() {
     | { kind: 'wordcloud'; sessionId: string; sectionId?: string; prompt?: string; showPromptToStudents?: boolean; allowMultipleAnswers?: boolean; hasSubmitted?: boolean }
     | { kind: 'poll'; sessionId: string; sectionId?: string; prompt?: string; options: string[]; hasSubmitted?: boolean }
     | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean }
+    | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string }
   >(undefined);
   useEffect(() => {
     // Keep current UI while refetching
@@ -242,6 +243,18 @@ export default function SectionsPage() {
           sessionId: String(anyInt['sessionId']),
           sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
           showOnDevices: typeof anyInt['showOnDevices'] === 'boolean' ? (anyInt['showOnDevices'] as boolean) : undefined,
+        });
+        return;
+      }
+      if (anyInt['kind'] === 'bible') {
+        setRenderInteractive({
+          kind: 'bible',
+          sessionId: String(anyInt['sessionId']),
+          sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
+          reference: typeof anyInt['reference'] === 'string' ? (anyInt['reference'] as string) : undefined,
+          translationId: typeof anyInt['translationId'] === 'string' ? (anyInt['translationId'] as string) : undefined,
+          translationName: typeof anyInt['translationName'] === 'string' ? (anyInt['translationName'] as string) : undefined,
+          text: typeof anyInt['text'] === 'string' ? (anyInt['text'] as string) : undefined,
         });
         return;
       }
@@ -521,6 +534,8 @@ export default function SectionsPage() {
               <div className="text-slate-600 text-sm text-center">Viewing on your device is disabled.</div>
             )}
           </div>
+        ) : renderInteractive.kind === 'bible' ? (
+          <BibleStudentWidget interactive={renderInteractive} />
         ) : null}
         </div>
       </Card>
@@ -632,5 +647,75 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
         )}
       </Card>
     </Modal>
+  );
+}
+
+function BibleStudentWidget({
+  interactive,
+}: {
+  interactive: {
+    kind: 'bible';
+    sessionId: string;
+    sectionId?: string;
+    reference?: string;
+    translationId?: string;
+    translationName?: string;
+    text?: string;
+  };
+}) {
+  const reference = interactive.reference || '';
+  const translationName = interactive.translationName || '';
+  const text = (interactive.text || '').trim();
+
+  const basePreviewChars = 320;
+  const preview =
+    text.length > basePreviewChars ? text.slice(0, basePreviewChars).trimEnd() + '…' : text;
+
+  const externalUrl = (() => {
+    const base = 'https://www.biblegateway.com/passage/';
+    const params = new URLSearchParams();
+    params.set('search', (reference || '').replace(/\s+/g, '+'));
+    const version = (interactive.translationId || '').toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
+    params.set('version', version);
+    return `${base}?${params.toString()}`;
+  })();
+
+  return (
+    <div className="space-y-3">
+      <div className="text-center">
+        <div className="font-medium">Bible Passage</div>
+        {reference && (
+          <div className="text-neutral-600 dark:text-neutral-300 text-sm mt-0.5">
+            {reference}
+            {translationName ? ` · ${translationName}` : null}
+          </div>
+        )}
+      </div>
+      <details className="group rounded-xl bg-white/85 dark:bg-neutral-900/85 border border-neutral-200 dark:border-neutral-800 shadow-soft p-4 max-h-64 overflow-hidden">
+        <summary className="list-none flex items-center justify-between gap-2 cursor-pointer select-none">
+          <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">
+            Passage (tap to expand)
+          </span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 group-open:hidden">
+            Showing first part
+          </span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 hidden group-open:inline">
+            Showing full passage
+          </span>
+        </summary>
+        <div className="mt-3 text-sm text-neutral-900 dark:text-neutral-100 leading-relaxed whitespace-pre-wrap">
+          {text ? text : 'Passage loading…'}
+        </div>
+      </details>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-neutral-600 dark:text-neutral-400">
+        <div className="hidden sm:block max-w-xs line-clamp-2">{preview}</div>
+        <button
+          className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline self-start sm:self-auto"
+          onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
+        >
+          View full passage →
+        </button>
+      </div>
+    </div>
   );
 }

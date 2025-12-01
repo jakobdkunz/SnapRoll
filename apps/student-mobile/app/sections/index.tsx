@@ -148,16 +148,22 @@ export default function SectionsScreen() {
 
         <Card>
           {!interactive ? (
-            <View style={{ padding: 12, borderStyle: 'dashed', borderWidth: 2, borderRadius: 12, borderColor: 'rgba(0,0,0,0.12)' }}>
-              <Text style={{ textAlign: 'center', color: '#475569' }}>Your instructors have not started any live activities yet...</Text>
+            <View style={{ padding: 12, borderStyle: 'dashed', borderWidth: 2, borderRadius: 12, borderColor: 'rgba(148,163,184,0.4)' }}>
+              <Text style={{ textAlign: 'center', color: '#475569' }}>
+                Your instructors have not started any live activities yet...
+              </Text>
             </View>
           ) : interactive.kind === 'slideshow' ? (
             <View style={{ gap: 8 }}>
               <Text style={{ fontWeight: '600', textAlign: 'center' }}>Activities</Text>
               {(interactive.showOnDevices ?? false) ? (
-                <Button onPress={() => router.push(`/slideshow/view/${interactive.sessionId}`)}>View Slides Live →</Button>
+                <Button onPress={() => router.push(`/slideshow/view/${interactive.sessionId}`)}>
+                  View Slides Live →
+                </Button>
               ) : (
-                <Text style={{ textAlign: 'center', color: '#6B7280' }}>Viewing on your device is disabled.</Text>
+                <Text style={{ textAlign: 'center', color: '#6B7280' }}>
+                  Viewing on your device is disabled.
+                </Text>
               )}
             </View>
           ) : interactive.kind === 'wordcloud' ? (
@@ -171,6 +177,8 @@ export default function SectionsScreen() {
             <View style={{ gap: 8 }}>
               <Text style={{ fontWeight: '600', textAlign: 'center' }}>Poll</Text>
             </View>
+          ) : interactive.kind === 'bible' ? (
+            <BibleMobileWidget interactive={interactive} />
           ) : null}
         </Card>
       </ScrollView>
@@ -223,6 +231,77 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
         </View>
       </Card>
     </Modal>
+  );
+}
+
+function BibleMobileWidget({
+  interactive,
+}: {
+  interactive: {
+    kind: 'bible';
+    sessionId: string;
+    sectionId?: string;
+    reference?: string;
+    translationId?: string;
+    translationName?: string;
+    text?: string;
+  };
+}) {
+  const reference = interactive.reference || '';
+  const translationName = interactive.translationName || '';
+  const text = (interactive.text || '').trim();
+
+  const previewChars = 240;
+  const preview =
+    text.length > previewChars ? text.slice(0, previewChars).trimEnd() + '…' : text;
+
+  const externalUrl = (() => {
+    const base = 'https://www.biblegateway.com/passage/';
+    const params = new URLSearchParams();
+    params.set('search', (reference || '').replace(/\s+/g, '+'));
+    const version = (interactive.translationId || '').toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
+    params.set('version', version);
+    return `${base}?${params.toString()}`;
+  })();
+
+  const [expanded, setExpanded] = React.useState(false);
+
+  return (
+    <View style={{ gap: 8 }}>
+      <Text style={{ fontWeight: '600', textAlign: 'center' }}>Bible Passage</Text>
+      {reference ? (
+        <Text style={{ textAlign: 'center', color: '#4B5563' }}>
+          {reference}
+          {translationName ? ` · ${translationName}` : ''}
+        </Text>
+      ) : null}
+      <View
+        style={{
+          borderRadius: 12,
+          backgroundColor: 'rgba(248,250,252,0.95)',
+          padding: 12,
+          maxHeight: expanded ? undefined : 180,
+        }}
+      >
+        <Text
+          style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}
+          numberOfLines={expanded ? 0 : 6}
+        >
+          {text || 'Passage loading…'}
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ fontSize: 12, color: '#6B7280', flex: 1, marginRight: 8 }} numberOfLines={2}>
+          {preview}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Button onPress={() => setExpanded((v) => !v)}>
+            {expanded ? 'Collapse' : 'Expand'}
+          </Button>
+          <Button onPress={() => router.push(externalUrl)}>View full →</Button>
+        </View>
+      </View>
+    </View>
   );
 }
 

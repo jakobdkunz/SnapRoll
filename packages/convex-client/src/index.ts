@@ -121,6 +121,14 @@ export const convexApi = {
     getSlides: api.functions.slideshow.getSlides,
   },
 
+  bible: {
+    startBiblePassage: api.functions.bible.startBiblePassage,
+    getActiveBiblePassage: api.functions.bible.getActiveBiblePassage,
+    getBibleSession: api.functions.bible.getBibleSession,
+    closeBiblePassage: api.functions.bible.closeBiblePassage,
+    heartbeat: api.functions.bible.heartbeat,
+  },
+
   // Students functions
   students: {
     getActiveInteractive: api.functions.students.getActiveInteractive,

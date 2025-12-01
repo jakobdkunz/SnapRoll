@@ -12,6 +12,7 @@ const nextConfig = {
   poweredByHeader: false,
   env: {
     NEXT_PUBLIC_DEV_MODE: process.env.NEXT_PUBLIC_DEV_MODE,
+    NEXT_PUBLIC_ENABLE_BIBLE_ACTIVITY: process.env.NEXT_PUBLIC_ENABLE_BIBLE_ACTIVITY,
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -8,7 +8,8 @@ export type InteractiveUI =
   | undefined
   | { kind: 'wordcloud'; sessionId: string; sectionId?: string; prompt?: string; showPromptToStudents?: boolean; allowMultipleAnswers?: boolean; hasSubmitted?: boolean }
   | { kind: 'poll'; sessionId: string; sectionId?: string; prompt?: string; options: string[]; hasSubmitted?: boolean }
-  | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean };
+  | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean }
+  | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string };
 
 export function useActiveInteractive(): InteractiveUI {
   const currentUser = useCurrentUser();
@@ -56,6 +57,17 @@ export function useActiveInteractive(): InteractiveUI {
         sessionId: String(anyInt['sessionId']),
         sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
         showOnDevices: typeof anyInt['showOnDevices'] === 'boolean' ? (anyInt['showOnDevices'] as boolean) : undefined,
+      };
+    }
+    if (anyInt['kind'] === 'bible') {
+      return {
+        kind: 'bible',
+        sessionId: String(anyInt['sessionId']),
+        sectionId: anyInt['sectionId'] ? String(anyInt['sectionId']) : undefined,
+        reference: typeof anyInt['reference'] === 'string' ? (anyInt['reference'] as string) : undefined,
+        translationId: typeof anyInt['translationId'] === 'string' ? (anyInt['translationId'] as string) : undefined,
+        translationName: typeof anyInt['translationName'] === 'string' ? (anyInt['translationName'] as string) : undefined,
+        text: typeof anyInt['text'] === 'string' ? (anyInt['text'] as string) : undefined,
       };
     }
   }
