@@ -671,6 +671,11 @@ function BibleStudentWidget({
 
   const isLong = text.length > 220;
 
+  const fullRef =
+    reference && translationName
+      ? `${reference} · ${translationName}`
+      : reference || translationName || '';
+
   const externalUrl = (() => {
     const base = 'https://www.biblegateway.com/passage/';
     const params = new URLSearchParams();
@@ -728,23 +733,14 @@ function BibleStudentWidget({
       </div>
 
       <Modal open={showFull} onClose={() => setShowFull(false)}>
-        <Card className="p-5 w-[min(92vw,32rem)] max-h-[80vh] overflow-y-auto">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <div className="font-medium mb-0.5">Bible Passage</div>
-              {reference && (
-                <div className="text-neutral-600 dark:text-neutral-300 text-sm">
-                  {reference}
-                  {translationName ? ` · ${translationName}` : null}
-                </div>
-              )}
-            </div>
-            <button
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
-              onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
-            >
-              Full passage on Bible Gateway →
-            </button>
+        <Card className="p-6 w-[min(92vw,40rem)] max-h-[80vh] overflow-y-auto bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
+          <div className="mb-3">
+            <div className="font-medium mb-0.5">Bible Passage</div>
+            {fullRef && (
+              <div className="text-neutral-600 dark:text-neutral-300 text-sm">
+                {fullRef}
+              </div>
+            )}
           </div>
           <div className="space-y-3 text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
             {interactive.versesJson
@@ -785,10 +781,23 @@ function BibleStudentWidget({
                 </p>
               )}
           </div>
-          <div className="mt-4 flex justify-end">
-            <Button variant="ghost" className="text-xs px-3 py-1 h-8" onClick={() => setShowFull(false)}>
-              Close
-            </Button>
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+            <div>{fullRef}</div>
+            <div className="flex items-center gap-3 justify-end">
+              <button
+                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
+                onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
+              >
+                Full passage on Bible Gateway →
+              </button>
+              <Button
+                variant="ghost"
+                className="text-xs px-3 py-1 h-8"
+                onClick={() => setShowFull(false)}
+              >
+                Close
+              </Button>
+            </div>
           </div>
         </Card>
       </Modal>

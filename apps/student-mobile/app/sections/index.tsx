@@ -254,6 +254,11 @@ function BibleMobileWidget({
 
   const isLong = text.length > 220;
 
+  const fullRef =
+    reference && translationName
+      ? `${reference} · ${translationName}`
+      : reference || translationName || '';
+
   const externalUrl = (() => {
     const base = 'https://www.biblegateway.com/passage/';
     const params = new URLSearchParams();
@@ -327,19 +332,11 @@ function BibleMobileWidget({
       <Modal open={showFull} onClose={() => setShowFull(false)}>
         <Card>
           <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flexShrink: 1, paddingRight: 8 }}>
-                <Text style={{ fontWeight: '600' }}>Bible Passage</Text>
-                {reference ? (
-                  <Text style={{ color: '#4B5563', marginTop: 2 }}>
-                    {reference}
-                    {translationName ? ` · ${translationName}` : ''}
-                  </Text>
-                ) : null}
-              </View>
-              <Button onPress={() => router.push(externalUrl)}>
-                Full passage on Bible Gateway
-              </Button>
+            <View>
+              <Text style={{ fontWeight: '600' }}>Bible Passage</Text>
+              {fullRef ? (
+                <Text style={{ color: '#4B5563', marginTop: 2 }}>{fullRef}</Text>
+              ) : null}
             </View>
             {interactive.versesJson ? (
               (() => {
@@ -421,8 +418,23 @@ function BibleMobileWidget({
                 {text || 'Passage loading…'}
               </Text>
             )}
-            <View style={{ alignItems: 'flex-end' }}>
-              <Button onPress={() => setShowFull(false)}>Close</Button>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: '#6B7280', flex: 1, paddingRight: 8 }}>
+                {fullRef}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Button onPress={() => router.push(externalUrl)}>
+                  Full passage on Bible Gateway
+                </Button>
+                <Button onPress={() => setShowFull(false)}>Close</Button>
+              </View>
             </View>
           </ScrollView>
         </Card>
