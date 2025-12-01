@@ -740,14 +740,14 @@ function BibleStudentWidget({
       </div>
 
       <Modal open={showFull} onClose={() => setShowFull(false)}>
-        <div className="relative w-[min(92vw,48rem)] max-h-[80vh]">
+        <div className="relative w-[min(92vw,48rem)] max-h-[80vh] rounded-2xl overflow-hidden">
           {gradientClass && (
             <>
               <div
                 className={`pointer-events-none absolute inset-0 ${gradientClass}`}
-                style={{ opacity: 0.3 }}
+                style={{ opacity: 0.7 }}
               />
-              <div className="pointer-events-none absolute inset-0 bg-white/35 dark:bg-neutral-950/60" />
+              <div className="pointer-events-none absolute inset-0 bg-white/70 dark:bg-neutral-950/85" />
               <div
                 className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]"
                 style={{
@@ -773,7 +773,7 @@ function BibleStudentWidget({
           <button
             type="button"
             aria-label="Close"
-            className="absolute top-3 right-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-neutral-500 hover:bg-white hover:text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
+            className="absolute top-3 right-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 shadow-sm dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             onClick={() => setShowFull(false)}
           >
             ✕
