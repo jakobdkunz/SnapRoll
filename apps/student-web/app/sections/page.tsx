@@ -705,7 +705,7 @@ function BibleStudentWidget({
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
             onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
           >
-            Full passage on Bible Gateway →
+            View full passage on Bible Gateway →
           </button>
         </div>
         <div className="relative mt-2">
@@ -733,7 +733,7 @@ function BibleStudentWidget({
       </div>
 
       <Modal open={showFull} onClose={() => setShowFull(false)}>
-        <Card className="p-6 w-[min(92vw,40rem)] max-h-[80vh] overflow-y-auto bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
+        <Card className="p-6 w-[min(92vw,48rem)] max-h-[80vh] overflow-y-auto bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
           <div className="mb-3">
             <div className="font-medium mb-0.5">Bible Passage</div>
             {fullRef && (
@@ -742,7 +742,7 @@ function BibleStudentWidget({
               </div>
             )}
           </div>
-          <div className="space-y-3 text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
+          <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">
             {interactive.versesJson
               ? (() => {
                   try {
@@ -760,7 +760,7 @@ function BibleStudentWidget({
                     return verses.map((v, idx) => (
                       <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
                         {typeof v.verse !== 'undefined' && (
-                          <sup className="align-super text-[0.65rem] text-neutral-500 mr-1">
+                          <sup className="align-super text-xs text-neutral-500 mr-1">
                             {String(v.verse)}
                           </sup>
                         )}
@@ -781,14 +781,14 @@ function BibleStudentWidget({
                 </p>
               )}
           </div>
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400">
             <div>{fullRef}</div>
             <div className="flex items-center gap-3 justify-end">
               <button
                 className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
                 onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
               >
-                Full passage on Bible Gateway →
+                View full passage on Bible Gateway →
               </button>
               <Button
                 variant="ghost"
