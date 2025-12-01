@@ -123,6 +123,7 @@ export const convexApi = {
 
   bible: {
     startBiblePassage: api.functions.bible.startBiblePassage,
+    updateBiblePassage: api.functions.bible.updateBiblePassage,
     getActiveBiblePassage: api.functions.bible.getActiveBiblePassage,
     getBibleSession: api.functions.bible.getBibleSession,
     closeBiblePassage: api.functions.bible.closeBiblePassage,

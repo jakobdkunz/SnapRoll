@@ -162,6 +162,71 @@ export const startBiblePassage = action({
   },
 });
 
+// Internal core mutation to update an existing Bible passage session in-place.
+export const _updateBibleSessionCore = internalMutation({
+  args: {
+    sessionId: v.id("biblePassageSessions"),
+    reference: v.string(),
+    translationId: v.string(),
+    translationName: v.string(),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Bible passage session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
+    await ctx.db.patch(args.sessionId, {
+      reference: args.reference,
+      translationId: args.translationId,
+      translationName: args.translationName,
+      text: args.text,
+      instructorLastSeenAt: Date.now(),
+    });
+    return args.sessionId;
+  },
+});
+
+// Public action to update the passage for an existing session without restarting it.
+export const updateBiblePassage = action({
+  args: {
+    sessionId: v.id("biblePassageSessions"),
+    bookAndRange: v.string(),
+    translationId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const reference = (args.bookAndRange || "").trim();
+    if (reference.length === 0 || reference.length > 80) {
+      throw new Error("Reference must be 1–80 characters.");
+    }
+
+    const { id: translationId, name: translationName } = resolveTranslation(
+      args.translationId ?? undefined
+    );
+
+    let text: string;
+    try {
+      text = await fetchBiblePassage(reference, translationId);
+    } catch (e) {
+      const msg =
+        e instanceof Error && e.message
+          ? e.message
+          : "Unable to fetch passage from the Bible API. Please try again.";
+      throw new Error(msg);
+    }
+
+    const sessionId = await ctx.runMutation(api.functions.bible._updateBibleSessionCore, {
+      sessionId: args.sessionId,
+      reference,
+      translationId,
+      translationName,
+      text,
+    });
+
+    return sessionId;
+  },
+});
+
 export const getActiveBiblePassage = query({
   args: { sectionId: v.id("sections") },
   handler: async (ctx, args) => {

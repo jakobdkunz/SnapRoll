@@ -1,16 +1,25 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from '@flamelink/ui';
+import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@clerk/nextjs';
+import BiblePassageStartModal from '../../../dashboard/_components/BiblePassageStartModal';
+
+function toChapterReference(reference: string): string {
+  const ref = reference.trim();
+  const idx = ref.indexOf(':');
+  if (idx === -1) return ref;
+  return ref.slice(0, idx);
+}
 
 function buildExternalUrl(reference: string, translationId: string | undefined) {
   const base = 'https://www.biblegateway.com/passage/';
   const params = new URLSearchParams();
-  params.set('search', reference.trim());
+  params.set('search', toChapterReference(reference));
   const version = translationId?.toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
   params.set('version', version);
   return `${base}?${params.toString()}`;
@@ -43,6 +52,7 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
 
   const heartbeat = useMutation(api.functions.bible.heartbeat);
   const close = useMutation(api.functions.bible.closeBiblePassage);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!authReady) return;
@@ -144,18 +154,28 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
           >
             ← Back
           </button>
-          <div className="flex-1 text-center">
-            {section?.title && (
-              <div className="text-sm text-neutral-700 dark:text-neutral-300 truncate mb-1">
-                {section.title}
+          <div className="flex-1 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setEditOpen(true)}
+              className="inline-flex flex-col items-center gap-1 px-3 py-1 rounded-lg hover:bg-white/70 dark:hover:bg-neutral-900/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 group"
+              aria-label="Edit Bible passage"
+            >
+              {section?.title && (
+                <div className="text-sm text-neutral-700 dark:text-neutral-300 truncate max-w-xs">
+                  {section.title}
+                </div>
+              )}
+              <div className="inline-flex items-center justify-center gap-2">
+                <span className="text-2xl sm:text-3xl md:text-4xl font-semibold text-neutral-900 dark:text-neutral-50">
+                  {session.reference}
+                </span>
+                <HiOutlinePencilSquare className="h-5 w-5 text-neutral-400 group-hover:text-neutral-600 dark:text-neutral-500 dark:group-hover:text-neutral-300" />
               </div>
-            )}
-            <div className="text-2xl sm:text-3xl md:text-4xl font-semibold text-neutral-900 dark:text-neutral-50">
-              {session.reference}
-            </div>
-            <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-              {session.translationName}
-            </div>
+              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+                {session.translationName}
+              </div>
+            </button>
           </div>
           <div className="w-[112px]" />
         </div>
@@ -182,6 +202,15 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
           </div>
         </Card>
       </div>
+
+      <BiblePassageStartModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        sectionId={session.sectionId}
+        sessionId={session._id}
+        initialReference={session.reference}
+        initialTranslationId={session.translationId}
+      />
     </div>
   );
 }

@@ -251,57 +251,105 @@ function BibleMobileWidget({
   const translationName = interactive.translationName || '';
   const text = (interactive.text || '').trim();
 
-  const previewChars = 240;
-  const preview =
-    text.length > previewChars ? text.slice(0, previewChars).trimEnd() + '…' : text;
+  const isLong = text.length > 220;
 
   const externalUrl = (() => {
     const base = 'https://www.biblegateway.com/passage/';
     const params = new URLSearchParams();
-    params.set('search', (reference || '').trim());
+    const ref = (reference || '').trim();
+    const idx = ref.indexOf(':');
+    const chapterRef = idx === -1 ? ref : ref.slice(0, idx);
+    params.set('search', chapterRef);
     const version = (interactive.translationId || '').toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
     params.set('version', version);
     return `${base}?${params.toString()}`;
   })();
 
-  const [expanded, setExpanded] = React.useState(false);
+  const [showFull, setShowFull] = React.useState(false);
 
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={{ fontWeight: '600', textAlign: 'center' }}>Bible Passage</Text>
-      {reference ? (
-        <Text style={{ textAlign: 'center', color: '#4B5563' }}>
-          {reference}
-          {translationName ? ` · ${translationName}` : ''}
-        </Text>
-      ) : null}
-      <View
-        style={{
-          borderRadius: 12,
-          backgroundColor: 'rgba(248,250,252,0.95)',
-          padding: 12,
-          maxHeight: expanded ? undefined : 180,
-        }}
-      >
-        <Text
-          style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}
-          numberOfLines={expanded ? 0 : 6}
-        >
-          {text || 'Passage loading…'}
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={{ fontSize: 12, color: '#6B7280', flex: 1, marginRight: 8 }} numberOfLines={2}>
-          {preview}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Button onPress={() => setExpanded((v) => !v)}>
-            {expanded ? 'Collapse' : 'Expand'}
+    <>
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flexShrink: 1, paddingRight: 8 }}>
+            <Text style={{ fontWeight: '600' }}>Bible Passage</Text>
+            {reference ? (
+              <Text style={{ color: '#4B5563', marginTop: 2 }}>
+                {reference}
+                {translationName ? ` · ${translationName}` : ''}
+              </Text>
+            ) : null}
+          </View>
+          <Button onPress={() => router.push(externalUrl)}>
+            Full passage on Bible Gateway
           </Button>
-          <Button onPress={() => router.push(externalUrl)}>View full →</Button>
         </View>
+        <View
+          style={{
+            borderRadius: 12,
+            backgroundColor: 'rgba(248,250,252,0.95)',
+            padding: 12,
+          }}
+        >
+          <View style={{ position: 'relative' }}>
+            <Text
+              style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}
+              numberOfLines={isLong ? 4 : 0}
+            >
+              {text || 'Passage loading…'}
+            </Text>
+            {isLong ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  flexDirection: 'row',
+                  alignItems: 'flex-end',
+                  paddingLeft: 16,
+                  paddingTop: 16,
+                  backgroundColor: 'rgba(248,250,252,0.85)',
+                }}
+              >
+                <Text style={{ fontSize: 16, color: '#6B7280' }}>…</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+        {isLong ? (
+          <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+            <Button onPress={() => setShowFull(true)}>More</Button>
+          </View>
+        ) : null}
       </View>
-    </View>
+
+      <Modal open={showFull} onClose={() => setShowFull(false)}>
+        <Card>
+          <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flexShrink: 1, paddingRight: 8 }}>
+                <Text style={{ fontWeight: '600' }}>Bible Passage</Text>
+                {reference ? (
+                  <Text style={{ color: '#4B5563', marginTop: 2 }}>
+                    {reference}
+                    {translationName ? ` · ${translationName}` : ''}
+                  </Text>
+                ) : null}
+              </View>
+              <Button onPress={() => router.push(externalUrl)}>
+                Full passage on Bible Gateway
+              </Button>
+            </View>
+            <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+              {text || 'Passage loading…'}
+            </Text>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Button onPress={() => setShowFull(false)}>Close</Button>
+            </View>
+          </ScrollView>
+        </Card>
+      </Modal>
+    </>
   );
 }
 

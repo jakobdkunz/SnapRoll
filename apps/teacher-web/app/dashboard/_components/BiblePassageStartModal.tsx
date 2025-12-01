@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Button, TextInput } from '@flamelink/ui';
 import { useAction, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
@@ -41,10 +41,16 @@ export default function BiblePassageStartModal({
   open,
   onClose,
   sectionId,
+  sessionId,
+  initialReference,
+  initialTranslationId,
 }: {
   open: boolean;
   onClose: () => void;
   sectionId: Id<'sections'> | null;
+  sessionId?: Id<'biblePassageSessions'> | null;
+  initialReference?: string | null;
+  initialTranslationId?: string | null;
 }) {
   const router = useRouter();
   const [bookQuery, setBookQuery] = useState('');
@@ -60,8 +66,39 @@ export default function BiblePassageStartModal({
   ) as { title?: string } | null | undefined;
 
   const startBible = useAction(api.functions.bible.startBiblePassage);
+  const updateBible = useAction(api.functions.bible.updateBiblePassage);
 
   const visible = open && !!sectionId;
+  const isEditing = !!sessionId;
+
+  // When opening (or when the initial reference/translation change), seed the fields.
+  useEffect(() => {
+    if (!open) return;
+    const ref = (initialReference || '').trim();
+    if (ref) {
+      const lastSpace = ref.lastIndexOf(' ');
+      if (lastSpace > 0) {
+        setSelectedBook(ref.slice(0, lastSpace));
+        setBookQuery('');
+        setVerseRange(ref.slice(lastSpace + 1));
+      } else {
+        setSelectedBook(ref);
+        setBookQuery('');
+        setVerseRange('');
+      }
+    } else {
+      setSelectedBook('');
+      setBookQuery('');
+      setVerseRange('');
+    }
+    if (initialTranslationId) {
+      setTranslation(initialTranslationId);
+    } else {
+      setTranslation('web');
+    }
+    setError(null);
+    setWorking(false);
+  }, [open, initialReference, initialTranslationId]);
 
   const normalizedQuery = bookQuery.trim().toLowerCase();
   const matches =
@@ -80,25 +117,38 @@ export default function BiblePassageStartModal({
     }
     try {
       setWorking(true);
-      const sessionId = await (startBible as unknown as (args: {
-        sectionId: Id<'sections'>;
-        bookAndRange: string;
-        translationId: string;
-      }) => Promise<unknown>)({
-        sectionId: sectionId as Id<'sections'>,
-        bookAndRange: fullReference,
-        translationId: translation,
-      });
-      onClose();
-      const idStr =
-        typeof sessionId === 'string'
-          ? sessionId
-          : String((sessionId as unknown as { _id?: string })._id ?? sessionId);
-      if (idStr) {
-        setTimeout(() => router.push(`/bible/live/${idStr}`), 120);
+      if (isEditing && sessionId) {
+        await (updateBible as unknown as (args: {
+          sessionId: Id<'biblePassageSessions'>;
+          bookAndRange: string;
+          translationId: string;
+        }) => Promise<unknown>)({
+          sessionId: sessionId as Id<'biblePassageSessions'>,
+          bookAndRange: fullReference,
+          translationId: translation,
+        });
+        onClose();
+      } else {
+        const createdSessionId = await (startBible as unknown as (args: {
+          sectionId: Id<'sections'>;
+          bookAndRange: string;
+          translationId: string;
+        }) => Promise<unknown>)({
+          sectionId: sectionId as Id<'sections'>,
+          bookAndRange: fullReference,
+          translationId: translation,
+        });
+        onClose();
+        const idStr =
+          typeof createdSessionId === 'string'
+            ? createdSessionId
+            : String((createdSessionId as unknown as { _id?: string })._id ?? createdSessionId);
+        if (idStr) {
+          setTimeout(() => router.push(`/bible/live/${idStr}`), 120);
+        }
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to start Bible passage. Please try again.';
+      const msg = e instanceof Error ? e.message : 'Failed to load Bible passage. Please try again.';
       setError(msg);
     } finally {
       setWorking(false);
