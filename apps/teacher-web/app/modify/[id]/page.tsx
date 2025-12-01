@@ -42,8 +42,8 @@ export default function ModifyPage() {
   // Combine enrollments with student data
   const students = useMemo(() => {
     if (!enrollments || !allStudents) return [];
-    return enrollments.map(enrollment => {
-      const student = allStudents.find(s => s._id === enrollment.studentId);
+    return enrollments.map((enrollment: { studentId: Id<'users'> }) => {
+      const student = allStudents.find((s: { _id: Id<'users'>; email: string; firstName: string; lastName: string }) => s._id === enrollment.studentId);
       return student ? {
         id: student._id,
         email: student.email,
@@ -154,7 +154,7 @@ export default function ModifyPage() {
     try {
       if (!needNames) {
         // Check if student exists by email
-        const existingStudent = allStudents?.find(s => s.email.toLowerCase() === newEmail.trim().toLowerCase());
+        const existingStudent = allStudents?.find((s: { _id: Id<'users'>; email: string; firstName: string; lastName: string }) => s.email.toLowerCase() === newEmail.trim().toLowerCase());
         if (existingStudent) {
           // Student exists, just enroll them
           await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: existingStudent._id });
