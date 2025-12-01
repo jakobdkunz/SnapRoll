@@ -76,7 +76,7 @@ The system supports multiple deployment models, from individual instructor use t
    ```bash
    pnpm install
    ```
-3. Set up environment variables (copy `.env.example` to `.env` and configure from there)
+3. Set up environment variables for each client (copy `.env.example` to `.env` and configure from there)
 4. Initialize Convex:
    ```bash
    pnpm convex:dev
