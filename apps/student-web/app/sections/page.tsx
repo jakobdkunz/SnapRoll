@@ -201,7 +201,7 @@ export default function SectionsPage() {
     | { kind: 'wordcloud'; sessionId: string; sectionId?: string; prompt?: string; showPromptToStudents?: boolean; allowMultipleAnswers?: boolean; hasSubmitted?: boolean }
     | { kind: 'poll'; sessionId: string; sectionId?: string; prompt?: string; options: string[]; hasSubmitted?: boolean }
     | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean }
-    | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string }
+    | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string; versesJson?: string | null }
   >(undefined);
   useEffect(() => {
     // Keep current UI while refetching
@@ -735,27 +735,57 @@ function BibleStudentWidget({
           </button>
         </div>
         <div className="relative mt-2">
-          <div
-            className={`
-              text-sm leading-relaxed text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap
-              ${isLong ? 'max-h-24 overflow-hidden' : ''}
-            `}
-          >
-            {text || 'Passage loading…'}
-          </div>
+          {(() => {
+            // Build preview with verse numbers
+            let previewVerses: Array<{ verse?: number | string; text?: string }> | null = null;
+            if (interactive.versesJson) {
+              try {
+                const parsed = JSON.parse(interactive.versesJson) as Array<{ verse?: number | string; text?: string }>;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  previewVerses = parsed;
+                }
+              } catch {
+                // fallback to text
+              }
+            }
+            if (!previewVerses && fallbackParagraphs.length > 0) {
+              previewVerses = fallbackParagraphs.map((p, idx) => ({
+                verse: startVerse !== null ? startVerse + idx : undefined,
+                text: p,
+              }));
+            }
+            if (!previewVerses) {
+              previewVerses = [{ text: text || 'Passage loading…' }];
+            }
+            return (
+              <div className="text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
+                <span className="line-clamp-2">
+                  {previewVerses.map((v, idx) => (
+                    <span key={`preview-${v.verse ?? idx}`}>
+                      {idx > 0 && ' '}
+                      {typeof v.verse !== 'undefined' && (
+                        <sup className="align-super text-[10px] text-neutral-500 mr-0.5">
+                          {String(v.verse)}
+                        </sup>
+                      )}
+                      {(v.text || '').trim()}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            );
+          })()}
           {isLong && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white dark:from-neutral-900 to-transparent flex justify-end items-end pr-2">
-              <span className="text-sm text-neutral-500 dark:text-neutral-400">…</span>
+            <div className="flex justify-end mt-1">
+              <button
+                className="text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                onClick={() => setShowFull(true)}
+              >
+                … More
+              </button>
             </div>
           )}
         </div>
-        {isLong && (
-          <div className="flex justify-end">
-            <Button variant="ghost" className="text-xs px-2 py-1 h-7" onClick={() => setShowFull(true)}>
-              More
-            </Button>
-          </div>
-        )}
       </div>
 
       <Modal open={showFull} onClose={() => setShowFull(false)}>

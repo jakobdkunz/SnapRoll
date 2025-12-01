@@ -58,7 +58,7 @@ async function fetchBiblePassage(
 
   const json = (await res.json()) as {
     text?: string;
-    verses?: Array<{ text?: string }>;
+    verses?: Array<{ verse?: number; text?: string }>;
   };
 
   let text = "";
