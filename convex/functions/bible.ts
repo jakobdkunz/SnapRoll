@@ -88,6 +88,7 @@ export const _startBibleSessionCore = internalMutation({
     translationId: v.string(),
     translationName: v.string(),
     text: v.string(),
+    versesJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const teacher = await requireTeacher(ctx);
@@ -120,6 +121,7 @@ export const _startBibleSessionCore = internalMutation({
       translationId: args.translationId,
       translationName: args.translationName,
       text: args.text,
+      versesJson: args.versesJson,
       createdAt: Date.now(),
       closedAt: undefined,
       instructorLastSeenAt: undefined,
