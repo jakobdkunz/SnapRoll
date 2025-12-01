@@ -30,56 +30,15 @@ The system supports multiple deployment models, from individual instructor use t
 - **Web applications**: Responsive Next.js applications optimized for desktop (instructor) and mobile-first (student) experiences
 - **Native mobile app**: React Native application for iOS and Android using Expo.
 
-### Technical Architecture
+### Architecture & Stack
 
-- **Real-time sync**: Convex backend provides instant updates across all clients. It pushes updated data to the application in real time via websockets instead of endless polling. Convex abstracts away the need to ever think about state. Highly recommended!
-- **Type-safe API**: End-to-end TypeScript with generated types from database schema
-- **Monorepo structure**: Turborepo-powered workspace with shared packages for UI, utilities, and client libraries
-- **Auth**: Clerk-based authentication with separate instances for instructors and students
-- **Rate limiting**: Built-in protection against abuse with configurable limits and blocking
+**Stack**: Next.js 14 + React 19 (web), React Native + Expo (mobile), Convex (real-time backend), Clerk (auth), Tailwind CSS, TypeScript throughout. Deployed on Vercel (web) and Expo (mobile).
 
-## Technology Stack
+**Monorepo**: Turborepo + pnpm workspaces with `apps/` (teacher-web, student-web, student-mobile) and `packages/` (shared UI, utilities, Convex client, config).
 
-- **Frontend**: Next.js 14, React 19, React Native, Expo
-- **Backend**: Convex (real-time database and serverless functions)
-- **Authentication**: Clerk (for now; a switch to WorkOS is on the roadmap)
-- **Styling**: Tailwind CSS with shared design system
-- **Type Safety**: TypeScript throughout
-- **Build System**: Turborepo, pnpm workspaces
-- **Deployment**: Vercel (web apps), Expo (mobile)
+**Real-time**: Convex pushes updates via websockets—attendance codes, poll results, slideshow navigation, and word clouds all sync instantly across devices.
 
-## An overview on how it all works
-
-### Monorepo Organization
-
-The codebase is organized as a Turborepo monorepo with clear separation of concerns:
-
-- `apps/teacher-web`: Desktop-optimized instructor interface
-- `apps/student-web`: Mobile-first PWA for students
-- `apps/student-mobile`: Native iOS and Android applications
-- `packages/ui`: Shared web UI components (Radix UI + shadcn-style)
-- `packages/ui-native`: Shared React Native components
-- `packages/student-core`: Shared business logic for student-facing apps
-- `packages/convex-client`: Type-safe Convex API client with helper functions
-- `packages/config`: Shared configuration (Tailwind preset, environment variables)
-- `packages/lib`: Shared utilities and helpers
-- `convex/`: Backend schema, functions, and authentication configuration
-
-### Real-Time Data Flow
-
-All interactive features leverage Convex's real-time subscriptions, ensuring that:
-- Attendance codes appear instantly to students
-- Poll results update live as votes are cast
-- Slideshow navigation synchronizes across all student devices
-- Word cloud responses appear in real-time
-
-### Security and Performance
-
-- Rate limiting on attendance check-ins prevents brute force attempts
-- Role-based access control enforced at the database level
-- Optimized database indexes for efficient queries
-- Service worker caching for offline PWA functionality
-- Automatic code expiration for attendance sessions
+**Security**: Rate limiting on check-ins, role-based access control at the database level, automatic code expiration, and service worker caching for offline PWA support.
 
 ## Roadmap
 
