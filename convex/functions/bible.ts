@@ -136,6 +136,7 @@ export const startBiblePassage = action({
     translationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    "use node";
     const reference = (args.bookAndRange || "").trim();
     if (reference.length === 0 || reference.length > 80) {
       throw new Error("Reference must be 1–80 characters.");
@@ -208,6 +209,7 @@ export const updateBiblePassage = action({
     translationId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    "use node";
     const reference = (args.bookAndRange || "").trim();
     if (reference.length === 0 || reference.length > 80) {
       throw new Error("Reference must be 1–80 characters.");
