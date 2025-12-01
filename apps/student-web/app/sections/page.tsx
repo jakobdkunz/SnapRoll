@@ -56,7 +56,7 @@ export default function SectionsPage() {
   // Get sections data (authorized) for the student's enrollments only
   const sectionIds = useMemo(() => {
     if (!enrollments) return null as Id<'sections'>[] | null;
-    return enrollments.map((e) => e.sectionId as Id<'sections'>);
+    return enrollments.map((e: { sectionId: Id<'sections'> }) => e.sectionId as Id<'sections'>);
   }, [enrollments]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
@@ -66,7 +66,7 @@ export default function SectionsPage() {
   // Shape sections for display
   const sections = useMemo(() => {
     if (!sectionsData) return [];
-    return sectionsData.map((section) => ({
+    return sectionsData.map((section: { _id: string; title: string; gradient?: string }) => ({
       id: section._id,
       title: section.title,
       gradient: section.gradient || 'gradient-1'
