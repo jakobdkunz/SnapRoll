@@ -255,6 +255,10 @@ export default function SectionsPage() {
           translationId: typeof anyInt['translationId'] === 'string' ? (anyInt['translationId'] as string) : undefined,
           translationName: typeof anyInt['translationName'] === 'string' ? (anyInt['translationName'] as string) : undefined,
           text: typeof anyInt['text'] === 'string' ? (anyInt['text'] as string) : undefined,
+          versesJson:
+            typeof anyInt['versesJson'] === 'string'
+              ? (anyInt['versesJson'] as string)
+              : null,
         });
         return;
       }
