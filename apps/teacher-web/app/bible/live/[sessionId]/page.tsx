@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { Card, Button } from '@flamelink/ui';
+import { Card } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
@@ -10,7 +10,7 @@ import { useAuth } from '@clerk/nextjs';
 function buildExternalUrl(reference: string, translationId: string | undefined) {
   const base = 'https://www.biblegateway.com/passage/';
   const params = new URLSearchParams();
-  params.set('search', reference.replace(/\s+/g, '+'));
+  params.set('search', reference.trim());
   const version = translationId?.toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
   params.set('version', version);
   return `${base}?${params.toString()}`;
@@ -157,17 +157,7 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
               {session.translationName}
             </div>
           </div>
-          <div className="w-[112px] flex justify-end">
-            <Button
-              variant="ghost"
-              className="truncate px-3 py-1 text-sm h-8"
-              onClick={() => {
-                window.open(externalUrl, '_blank', 'noopener,noreferrer');
-              }}
-            >
-              View full passage
-            </Button>
-          </div>
+          <div className="w-[112px]" />
         </div>
         <Card className="p-6 bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
           <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">

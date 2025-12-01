@@ -674,7 +674,7 @@ function BibleStudentWidget({
   const externalUrl = (() => {
     const base = 'https://www.biblegateway.com/passage/';
     const params = new URLSearchParams();
-    params.set('search', (reference || '').replace(/\s+/g, '+'));
+    params.set('search', (reference || '').trim());
     const version = (interactive.translationId || '').toLowerCase() === 'kjv' ? 'KJV' : 'WEB';
     params.set('version', version);
     return `${base}?${params.toString()}`;
