@@ -778,8 +778,8 @@ function BibleStudentWidget({
           >
             ✕
           </button>
-          <div className="relative z-10">
-            <Card className="p-6 bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
+          <div className="relative z-10 p-4 sm:p-5">
+            <Card className="p-6 bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft max-h-[72vh] overflow-y-auto">
               <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">
                 {interactive.versesJson
                   ? (() => {
