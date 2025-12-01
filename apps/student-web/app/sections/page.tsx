@@ -535,7 +535,12 @@ export default function SectionsPage() {
             )}
           </div>
         ) : renderInteractive.kind === 'bible' ? (
-          <BibleStudentWidget interactive={renderInteractive} />
+          <BibleStudentWidget
+            interactive={renderInteractive}
+            gradientClass={
+              sections.find((s) => s.id === renderInteractive.sectionId)?.gradient || 'gradient-1'
+            }
+          />
         ) : null}
         </div>
       </Card>
@@ -652,6 +657,7 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
 
 function BibleStudentWidget({
   interactive,
+  gradientClass,
 }: {
   interactive: {
     kind: 'bible';
@@ -663,6 +669,7 @@ function BibleStudentWidget({
     text?: string;
     versesJson?: string | null;
   };
+  gradientClass?: string;
 }) {
   const reference = interactive.reference || '';
   const translationName = interactive.translationName || '';
@@ -733,73 +740,99 @@ function BibleStudentWidget({
       </div>
 
       <Modal open={showFull} onClose={() => setShowFull(false)}>
-        <Card className="p-6 w-[min(92vw,48rem)] max-h-[80vh] overflow-y-auto bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
-          <div className="mb-3">
-            <div className="font-medium mb-0.5">Bible Passage</div>
-            {fullRef && (
-              <div className="text-neutral-600 dark:text-neutral-300 text-sm">
-                {fullRef}
-              </div>
-            )}
-          </div>
-          <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">
-            {interactive.versesJson
-              ? (() => {
-                  try {
-                    const verses = JSON.parse(interactive.versesJson as string) as Array<{
-                      verse?: number | string;
-                      text?: string;
-                    }>;
-                    if (!Array.isArray(verses) || verses.length === 0) {
-                      return (
-                        <p className="whitespace-pre-wrap">
-                          {text || 'Passage loading…'}
-                        </p>
-                      );
-                    }
-                    return verses.map((v, idx) => (
-                      <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
-                        {typeof v.verse !== 'undefined' && (
-                          <sup className="align-super text-xs text-neutral-500 mr-1">
-                            {String(v.verse)}
-                          </sup>
-                        )}
-                        {(v.text || '').trim()}
-                      </p>
-                    ));
-                  } catch {
-                    return (
-                      <p className="whitespace-pre-wrap">
-                        {text || 'Passage loading…'}
-                      </p>
-                    );
+        <div className="relative w-[min(92vw,48rem)] max-h-[80vh]">
+          {gradientClass && (
+            <>
+              <div
+                className={`pointer-events-none absolute inset-0 ${gradientClass}`}
+                style={{ opacity: 0.3 }}
+              />
+              <div className="pointer-events-none absolute inset-0 bg-white/35 dark:bg-neutral-950/60" />
+              <div
+                className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_14s_linear_infinite]"
+                style={{
+                  background:
+                    'radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.32), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.32), transparent)',
+                }}
+              />
+              <style jsx>{`
+                @keyframes gradient_drift {
+                  0% {
+                    transform: translate3d(0, 0, 0);
                   }
-                })()
-              : (
-                <p className="whitespace-pre-wrap">
-                  {text || 'Passage loading…'}
-                </p>
-              )}
+                  50% {
+                    transform: translate3d(2%, -2%, 0) scale(1.02);
+                  }
+                  100% {
+                    transform: translate3d(0, 0, 0);
+                  }
+                }
+              `}</style>
+            </>
+          )}
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute top-3 right-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-neutral-500 hover:bg-white hover:text-neutral-700 shadow-sm dark:bg-neutral-900/90 dark:text-neutral-400 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
+            onClick={() => setShowFull(false)}
+          >
+            ✕
+          </button>
+          <div className="relative z-10">
+            <Card className="p-6 bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
+              <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">
+                {interactive.versesJson
+                  ? (() => {
+                      try {
+                        const verses = JSON.parse(
+                          interactive.versesJson as string
+                        ) as Array<{
+                          verse?: number | string;
+                          text?: string;
+                        }>;
+                        if (!Array.isArray(verses) || verses.length === 0) {
+                          return (
+                            <p className="whitespace-pre-wrap">
+                              {text || 'Passage loading…'}
+                            </p>
+                          );
+                        }
+                        return verses.map((v, idx) => (
+                          <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
+                            {typeof v.verse !== 'undefined' && (
+                              <sup className="align-super text-xs text-neutral-500 mr-1">
+                                {String(v.verse)}
+                              </sup>
+                            )}
+                            {(v.text || '').trim()}
+                          </p>
+                        ));
+                      } catch {
+                        return (
+                          <p className="whitespace-pre-wrap">
+                            {text || 'Passage loading…'}
+                          </p>
+                        );
+                      }
+                    })()
+                  : (
+                    <p className="whitespace-pre-wrap">
+                      {text || 'Passage loading…'}
+                    </p>
+                  )}
+              </div>
+              <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+                <div>{fullRef}</div>
+                <button
+                  className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
+                  onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
+                >
+                  View full passage on Bible Gateway →
+                </button>
+              </div>
+            </Card>
           </div>
-          <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400">
-            <div>{fullRef}</div>
-            <div className="flex items-center gap-3 justify-end">
-              <button
-                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
-                onClick={() => window.open(externalUrl, '_blank', 'noopener,noreferrer')}
-              >
-                View full passage on Bible Gateway →
-              </button>
-              <Button
-                variant="ghost"
-                className="text-xs px-3 py-1 h-8"
-                onClick={() => setShowFull(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </Card>
+        </div>
       </Modal>
     </>
   );
