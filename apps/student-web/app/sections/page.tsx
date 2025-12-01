@@ -687,6 +687,21 @@ function BibleStudentWidget({
       ? `${reference} · ${translationName}`
       : reference || translationName || '';
 
+  const startVerse = (() => {
+    const ref = reference || '';
+    const match = ref.match(/:(\d+)/);
+    if (!match) return null;
+    const n = Number.parseInt(match[1], 10);
+    return Number.isFinite(n) ? n : null;
+  })();
+
+  const fallbackParagraphs = text
+    ? text
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+    : [];
+
   const externalUrl = (() => {
     const base = 'https://www.biblegateway.com/passage/';
     const params = new URLSearchParams();
@@ -795,11 +810,7 @@ function BibleStudentWidget({
                           text?: string;
                         }>;
                         if (!Array.isArray(verses) || verses.length === 0) {
-                          return (
-                            <p className="whitespace-pre-wrap">
-                              {text || 'Passage loading…'}
-                            </p>
-                          );
+                          throw new Error('No verses');
                         }
                         return verses.map((v, idx) => (
                           <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
@@ -812,18 +823,46 @@ function BibleStudentWidget({
                           </p>
                         ));
                       } catch {
-                        return (
-                          <p className="whitespace-pre-wrap">
-                            {text || 'Passage loading…'}
-                          </p>
-                        );
+                        const paras =
+                          fallbackParagraphs.length > 0
+                            ? fallbackParagraphs
+                            : [text || 'Passage loading…'];
+                        return paras.map((p, idx) => {
+                          const verseNum =
+                            startVerse !== null ? startVerse + idx : null;
+                          return (
+                            <p key={idx} className="whitespace-pre-wrap">
+                              {verseNum !== null && (
+                                <sup className="align-super text-xs text-neutral-500 mr-1">
+                                  {String(verseNum)}
+                                </sup>
+                              )}
+                              {p}
+                            </p>
+                          );
+                        });
                       }
                     })()
-                  : (
-                    <p className="whitespace-pre-wrap">
-                      {text || 'Passage loading…'}
-                    </p>
-                  )}
+                  : (() => {
+                      const paras =
+                        fallbackParagraphs.length > 0
+                          ? fallbackParagraphs
+                          : [text || 'Passage loading…'];
+                      return paras.map((p, idx) => {
+                        const verseNum =
+                          startVerse !== null ? startVerse + idx : null;
+                        return (
+                          <p key={idx} className="whitespace-pre-wrap">
+                            {verseNum !== null && (
+                              <sup className="align-super text-xs text-neutral-500 mr-1">
+                                {String(verseNum)}
+                              </sup>
+                            )}
+                            {p}
+                          </p>
+                        );
+                      });
+                    })()}
               </div>
               <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-neutral-500 dark:text-neutral-400">
                 <div>{fullRef}</div>
