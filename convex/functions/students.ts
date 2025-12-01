@@ -183,6 +183,7 @@ export const getActiveInteractive = query({
       translationId: top.session.translationId,
       translationName: top.session.translationName,
       text: top.session.text,
+      versesJson: (top.session as any).versesJson ?? null,
       sectionId: top.session.sectionId,
     };
     } catch (err) {

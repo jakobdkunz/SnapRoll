@@ -107,10 +107,25 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
   const fullRef = `${session.reference} (${session.translationName})`;
   const externalUrl = buildExternalUrl(session.reference, session.translationId);
 
-  const paragraphs = session.text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  let verses: Array<{ verse?: number | string; text?: string }> | null = null;
+  if (typeof (session as any).versesJson === 'string') {
+    try {
+      const parsed = JSON.parse((session as any).versesJson as string) as Array<{
+        verse?: number | string;
+        text?: string;
+      }>;
+      verses = parsed;
+    } catch {
+      verses = null;
+    }
+  }
+
+  const paragraphs = !verses
+    ? session.text
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+    : [];
 
   return (
     <div className="relative min-h-dvh px-4 py-6">
@@ -181,7 +196,18 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
         </div>
         <Card className="p-6 bg-white/90 dark:bg-neutral-950/90 border border-neutral-200/70 dark:border-neutral-800 shadow-soft">
           <div className="space-y-4 text-neutral-900 dark:text-neutral-100 leading-relaxed text-lg">
-            {paragraphs.length === 0 ? (
+            {verses && verses.length > 0 ? (
+              verses.map((v, idx) => (
+                <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
+                  {typeof v.verse !== 'undefined' && (
+                    <sup className="align-super text-xs text-neutral-500 mr-1">
+                      {String(v.verse)}
+                    </sup>
+                  )}
+                  {(v.text || '').trim()}
+                </p>
+              ))
+            ) : paragraphs.length === 0 ? (
               <p className="whitespace-pre-wrap">{session.text}</p>
             ) : (
               paragraphs.map((p, idx) => (

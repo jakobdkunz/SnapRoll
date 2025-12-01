@@ -661,6 +661,7 @@ function BibleStudentWidget({
     translationId?: string;
     translationName?: string;
     text?: string;
+    versesJson?: string | null;
   };
 }) {
   const reference = interactive.reference || '';
@@ -745,8 +746,44 @@ function BibleStudentWidget({
               Full passage on Bible Gateway →
             </button>
           </div>
-          <div className="text-sm leading-relaxed text-neutral-900 dark:text-neutral-100 whitespace-pre-wrap">
-            {text || 'Passage loading…'}
+          <div className="space-y-3 text-sm leading-relaxed text-neutral-900 dark:text-neutral-100">
+            {interactive.versesJson
+              ? (() => {
+                  try {
+                    const verses = JSON.parse(interactive.versesJson as string) as Array<{
+                      verse?: number | string;
+                      text?: string;
+                    }>;
+                    if (!Array.isArray(verses) || verses.length === 0) {
+                      return (
+                        <p className="whitespace-pre-wrap">
+                          {text || 'Passage loading…'}
+                        </p>
+                      );
+                    }
+                    return verses.map((v, idx) => (
+                      <p key={`${v.verse ?? idx}`} className="whitespace-pre-wrap">
+                        {typeof v.verse !== 'undefined' && (
+                          <sup className="align-super text-[0.65rem] text-neutral-500 mr-1">
+                            {String(v.verse)}
+                          </sup>
+                        )}
+                        {(v.text || '').trim()}
+                      </p>
+                    ));
+                  } catch {
+                    return (
+                      <p className="whitespace-pre-wrap">
+                        {text || 'Passage loading…'}
+                      </p>
+                    );
+                  }
+                })()
+              : (
+                <p className="whitespace-pre-wrap">
+                  {text || 'Passage loading…'}
+                </p>
+              )}
           </div>
           <div className="mt-4 flex justify-end">
             <Button variant="ghost" className="text-xs px-3 py-1 h-8" onClick={() => setShowFull(false)}>

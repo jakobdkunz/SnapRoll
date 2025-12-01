@@ -245,6 +245,7 @@ function BibleMobileWidget({
     translationId?: string;
     translationName?: string;
     text?: string;
+    versesJson?: string | null;
   };
 }) {
   const reference = interactive.reference || '';
@@ -340,9 +341,86 @@ function BibleMobileWidget({
                 Full passage on Bible Gateway
               </Button>
             </View>
-            <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
-              {text || 'Passage loading…'}
-            </Text>
+            {interactive.versesJson ? (
+              (() => {
+                try {
+                  const verses = JSON.parse(interactive.versesJson as string) as Array<{
+                    verse?: number | string;
+                    text?: string;
+                  }>;
+                  if (!Array.isArray(verses) || verses.length === 0) {
+                    return (
+                      <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                        {text || 'Passage loading…'}
+                      </Text>
+                    );
+                  }
+                  return verses.map((v, idx) => (
+                    <Text
+                      key={`${v.verse ?? idx}`}
+                      style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}
+                    >
+                      {typeof v.verse !== 'undefined' ? (
+                        <Text style={{ fontSize: 10, lineHeight: 10, color: '#6B7280' }}>
+                          {String(v.verse)}{' '}
+                        </Text>
+                      ) : null}
+                      {(v.text || '').trim()}
+                    </Text>
+                  ));
+                } catch {
+                  return (
+                    <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                      {text || 'Passage loading…'}
+                    </Text>
+                  );
+                }
+              })()
+            ) : (
+              <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                {text || 'Passage loading…'}
+              </Text>
+            )}
+            {interactive.versesJson ? (
+              (() => {
+                try {
+                  const verses = JSON.parse(interactive.versesJson as string) as Array<{
+                    verse?: number | string;
+                    text?: string;
+                  }>;
+                  if (!Array.isArray(verses) || verses.length === 0) {
+                    return (
+                      <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                        {text || 'Passage loading…'}
+                      </Text>
+                    );
+                  }
+                  return verses.map((v, idx) => (
+                    <Text
+                      key={`${v.verse ?? idx}`}
+                      style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}
+                    >
+                      {typeof v.verse !== 'undefined' ? (
+                        <Text style={{ fontSize: 10, lineHeight: 10, color: '#6B7280' }}>
+                          {String(v.verse)}{' '}
+                        </Text>
+                      ) : null}
+                      {(v.text || '').trim()}
+                    </Text>
+                  ));
+                } catch {
+                  return (
+                    <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                      {text || 'Passage loading…'}
+                    </Text>
+                  );
+                }
+              })()
+            ) : (
+              <Text style={{ fontSize: 14, lineHeight: 20, color: '#111827' }}>
+                {text || 'Passage loading…'}
+              </Text>
+            )}
             <View style={{ alignItems: 'flex-end' }}>
               <Button onPress={() => setShowFull(false)}>Close</Button>
             </View>

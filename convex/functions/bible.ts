@@ -32,7 +32,10 @@ function resolveTranslation(id: string | undefined | null) {
   return SUPPORTED_TRANSLATIONS.find((t) => t.id === lower) ?? fallback;
 }
 
-async function fetchBiblePassage(reference: string, translationId: string): Promise<string> {
+async function fetchBiblePassage(
+  reference: string,
+  translationId: string
+): Promise<{ text: string; versesJson: string | null }> {
   const ref = reference.trim();
   if (!ref) throw new Error("Reference is required");
   if (ref.length > 80) throw new Error("Reference is too long");
@@ -58,19 +61,23 @@ async function fetchBiblePassage(reference: string, translationId: string): Prom
     verses?: Array<{ text?: string }>;
   };
 
+  let text = "";
   if (typeof json.text === "string" && json.text.trim().length > 0) {
-    return json.text.trim();
-  }
-
-  if (Array.isArray(json.verses) && json.verses.length > 0) {
+    text = json.text.trim();
+  } else if (Array.isArray(json.verses) && json.verses.length > 0) {
     const combined = json.verses
       .map((v) => (v.text ?? "").toString().trim())
       .filter(Boolean)
       .join(" ");
-    if (combined.length > 0) return combined;
+    if (combined.length > 0) text = combined;
   }
 
-  throw new Error("No text returned for that passage. Try a different reference.");
+  if (!text) {
+    throw new Error("No text returned for that passage. Try a different reference.");
+  }
+
+  const versesJson = Array.isArray(json.verses) && json.verses.length > 0 ? JSON.stringify(json.verses) : null;
+  return { text, versesJson };
 }
 
 // Internal core mutation: validates teacher & section, rate limits, and writes session.
@@ -140,8 +147,11 @@ export const startBiblePassage = action({
 
     // Fetch passage text from public API
     let text: string;
+    let versesJson: string | null;
     try {
-      text = await fetchBiblePassage(reference, translationId);
+      const rich = await fetchBiblePassage(reference, translationId);
+      text = rich.text;
+      versesJson = rich.versesJson;
     } catch (e) {
       const msg =
         e instanceof Error && e.message
@@ -156,6 +166,7 @@ export const startBiblePassage = action({
       translationId,
       translationName,
       text,
+      versesJson,
     });
 
     return sessionId;
@@ -170,6 +181,7 @@ export const _updateBibleSessionCore = internalMutation({
     translationId: v.string(),
     translationName: v.string(),
     text: v.string(),
+    versesJson: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const teacher = await requireTeacher(ctx);
@@ -181,6 +193,7 @@ export const _updateBibleSessionCore = internalMutation({
       translationId: args.translationId,
       translationName: args.translationName,
       text: args.text,
+      versesJson: args.versesJson,
       instructorLastSeenAt: Date.now(),
     });
     return args.sessionId;
@@ -205,8 +218,11 @@ export const updateBiblePassage = action({
     );
 
     let text: string;
+    let versesJson: string | null;
     try {
-      text = await fetchBiblePassage(reference, translationId);
+      const rich = await fetchBiblePassage(reference, translationId);
+      text = rich.text;
+      versesJson = rich.versesJson;
     } catch (e) {
       const msg =
         e instanceof Error && e.message
@@ -221,6 +237,7 @@ export const updateBiblePassage = action({
       translationId,
       translationName,
       text,
+      versesJson,
     });
 
     return sessionId;

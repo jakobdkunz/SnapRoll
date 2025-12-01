@@ -202,6 +202,8 @@ export default defineSchema({
     translationId: v.string(), // e.g., "web", "kjv"
     translationName: v.string(), // Human-readable translation name
     text: v.string(), // Full passage text as returned by the API
+    // Optional serialized verses array from the Bible API, used for rich formatting
+    versesJson: v.optional(v.string()),
     createdAt: v.number(),
     closedAt: v.optional(v.number()),
     instructorLastSeenAt: v.optional(v.number()),

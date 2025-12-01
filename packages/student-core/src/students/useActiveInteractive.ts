@@ -9,7 +9,7 @@ export type InteractiveUI =
   | { kind: 'wordcloud'; sessionId: string; sectionId?: string; prompt?: string; showPromptToStudents?: boolean; allowMultipleAnswers?: boolean; hasSubmitted?: boolean }
   | { kind: 'poll'; sessionId: string; sectionId?: string; prompt?: string; options: string[]; hasSubmitted?: boolean }
   | { kind: 'slideshow'; sessionId: string; sectionId?: string; showOnDevices?: boolean }
-  | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string };
+  | { kind: 'bible'; sessionId: string; sectionId?: string; reference?: string; translationId?: string; translationName?: string; text?: string; versesJson?: string | null };
 
 export function useActiveInteractive(): InteractiveUI {
   const currentUser = useCurrentUser();
@@ -68,6 +68,7 @@ export function useActiveInteractive(): InteractiveUI {
         translationId: typeof anyInt['translationId'] === 'string' ? (anyInt['translationId'] as string) : undefined,
         translationName: typeof anyInt['translationName'] === 'string' ? (anyInt['translationName'] as string) : undefined,
         text: typeof anyInt['text'] === 'string' ? (anyInt['text'] as string) : undefined,
+        versesJson: typeof anyInt['versesJson'] === 'string' ? (anyInt['versesJson'] as string) : null,
       };
     }
   }
