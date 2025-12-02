@@ -94,6 +94,18 @@ export const getUserByEmail = query({
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
+    // In demo mode, return demo teacher user
+    if (process.env.DEMO_MODE === "true") {
+      const demoEmail = "demo-teacher@example.com";
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", demoEmail))
+        .first();
+      
+      // In query context, user must already exist (created by seed function)
+      return user;
+    }
+    
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
     const email = (identity.email ?? identity.tokenIdentifier ?? "")

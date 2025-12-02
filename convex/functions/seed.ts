@@ -1,14 +1,23 @@
-import { mutation } from "../_generated/server";
+import { mutation, type MutationCtx } from "../_generated/server";
 
-export const seedDemoData = mutation({
-  args: {},
-  handler: async (ctx) => {
-    // Create demo teacher
+/**
+ * Shared function to seed demo data. Can be called from mutations.
+ */
+export async function seedDemoDataHandler(ctx: MutationCtx) {
+    // Create demo teacher (email must match _auth.ts getDemoUser)
     const teacherId = await ctx.db.insert("users", {
-      email: "demo@example.com",
+      email: "demo-teacher@example.com",
       firstName: "Demo",
       lastName: "Teacher",
       role: "TEACHER",
+    });
+    
+    // Also create demo student user (for student views)
+    await ctx.db.insert("users", {
+      email: "demo-student@example.com",
+      firstName: "Demo",
+      lastName: "Student",
+      role: "STUDENT",
     });
 
     // Create demo students
@@ -121,5 +130,11 @@ export const seedDemoData = mutation({
       sectionIds,
       classDayIds,
     };
+}
+
+export const seedDemoData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await seedDemoDataHandler(ctx);
   },
 });

@@ -8,8 +8,18 @@ export function AuthGuard() {
   const pathname = usePathname();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
 
   useEffect(() => {
+    // Skip auth checks in demo mode
+    if (isDemoMode) {
+      // Set cookie for service worker
+      try {
+        document.cookie = `flamelink_auth=1; Path=/; SameSite=Lax`;
+      } catch (e) { void e; }
+      return;
+    }
+    
     if (!isLoaded) return;
     const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
     if (!isSignedIn && !isPublic) {
@@ -22,7 +32,7 @@ export function AuthGuard() {
     try {
       document.cookie = `flamelink_auth=${isSignedIn ? '1' : '0'}; Path=/; SameSite=Lax`;
     } catch (e) { void e; }
-  }, [isLoaded, isSignedIn, user, pathname, router]);
+  }, [isLoaded, isSignedIn, user, pathname, router, isDemoMode]);
 
   return null;
 }

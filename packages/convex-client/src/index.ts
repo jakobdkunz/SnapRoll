@@ -138,6 +138,7 @@ export const convexApi = {
   // Demo utilities (developer mode only)
   demo: {
     generateDemoData: api.functions.demo.generateDemoData,
+    resetDemoData: api.functions.demo.resetDemoData,
   },
 };
 

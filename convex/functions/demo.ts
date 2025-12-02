@@ -3,6 +3,7 @@ import { query, mutation } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireTeacher } from "./_auth";
 import { getEasternStartOfDay } from "./_tz";
+import { seedDemoDataHandler } from "./seed";
 
 export const hello = query({
   args: { name: v.string() },
@@ -160,5 +161,55 @@ export const generateDemoData = mutation({
       daysGenerated: results.length,
       studentsGenerated: studentIds.length,
     };
+  },
+});
+
+/**
+ * Reset all demo data. Only works in demo mode.
+ * Deletes all data and reseeds with fresh demo data.
+ */
+export const resetDemoData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Only allow in demo mode
+    if (process.env.DEMO_MODE !== "true") {
+      throw new Error("Reset is only available in demo mode");
+    }
+
+    // Delete all data from all tables
+    // We'll delete in reverse dependency order to avoid foreign key issues
+    
+    // Delete all child records first
+    const tablesToClear = [
+      "pointsAssignments",
+      "pointsOpportunities",
+      "biblePassageSessions",
+      "slideshowSlides",
+      "slideshowSessions",
+      "slideshowAssets",
+      "pollAnswers",
+      "pollSessions",
+      "wordCloudAnswers",
+      "wordCloudSessions",
+      "manualStatusChanges",
+      "attendanceRecords",
+      "classDays",
+      "enrollments",
+      "sections",
+      "rateLimits",
+      "users",
+    ];
+
+    for (const tableName of tablesToClear) {
+      const allRecords = await ctx.db.query(tableName as any).collect();
+      for (const record of allRecords) {
+        await ctx.db.delete(record._id);
+      }
+    }
+
+    // Now reseed with demo data
+    await seedDemoDataHandler(ctx);
+
+    return { message: "Demo data reset successfully" };
   },
 });

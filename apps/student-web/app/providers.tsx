@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { ClerkProvider, useAuth } from '@clerk/nextjs';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
+import { ConvexProvider } from 'convex/react';
 import { createConvexClient, getConvexUrl } from '@flamelink/convex-client';
 
 function AuthDebug() {
@@ -40,6 +41,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const clientRef = React.useRef<ReturnType<typeof createConvexClient> | null>(null);
   const url = getConvexUrl();
   if (url && !clientRef.current) clientRef.current = createConvexClient(url);
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+
+  // In demo mode, use ConvexProvider directly without Clerk
+  if (isDemoMode) {
+    return (
+      <>
+        {clientRef.current ? (
+          <ConvexProvider client={clientRef.current}>
+            {children}
+          </ConvexProvider>
+        ) : (
+          <>{children}</>
+        )}
+      </>
+    );
+  }
+
+  // Normal mode: use Clerk + ConvexProviderWithClerk
   return (
     <ClerkProvider 
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}

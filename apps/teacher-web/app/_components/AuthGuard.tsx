@@ -8,8 +8,12 @@ export function AuthGuard() {
   const pathname = usePathname();
   const { isLoaded, isSignedIn } = useAuth();
   const { user } = useUser();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
 
   useEffect(() => {
+    // Skip auth checks in demo mode
+    if (isDemoMode) return;
+    
     if (!isLoaded) return;
     const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
     if (!isSignedIn && !isPublic) {
@@ -18,7 +22,7 @@ export function AuthGuard() {
       }, 10);
       return () => clearTimeout(t);
     }
-  }, [isLoaded, isSignedIn, user, pathname, router]);
+  }, [isLoaded, isSignedIn, user, pathname, router, isDemoMode]);
 
   return null;
 }
