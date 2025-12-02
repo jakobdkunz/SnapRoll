@@ -571,7 +571,7 @@ export default function SectionsPage() {
         <div className="text-slate-600 dark:text-slate-300 text-sm">My courses</div>
         <button className="text-blue-500 text-sm font-medium hover:underline" onClick={() => { setJoinOpen(true); setJoinCode(''); setJoinError(null); }}>+ Enter Join Code</button>
       </div>
-      {!enrollments || !sectionsData ? (
+      {enrollments === undefined ? (
         <div className="text-center text-slate-600">Loading sections...</div>
       ) : sections.length === 0 ? (
         <Card className="p-8 text-center">
