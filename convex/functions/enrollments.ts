@@ -52,8 +52,24 @@ export const getByStudent = query({
   handler: async (ctx, args) => {
     // Allow teacher access only to students enrolled in their sections via other endpoints.
     // Here we restrict to the student themselves.
-    const student = await requireStudent(ctx);
-    if (student._id !== args.studentId) throw new Error("Forbidden");
+    // In demo mode, if demo student doesn't exist yet, return empty array
+    const isDemoMode = process.env.DEMO_MODE === "true";
+    if (isDemoMode) {
+      try {
+        const student = await requireStudent(ctx);
+        if (student._id !== args.studentId) throw new Error("Forbidden");
+      } catch (e) {
+        // In demo mode, if student doesn't exist yet (e.g., "Demo user not found"), return empty array
+        // The frontend will create the student via upsertUser
+        if (e instanceof Error && e.message.includes("Demo user not found")) {
+          return [];
+        }
+        throw e;
+      }
+    } else {
+      const student = await requireStudent(ctx);
+      if (student._id !== args.studentId) throw new Error("Forbidden");
+    }
     return await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
