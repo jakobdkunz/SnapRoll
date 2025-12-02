@@ -178,6 +178,21 @@ export const resetDemoData = mutation({
 
     // Delete all data from all tables
     // We'll delete in reverse dependency order to avoid foreign key issues
+    // IMPORTANT: Preserve demo users (demo-teacher@example.com and demo-student@example.com)
+    
+    const demoUserEmails = ["demo-teacher@example.com", "demo-student@example.com"];
+    const demoUserIds = new Set<Id<'users'>>();
+    
+    // First, find and preserve demo users
+    for (const email of demoUserEmails) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+      if (user) {
+        demoUserIds.add(user._id as Id<'users'>);
+      }
+    }
     
     // Delete all child records first
     const tablesToClear = [
@@ -197,13 +212,20 @@ export const resetDemoData = mutation({
       "enrollments",
       "sections",
       "rateLimits",
-      "users",
     ];
 
     for (const tableName of tablesToClear) {
       const allRecords = await ctx.db.query(tableName as any).collect();
       for (const record of allRecords) {
         await ctx.db.delete(record._id);
+      }
+    }
+    
+    // Delete all users EXCEPT demo users
+    const allUsers = await ctx.db.query("users").collect();
+    for (const user of allUsers) {
+      if (!demoUserIds.has(user._id as Id<'users'>)) {
+        await ctx.db.delete(user._id);
       }
     }
 

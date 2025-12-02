@@ -1,19 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-
-async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthenticated");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new Error("Unauthenticated");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new Error("User not provisioned");
-  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
-}
+import { requireCurrentUser, requireTeacher } from "./_auth";
 
 export const get = query({
   args: { id: v.id("sections") },
@@ -37,8 +25,8 @@ export const get = query({
 export const getByTeacher = query({
   args: { teacherId: v.id("users") },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
-    if (user.role !== "TEACHER" || user._id !== args.teacherId) throw new Error("Forbidden");
+    const user = await requireTeacher(ctx);
+    if (user._id !== args.teacherId) throw new Error("Forbidden");
     return await ctx.db
       .query("sections")
       .withIndex("by_teacher", (q) => q.eq("teacherId", args.teacherId))
