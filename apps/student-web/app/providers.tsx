@@ -43,10 +43,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   if (url && !clientRef.current) clientRef.current = createConvexClient(url);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
 
-  // In demo mode, use ConvexProvider directly without Clerk
+  // In demo mode, provide a minimal ClerkProvider so useAuth hooks don't fail
+  // but use ConvexProvider directly (no auth)
   if (isDemoMode) {
     return (
-      <>
+      <ClerkProvider 
+        publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_demo"}
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+      >
         {clientRef.current ? (
           <ConvexProvider client={clientRef.current}>
             {children}
@@ -54,7 +59,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         ) : (
           <>{children}</>
         )}
-      </>
+      </ClerkProvider>
     );
   }
 
