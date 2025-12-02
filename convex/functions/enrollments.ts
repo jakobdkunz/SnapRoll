@@ -54,32 +54,23 @@ export const getByStudent = query({
     // Here we restrict to the student themselves.
     const isDemoMode = process.env.DEMO_MODE === "true";
     
+    let effectiveStudentId: Id<"users">;
+    
     if (isDemoMode) {
-      // In demo mode, check if demo student exists
-      const demoEmail = "demo-student@example.com";
-      const demoStudent = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", demoEmail))
-        .first();
-      
-      // If demo student doesn't exist yet, return empty array (frontend will create it)
-      if (!demoStudent) {
-        return [];
-      }
-      
-      // Verify the requested studentId matches the demo student
-      if (demoStudent._id !== args.studentId) {
-        throw new Error("Forbidden");
-      }
+      // In demo mode, use requireStudent to get the demo student
+      // (This handles the case where getCurrentUser returns teacher but we need student)
+      const student = await requireStudent(ctx);
+      effectiveStudentId = student._id;
     } else {
-      // Normal mode: use requireStudent
+      // Normal mode: use requireStudent and verify the requested studentId matches
       const student = await requireStudent(ctx);
       if (student._id !== args.studentId) throw new Error("Forbidden");
+      effectiveStudentId = args.studentId;
     }
     
     return await ctx.db
       .query("enrollments")
-      .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
+      .withIndex("by_student", (q) => q.eq("studentId", effectiveStudentId))
       .collect();
   },
 });
