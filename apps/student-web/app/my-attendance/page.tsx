@@ -91,7 +91,7 @@ export default function MyAttendancePage() {
   }
 
   // Convex hooks
-  const currentUser = useQuery(convexApi.auth.getCurrentUser);
+  const currentUser = useQuery(convexApi.auth.getCurrentUser, { role: "STUDENT" });
   const history = useQuery(
     api.functions.history.getStudentHistory,
     currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit } : "skip"

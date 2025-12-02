@@ -59,7 +59,7 @@ export function StudentHeaderRight() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, { role: "STUDENT" });
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
 
   useEffect(() => {

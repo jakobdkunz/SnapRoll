@@ -25,7 +25,7 @@ export default function SectionsPage() {
   const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
   // Get current user from Convex based on Clerk identity
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, { role: "STUDENT" });
   const { isLoaded, isSignedIn } = useSafeAuth();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);

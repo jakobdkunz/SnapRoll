@@ -92,11 +92,14 @@ export const getUserByEmail = query({
 });
 
 export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    // In demo mode, return demo teacher user
+  args: {
+    role: v.optional(v.union(v.literal("TEACHER"), v.literal("STUDENT"))),
+  },
+  handler: async (ctx, args) => {
+    // In demo mode, return the appropriate demo user based on role
     if (process.env.DEMO_MODE === "true") {
-      const demoEmail = "demo-teacher@example.com";
+      const requestedRole = args.role || "TEACHER"; // Default to teacher for backward compatibility
+      const demoEmail = requestedRole === "TEACHER" ? "demo-teacher@example.com" : "demo-student@example.com";
       const user = await ctx.db
         .query("users")
         .withIndex("by_email", (q) => q.eq("email", demoEmail))

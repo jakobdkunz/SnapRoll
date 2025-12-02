@@ -11,7 +11,7 @@ export type CurrentUser = {
 } | null | undefined;
 
 export function useCurrentUser(): CurrentUser {
-  return useQuery(api.functions.auth.getCurrentUser);
+  return useQuery(api.functions.auth.getCurrentUser, { role: "STUDENT" });
 }
 
 
