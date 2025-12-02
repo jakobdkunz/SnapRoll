@@ -3,7 +3,7 @@ import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
-import { requireCurrentUser as requireCurrentUserFromAuth, requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import { requireCurrentUser as requireCurrentUserFromAuth, requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 
 type RateLimitBucket = {
   _id: Id<'rateLimits'>;
@@ -85,8 +85,8 @@ export const checkIn = mutation({
     attendanceCode: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
-    if (user.role !== "STUDENT") throw new ConvexError("Only students can check in.");
+    // Use requireStudent to ensure we get the student user (handles demo mode correctly)
+    const user = await requireStudent(ctx);
     const studentId = user._id;
     const now = Date.now();
     // Rate limit: 6 attempts per 30 minutes; block for 30 minutes when exceeded
