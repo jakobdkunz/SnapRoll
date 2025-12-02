@@ -1,19 +1,45 @@
 "use client";
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth, useUser } from '@clerk/nextjs';
+
+const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+
+// Safe wrapper for Clerk hooks that handles demo mode
+function useSafeAuth() {
+  if (isDemoMode) {
+    return { isLoaded: true, isSignedIn: true };
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAuth: clerkUseAuth } = require('@clerk/nextjs');
+    return clerkUseAuth();
+  } catch {
+    return { isLoaded: true, isSignedIn: false };
+  }
+}
+
+function useSafeUser() {
+  if (isDemoMode) {
+    return { user: null };
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useUser: clerkUseUser } = require('@clerk/nextjs');
+    return clerkUseUser();
+  } catch {
+    return { user: null };
+  }
+}
 
 export function AuthGuard() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { isLoaded, isSignedIn } = useSafeAuth();
+  const { user } = useSafeUser();
 
   useEffect(() => {
-    // Skip auth checks in demo mode
+    // In demo mode, set cookie and return
     if (isDemoMode) {
-      // Set cookie for service worker
       try {
         document.cookie = `flamelink_auth=1; Path=/; SameSite=Lax`;
       } catch (e) { void e; }
@@ -32,7 +58,7 @@ export function AuthGuard() {
     try {
       document.cookie = `flamelink_auth=${isSignedIn ? '1' : '0'}; Path=/; SameSite=Lax`;
     } catch (e) { void e; }
-  }, [isLoaded, isSignedIn, user, pathname, router, isDemoMode]);
+  }, [isLoaded, isSignedIn, user, pathname, router]);
 
   return null;
 }

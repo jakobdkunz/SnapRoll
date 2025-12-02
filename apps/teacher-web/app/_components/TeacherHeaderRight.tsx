@@ -6,13 +6,41 @@ import { useRouter } from 'next/navigation';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 
+const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+
+// Safe wrapper for Clerk hooks that handles demo mode
+function useSafeAuth() {
+  if (isDemoMode) {
+    return { isSignedIn: true };
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAuth: clerkUseAuth } = require('@clerk/nextjs');
+    return clerkUseAuth();
+  } catch {
+    return { isSignedIn: false };
+  }
+}
+
+function useSafeClerk() {
+  if (isDemoMode) {
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useClerk: clerkUseClerk } = require('@clerk/nextjs');
+    return clerkUseClerk();
+  } catch {
+    return null;
+  }
+}
+
 export function TeacherHeaderRight() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useSafeAuth();
   const [teacherId, setTeacherId] = useState<Id<'users'> | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -135,9 +163,16 @@ export function TeacherHeaderRight() {
     }
   }
 
-  const { signOut } = useClerk();
+  const clerk = useSafeClerk();
   function logout() {
-    try { signOut().catch(() => { /* no-op */ }); } catch (err) { if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') { /* eslint-disable-next-line no-console */ console.warn('Sign out failed', err); } }
+    if (isDemoMode) {
+      // In demo mode, just redirect to home
+      router.push('/');
+      return;
+    }
+    if (clerk?.signOut) {
+      try { clerk.signOut().catch(() => { /* no-op */ }); } catch (err) { if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') { /* eslint-disable-next-line no-console */ console.warn('Sign out failed', err); } }
+    }
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);

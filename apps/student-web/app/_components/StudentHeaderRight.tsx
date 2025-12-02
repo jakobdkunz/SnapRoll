@@ -4,17 +4,45 @@ import { useRouter } from 'next/navigation';
 import { api } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
-import { useAuth, useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
 import { MdDarkMode, MdLightMode, MdPhoneIphone } from 'react-icons/md';
 
+const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+
+// Safe wrapper for Clerk hooks that handles demo mode
+function useSafeAuth() {
+  if (isDemoMode) {
+    return { isSignedIn: true };
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAuth: clerkUseAuth } = require('@clerk/nextjs');
+    return clerkUseAuth();
+  } catch {
+    return { isSignedIn: false };
+  }
+}
+
+function useSafeClerk() {
+  if (isDemoMode) {
+    return null;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useClerk: clerkUseClerk } = require('@clerk/nextjs');
+    return clerkUseClerk();
+  } catch {
+    return null;
+  }
+}
+
 // type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 export function StudentHeaderRight() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useSafeAuth();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -72,16 +100,23 @@ export function StudentHeaderRight() {
     };
   }, [open]);
 
-  const { signOut } = useClerk();
   const resetRateLimit = useMutation(api.functions.attendance.resetCheckinRateLimit);
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
-  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   const [resetting, setResetting] = useState(false);
+  const clerk = useSafeClerk();
+  
   function logout() {
+    if (isDemoMode) {
+      // In demo mode, just redirect to home
+      router.push('/');
+      return;
+    }
     setStudentId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    try { signOut().catch(() => {}); } catch (e) { void e; }
+    if (clerk?.signOut) {
+      try { clerk.signOut().catch(() => {}); } catch (e) { void e; }
+    }
     router.push('/sign-in');
   }
 

@@ -1,11 +1,26 @@
 "use client";
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
 import Image from 'next/image';
+
+const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+
+// Safe wrapper for Clerk hooks that handles demo mode
+function useSafeAuth() {
+  if (isDemoMode) {
+    return { isSignedIn: true };
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useAuth: clerkUseAuth } = require('@clerk/nextjs');
+    return clerkUseAuth();
+  } catch {
+    return { isSignedIn: false };
+  }
+}
 
 export function WordmarkLink() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { isSignedIn } = useSafeAuth();
   function onClick() {
     if (isSignedIn) router.push('/sections');
     else router.push('/');
