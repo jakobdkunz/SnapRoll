@@ -1,23 +1,37 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 const isPublicRoute = createRouteMatcher(["/", "/manifest.json", "/sw.js", "/sign-up(.*)", "/sign-in(.*)", "/sso-callback(.*)"]); 
 
-export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth();
+// In demo mode, skip Clerk middleware entirely
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
-  if (req.nextUrl.pathname === '/') {
-    if (userId) {
-      const url = req.nextUrl.clone();
-      url.pathname = '/dashboard';
-      return NextResponse.redirect(url);
+export default isDemoMode
+  ? async (req: NextRequest) => {
+      // In demo mode, allow all routes without auth
+      if (req.nextUrl.pathname === '/') {
+        const url = req.nextUrl.clone();
+        url.pathname = '/dashboard';
+        return NextResponse.redirect(url);
+      }
+      return NextResponse.next();
     }
-    return;
-  }
+  : clerkMiddleware(async (auth, req) => {
+      const { userId, redirectToSignIn } = await auth();
 
-  if (isPublicRoute(req)) return;
-  if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
-});
+      if (req.nextUrl.pathname === '/') {
+        if (userId) {
+          const url = req.nextUrl.clone();
+          url.pathname = '/dashboard';
+          return NextResponse.redirect(url);
+        }
+        return;
+      }
+
+      if (isPublicRoute(req)) return;
+      if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
+    });
 
 export const config = {
   matcher: [
