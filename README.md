@@ -95,4 +95,4 @@ Copyright (c) 2025 Jakob Kunz. All rights reserved.
 
 This software is provided for review only. No permission is granted to use, copy, modify, compile, distribute, or deploy this software, in whole or in part, for any purpose other than evaluation.
 
-Licensing available upon request.
+Licensing available upon request. 
