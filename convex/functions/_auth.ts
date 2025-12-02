@@ -103,9 +103,17 @@ export async function requireTeacherOwnsSection(
   sectionId: Id<"sections">,
   teacherUserId?: Id<"users">
 ) {
-  const teacherIdToCheck = teacherUserId ?? (await requireTeacher(ctx))._id;
+  const teacher = await requireTeacher(ctx);
+  const teacherIdToCheck = teacherUserId ?? teacher._id;
   const section = await ctx.db.get(sectionId);
-  if (!section || section.teacherId !== teacherIdToCheck) throw new Error("Forbidden");
+  if (!section) throw new Error("Forbidden");
+  
+  // In demo mode, allow demo teacher to access any section
+  if (isDemoMode() && teacher.role === "TEACHER") {
+    return section;
+  }
+  
+  if (section.teacherId !== teacherIdToCheck) throw new Error("Forbidden");
   return section;
 }
 
