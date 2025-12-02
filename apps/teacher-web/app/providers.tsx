@@ -42,25 +42,34 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const url = getConvexUrl();
   if (url && !clientRef.current) clientRef.current = createConvexClient(url);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-  // In demo mode, provide a minimal ClerkProvider so useAuth hooks don't fail
-  // but use ConvexProvider directly (no auth)
+  // In demo mode, only provide ClerkProvider if we have a valid key
+  // Otherwise skip it (useAuth calls will use safe wrappers)
   if (isDemoMode) {
-    return (
-      <ClerkProvider 
-        publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || "pk_demo"}
-        signInUrl="/sign-in"
-        signUpUrl="/sign-up"
-      >
-        {clientRef.current ? (
-          <ConvexProvider client={clientRef.current}>
-            {children}
-          </ConvexProvider>
-        ) : (
-          <>{children}</>
-        )}
-      </ClerkProvider>
+    const content = clientRef.current ? (
+      <ConvexProvider client={clientRef.current}>
+        {children}
+      </ConvexProvider>
+    ) : (
+      <>{children}</>
     );
+
+    // Only wrap with ClerkProvider if we have a valid key
+    if (clerkKey && clerkKey.startsWith('pk_')) {
+      return (
+        <ClerkProvider 
+          publishableKey={clerkKey}
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+        >
+          {content}
+        </ClerkProvider>
+      );
+    }
+    
+    // No ClerkProvider in demo mode without a key
+    return <>{content}</>;
   }
 
   // Normal mode: use Clerk + ConvexProviderWithClerk
