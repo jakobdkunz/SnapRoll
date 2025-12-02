@@ -24,7 +24,7 @@ export default function ModifyPage() {
   // Convex hooks
   // Ensure the current Clerk user is provisioned in Convex before running protected queries
   const { isLoaded, isSignedIn } = useSafeAuth();
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, { role: "TEACHER" });
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;

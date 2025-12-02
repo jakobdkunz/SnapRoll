@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const deleteSection = useMutation(api.functions.sections.deleteSection);
 
   // Current user via Clerk/Convex
-  const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser, { role: "TEACHER" });
   const teacherId: Id<'users'> | null = hasId(currentUser) ? (currentUser._id as Id<'users'>) : null;
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const { isLoaded, isSignedIn } = useSafeAuth();

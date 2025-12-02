@@ -68,7 +68,7 @@ export function TeacherHeaderRight() {
   const [generating, setGenerating] = useState(false);
 
   // Convex hooks
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, { role: "TEACHER" });
   const updateUser = useMutation(api.functions.users.update);
   const generateDemo = useMutation(api.functions.demo.generateDemoData);
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
