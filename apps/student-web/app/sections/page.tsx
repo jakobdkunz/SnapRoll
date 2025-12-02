@@ -6,7 +6,7 @@ import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../_lib/clerk-safe';
 
 type Section = {
   id: string;
@@ -26,7 +26,7 @@ export default function SectionsPage() {
   
   // Get current user from Convex based on Clerk identity
   const currentUser = useQuery(api.functions.auth.getCurrentUser);
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);
   useEffect(() => {

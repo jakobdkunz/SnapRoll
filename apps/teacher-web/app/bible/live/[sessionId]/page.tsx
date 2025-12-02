@@ -6,7 +6,7 @@ import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../../_lib/clerk-safe';
 import BiblePassageStartModal from '../../../dashboard/_components/BiblePassageStartModal';
 
 function toChapterReference(reference: string): string {
@@ -27,7 +27,7 @@ function buildExternalUrl(reference: string, translationId: string | undefined) 
 
 export default function BibleLivePage({ params }: { params: { sessionId: string } }) {
   const { sessionId } = params;
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const authReady = isLoaded && isSignedIn;
 
   const session = useQuery(

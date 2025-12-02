@@ -4,7 +4,7 @@ import { Card, Button } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../../_lib/clerk-safe';
 
 // Removed unused PollSession type
 
@@ -12,7 +12,7 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
   const { sessionId } = params;
   const [toggling, setToggling] = useState(false);
   const [showLocal, setShowLocal] = useState<boolean | null>(null);
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const authReady = isLoaded && isSignedIn;
 
   // Convex hooks

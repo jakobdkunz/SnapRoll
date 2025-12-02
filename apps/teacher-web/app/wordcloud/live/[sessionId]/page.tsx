@@ -4,14 +4,14 @@ import { useEffect, useRef } from 'react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../../_lib/clerk-safe';
 
 type Word = { word: string; count: number };
 // removed unused Session type
 
 export default function WordCloudLivePage({ params }: { params: { sessionId: string } }) {
   const sessionId = params.sessionId;
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const authReady = isLoaded && isSignedIn;
 
   // Convex hooks

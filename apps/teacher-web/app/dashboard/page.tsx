@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../_lib/clerk-safe';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser);
   const teacherId: Id<'users'> | null = hasId(currentUser) ? (currentUser._id as Id<'users'>) : null;
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
 
   // Data queries
   const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;

@@ -8,7 +8,7 @@ import { ImportCsvModal } from './_components/ImportCsvModal';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../_lib/clerk-safe';
 import { isValidEmail } from '@flamelink/lib';
 import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
@@ -23,7 +23,7 @@ export default function ModifyPage() {
 
   // Convex hooks
   // Ensure the current Clerk user is provisioned in Convex before running protected queries
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const currentUser = useQuery(api.functions.auth.getCurrentUser);
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   useEffect(() => {

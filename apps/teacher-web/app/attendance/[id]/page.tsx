@@ -7,7 +7,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../_lib/clerk-safe';
 
 type AttendanceStatus = {
   hasActiveAttendance: boolean;
@@ -20,7 +20,7 @@ type AttendanceStatus = {
 export default function AttendancePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const isAuthReady = isLoaded && isSignedIn;
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);

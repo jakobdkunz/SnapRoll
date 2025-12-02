@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '@clerk/nextjs';
+import { useSafeAuth } from '../../_lib/clerk-safe';
 import { Card, Badge, Button, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@flamelink/lib';
@@ -29,7 +29,7 @@ type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
 export default function HistoryPage() {
   const params = useParams<{ id: string }>();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSafeAuth();
   const isAuthReady = isLoaded && isSignedIn;
   //
   const [offset, setOffset] = useState<number>(0);
