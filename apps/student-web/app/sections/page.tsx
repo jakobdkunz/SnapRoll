@@ -29,8 +29,26 @@ export default function SectionsPage() {
   const { isLoaded, isSignedIn } = useSafeAuth();
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   useEffect(() => {
     if (didUpsertRef.current) return;
+    // In demo mode, always try to upsert to create demo student if needed
+    if (isDemoMode) {
+      if (currentUser === undefined) return; // still loading
+      if (!currentUser) {
+        (async () => {
+          try {
+            didUpsertRef.current = true;
+            await upsertUser({ role: 'STUDENT' });
+          } catch (e) {
+            // Best-effort upsert; ignore failures in UI but log for debugging
+            console.error(e);
+          }
+        })();
+      }
+      return;
+    }
+    // Normal mode: only upsert if signed in
     if (!isLoaded || !isSignedIn) return;
     if (currentUser === undefined) return;
     if (!currentUser) {
@@ -44,7 +62,7 @@ export default function SectionsPage() {
         }
       })();
     }
-  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
+  }, [isLoaded, isSignedIn, currentUser, upsertUser, isDemoMode]);
   const effectiveUserId = (currentUser?._id as Id<'users'> | undefined);
 
   // Get student's enrolled sections

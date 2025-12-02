@@ -52,15 +52,8 @@ export const getByStudent = query({
   handler: async (ctx, args) => {
     // Allow teacher access only to students enrolled in their sections via other endpoints.
     // Here we restrict to the student themselves.
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
-      .first();
-    if (!currentUser) throw new Error("Unauthenticated");
-    if (currentUser._id !== args.studentId) throw new Error("Forbidden");
+    const student = await requireStudent(ctx);
+    if (student._id !== args.studentId) throw new Error("Forbidden");
     return await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
