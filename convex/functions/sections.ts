@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { requireCurrentUser, requireTeacher } from "./_auth";
 
@@ -187,19 +187,36 @@ export const update = mutation({
     }
     // If explicitly clearing permitted absences, unset the optional field
     if (args.clearPermittedAbsences) {
-      const patchAny: any = {
+      return await ctx.db.patch(id, {
         ...safe,
         permittedAbsences: undefined,
         permittedAbsencesMode: undefined,
         policyTimesPerWeek: undefined,
         policyDuration: undefined,
-      };
-      return await ctx.db.patch(id, patchAny);
+      } as {
+        title?: string;
+        gradient?: string;
+        permittedAbsences?: undefined;
+        permittedAbsencesMode?: undefined;
+        policyTimesPerWeek?: undefined;
+        policyDuration?: undefined;
+        participationCreditPointsPossible?: number;
+      });
     }
     // If explicitly clearing participation config, unset both optional fields
     if (args.clearParticipation) {
-      const patchAny: any = { ...safe, participationCreditPointsPossible: undefined };
-      return await ctx.db.patch(id, patchAny);
+      return await ctx.db.patch(id, {
+        ...safe,
+        participationCreditPointsPossible: undefined,
+      } as {
+        title?: string;
+        gradient?: string;
+        permittedAbsences?: number;
+        permittedAbsencesMode?: "policy" | "custom";
+        policyTimesPerWeek?: number;
+        policyDuration?: "semester" | "8week";
+        participationCreditPointsPossible?: undefined;
+      });
     }
     return await ctx.db.patch(id, safe);
   },
