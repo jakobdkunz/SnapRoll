@@ -61,10 +61,31 @@ export function StudentHeaderRight() {
   // Convex hooks
   const currentUser = useQuery(api.functions.auth.getCurrentUser, { role: "STUDENT" });
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
+  const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const didUpsertRef = useRef(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // In demo mode, ensure demo student exists
+  useEffect(() => {
+    if (didUpsertRef.current) return;
+    if (isDemoMode) {
+      if (currentUser === undefined) return; // still loading
+      if (!currentUser) {
+        (async () => {
+          try {
+            didUpsertRef.current = true;
+            await upsertUser({ role: 'STUDENT' });
+          } catch (e) {
+            // Best-effort upsert; ignore failures in UI but log for debugging
+            console.error(e);
+          }
+        })();
+      }
+    }
+  }, [currentUser, upsertUser, isDemoMode]);
 
   // Update form fields when student data loads
   useEffect(() => {
