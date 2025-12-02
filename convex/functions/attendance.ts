@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
+import { requireCurrentUser as requireCurrentUserFromAuth, requireTeacher, requireTeacherOwnsSection } from "./_auth";
 
 type RateLimitBucket = {
   _id: Id<'rateLimits'>;
@@ -13,24 +14,8 @@ type RateLimitBucket = {
   blockedUntil?: number;
 };
 
-async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new ConvexError("Please sign in to continue.");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new ConvexError("Please sign in to continue.");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new ConvexError("Account not provisioned. Try refreshing or contact your instructor.");
-  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
-}
-
-async function requireTeacherOwnsSection(ctx: QueryCtx | MutationCtx, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
-  const section = await ctx.db.get(sectionId);
-  if (!section || section.teacherId !== teacherUserId) throw new Error("Forbidden");
-  return section;
-}
+// Use requireCurrentUser from _auth.ts which handles demo mode
+const requireCurrentUser = requireCurrentUserFromAuth;
 
 async function requireTeacherOwnershipForClassDay(ctx: QueryCtx | MutationCtx, classDayId: Id<'classDays'>, teacherUserId: Id<'users'>) {
   const classDay = await ctx.db.get(classDayId);

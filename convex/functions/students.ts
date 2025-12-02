@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { requireStudent } from "./_auth";
 
 export const getActiveInteractive = query({
   args: { studentId: v.id("users"), tick: v.optional(v.number()) },
@@ -8,13 +9,30 @@ export const getActiveInteractive = query({
     try {
     // Only allow the student themselves to query their active interactive.
     // Be defensive: on any auth mismatch, return null instead of throwing to avoid crashing the client UI.
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) return null;
-    // Authorize: ensure the provided studentId matches the caller's identity email
-    const currentUser = await ctx.db.get(args.studentId);
-    if (!currentUser) return null;
-    if ((currentUser.email || "").toString().trim().toLowerCase() !== email) return null;
+    const isDemoMode = process.env.DEMO_MODE === "true";
+    
+    let currentUser;
+    if (isDemoMode) {
+      // In demo mode, use requireStudent to get the demo student
+      try {
+        const student = await requireStudent(ctx);
+        currentUser = student;
+      } catch {
+        return null; // If demo student doesn't exist, return null
+      }
+    } else {
+      // Normal mode: use auth identity
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+      if (!email) return null;
+      const user = await ctx.db.get(args.studentId);
+      if (!user) return null;
+      if ((user.email || "").toString().trim().toLowerCase() !== email) return null;
+      currentUser = user;
+    }
+    
+    // Verify the studentId matches
+    if (currentUser._id !== args.studentId) return null;
     // Get student's enrollments
     const enrollments = await ctx.db
       .query("enrollments")

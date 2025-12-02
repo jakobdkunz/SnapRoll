@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import type { Id, Doc } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import { requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 import { getEasternDayBounds } from "./_tz";
 
 export const getSectionHistory = query({
@@ -351,14 +351,27 @@ export const getStudentHistory = query({
   handler: async (ctx, args) => {
     // Only allow the student to access their own consolidated history
     // Teachers should use section-scoped history above
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-    if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
+    const isDemoMode = process.env.DEMO_MODE === "true";
+    
+    let currentUser;
+    if (isDemoMode) {
+      // In demo mode, use requireStudent to get the demo student
+      const student = await requireStudent(ctx);
+      currentUser = student;
+    } else {
+      // Normal mode: use auth identity
+      const identity = await ctx.auth.getUserIdentity();
+      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
+      if (!email) throw new Error("Unauthenticated");
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+      if (!user) throw new Error("Unauthenticated");
+      currentUser = user;
+    }
+    
+    if (currentUser._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
     // Get all sections the student is enrolled in
     const enrollments = await ctx.db
