@@ -2,7 +2,7 @@
 
 Attendance tracking and realtime student engagement for higher-ed. Optimized for cost-efficiency: similar software solutions cost universities hundreds of thousands to millions of dollars per year, while SnapRoll costs far less. FERPA-compatible. Deploys on desktop/mobile web, iOS, and Android.
 
-## Overview
+## Overview & Goals
 
 SnapRoll solves attendance and student engagement in large lecture halls. Instructors generate a code, and students type it in to prove their attendance. Real-time interactive features like polls, word clouds, and quizzes enable instructors to foster active participation.
 
