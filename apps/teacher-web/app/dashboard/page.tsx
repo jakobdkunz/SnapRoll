@@ -98,13 +98,24 @@ export default function DashboardPage() {
   }, [sections, backfillJoinCodes]);
 
   // Fallback: if signed in but no Convex user yet, upsert as TEACHER
+  // In demo mode, always try to upsert to ensure demo user exists
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   useEffect(() => {
+    if (isDemoMode) {
+      // In demo mode, always try to upsert to create demo user if needed
+      if (currentUser === undefined) return; // still loading
+      if (!currentUser) {
+        upsertUser({ role: 'TEACHER' }).catch(() => {});
+      }
+      return;
+    }
+    // Normal mode: only upsert if signed in
     if (!isLoaded || !isSignedIn) return;
     if (currentUser === undefined) return; // still loading
     if (!currentUser) {
       upsertUser({ role: 'TEACHER' }).catch(() => {});
     }
-  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
+  }, [isLoaded, isSignedIn, currentUser, upsertUser, isDemoMode]);
 
   // Word cloud start handled by dynamic modal
 

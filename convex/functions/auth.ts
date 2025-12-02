@@ -125,6 +125,30 @@ export const upsertCurrentUser = mutation({
     role: v.union(v.literal("TEACHER"), v.literal("STUDENT")),
   },
   handler: async (ctx, args) => {
+    // In demo mode, create/return demo user
+    if (process.env.DEMO_MODE === "true") {
+      const demoEmail = args.role === "TEACHER" ? "demo-teacher@example.com" : "demo-student@example.com";
+      let user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", demoEmail))
+        .first();
+      
+      if (!user) {
+        const userId = await ctx.db.insert("users", {
+          email: demoEmail,
+          firstName: "Demo",
+          lastName: args.role === "TEACHER" ? "Teacher" : "Student",
+          role: args.role,
+        });
+        return userId;
+      }
+      
+      if (user.role !== args.role) {
+        await ctx.db.patch(user._id as Id<"users">, { role: args.role });
+      }
+      return user._id;
+    }
+
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null as unknown as Id<'users'>;
 
