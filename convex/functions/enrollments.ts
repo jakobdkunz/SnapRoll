@@ -38,8 +38,32 @@ export const create = mutation({
 export const getBySection = query({
   args: { sectionId: v.id("sections") },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
-    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    const isDemoMode = process.env.DEMO_MODE === "true";
+    
+    if (isDemoMode) {
+      // In demo mode, check if demo teacher exists first
+      const demoEmail = "demo-teacher@example.com";
+      const demoTeacher = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", demoEmail))
+        .first();
+      
+      // If demo teacher doesn't exist yet, return empty array (frontend will create it)
+      if (!demoTeacher) {
+        return [];
+      }
+      
+      // Verify section exists
+      const section = await ctx.db.get(args.sectionId);
+      if (!section) {
+        return [];
+      }
+    } else {
+      // Normal mode: use standard auth checks
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    }
+    
     return await ctx.db
       .query("enrollments")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
