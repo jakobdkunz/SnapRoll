@@ -1,0 +1,16 @@
+node_modules
+.turbo
+.next
+.next/**
+.next*
+**/.next*
+dist
+build
+.env
+.env.*
+coverage
+public/*.generated.*
+.DS_Store
+**/*.tsbuildinfo
+**/.expo/**
+

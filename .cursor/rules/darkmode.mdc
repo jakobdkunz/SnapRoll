@@ -1,0 +1,7 @@
+---
+description: Dark mode reminder
+globs:
+alwaysApply: true
+---
+
+When adding UI, mind the fact that we support Light and Dark modes. Make sure new UI is consistent with existing UI in regards to that.

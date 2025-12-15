@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "incremental": true,
+    "isolatedModules": true,
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "jsx": "preserve"
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next-student-3001/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next-student-demo-3003/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

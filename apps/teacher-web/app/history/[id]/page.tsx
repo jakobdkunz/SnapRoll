@@ -1,0 +1,690 @@
+"use client";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { useAuth } from '@clerk/nextjs';
+import { Card, Badge, Button, Skeleton, Modal } from '@flamelink/ui';
+import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
+import { formatDateMDY } from '@flamelink/lib';
+import { api } from '@flamelink/convex-client';
+import type { Id } from '@flamelink/convex-client';
+import { useQuery, useMutation, useConvex } from 'convex/react';
+import { useParams } from 'next/navigation';
+import { SectionHeader } from '../../modify/[id]/_components/SectionHeader';
+
+type Student = { id: string; firstName: string; lastName: string; email: string; totalAbsences?: number };
+type Record = { 
+  classDayId: string; 
+  studentId: string; 
+  status: Status; 
+  isManual: boolean;
+  originalStatus: Status; // Add this field to track original status
+  manualChange?: {
+    status: Status;
+    teacherName: string;
+    createdAt: string;
+  };
+};
+
+type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
+
+export default function HistoryPage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <HistoryPageDemo /> : <HistoryPageClerk />;
+}
+
+function HistoryPageDemo() {
+  return <HistoryPageCore authReady={true} />;
+}
+
+function HistoryPageClerk() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const authReady = isLoaded && isSignedIn;
+  return <HistoryPageCore authReady={authReady} />;
+}
+
+function HistoryPageCore({ authReady }: { authReady: boolean }) {
+  const params = useParams<{ id: string }>();
+  //
+  const [offset, setOffset] = useState<number>(0);
+  // Server-side window equals the number of columns that fit
+  const [limit, setLimit] = useState<number>(12);
+  const [activeTab, setActiveTab] = useState<'attendance' | 'participation'>('attendance');
+  const sectionId = params.id as unknown as Id<'sections'>;
+  const history = useQuery(
+    api.functions.history.getSectionHistory,
+    authReady && params.id ? { sectionId, offset, limit } : "skip"
+  ) as any;
+  const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
+  const participation = useQuery(
+    api.functions.history.getParticipationBySection,
+    authReady && params.id && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
+  ) as {
+    days: { id: string; date: string }[];
+    records: { studentId: string; rows: { classDayId: string; sharesEarned: number; sharesTotal: number; absent: boolean }[] }[];
+    totals: { studentId: string; points: number }[];
+    totalDays: number;
+    offset: number;
+    limit: number;
+  } | undefined;
+  //
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const firstThRef = useRef<HTMLTableCellElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isCompact, setIsCompact] = useState(false); // based on container width, not viewport
+  useEffect(() => {
+    const update = () => setIsMobile(typeof window !== 'undefined' && window.innerWidth < 640);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  const STUDENT_COL_BASE = isCompact ? 120 : 220; // narrower when compact
+  const DAY_COL_CONTENT = isCompact ? 48 : 96; // tighter in compact to fit more columns
+  const DAY_COL_PADDING = 12; // Adjusted: pl-1 (4px) + pr-2 (8px)
+  // const PER_COL = DAY_COL_CONTENT + DAY_COL_PADDING; // total column footprint (unused)
+  const [initialized, setInitialized] = useState(false);
+  const [leftWidth, setLeftWidth] = useState<number>(STUDENT_COL_BASE);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [fillerWidth, setFillerWidth] = useState<number>(0);
+  const initializedRightmostRef = useRef(false);
+  const hasInteractedRef = useRef(false);
+  const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; anchorX: number; anchorY: number }>(
+    { visible: false, text: '', anchorX: 0, anchorY: 0 }
+  );
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const convex = useConvex();
+  const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
+  // Section header state
+  const section = useQuery(
+    api.functions.sections.get,
+    isAuthReady && params.id ? { id: sectionId } : "skip"
+  ) as any;
+  const [sectionLoaded, setSectionLoaded] = useState(false);
+  const [sectionTitle, setSectionTitle] = useState<string>('Section');
+  const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
+  useEffect(() => {
+    if (section) {
+      setSectionLoaded(true);
+      setSectionTitle(section.title || 'Section');
+      setSectionGradient(section.gradient || 'gradient-1');
+    }
+  }, [section]);
+
+  function showTooltip(text: string, rect: DOMRect) {
+    setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
+  }
+  function hideTooltip() {
+    setTooltip(t => ({ ...t, visible: false }));
+  }
+
+  function TooltipOverlay({ visible, text, anchorX, anchorY }: { visible: boolean; text: string; anchorX: number; anchorY: number }) {
+    const ref = useRef<HTMLDivElement | null>(null);
+    const [pos, setPos] = useState<{ left: number; top: number }>({ left: anchorX, top: anchorY });
+    useLayoutEffect(() => {
+      if (!visible) return;
+      const el = ref.current;
+      if (!el) return;
+      const vw = window.innerWidth;
+      const margin = 8;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const left = Math.min(vw - margin - w, Math.max(margin, anchorX - w / 2));
+      let top = anchorY - margin - h;
+      if (top < margin) top = anchorY + margin;
+      setPos({ left, top });
+    }, [visible, anchorX, anchorY]);
+    if (!visible) return null;
+    return createPortal(
+      <div
+        ref={ref}
+        style={{ position: 'fixed', left: pos.left, top: pos.top, zIndex: 9999, maxWidth: 'calc(100vw - 16px)' }}
+        className="pointer-events-none px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg"
+      >
+        {text}
+      </div>,
+      document.body
+    );
+  }
+
+  function formatHeaderDateMDFromString(dateStr: string) {
+    const [, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
+    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}`;
+  }
+
+  function formatDateMDYFromString(dateStr: string) {
+    const [y, m, d] = dateStr.split('-').map((s) => parseInt(s, 10));
+    return `${String(m).padStart(2, '0')}/${String(d).padStart(2, '0')}/${y}`;
+  }
+
+  // Removed measurement-driven left column width to avoid drift across resizes
+
+  // Recompute how many day columns fit and update query limit
+  const recomputeVisible = useCallback(() => {
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    const rectW = containerEl.getBoundingClientRect().width || containerEl.clientWidth || 0;
+    if (!rectW || rectW < 1) {
+      if (typeof window !== 'undefined') requestAnimationFrame(() => recomputeVisible());
+      return;
+    }
+    // Decide compact mode from container width and compute with local values
+    const compact = rectW < 640;
+    setIsCompact(compact);
+    const leftCol = compact ? 120 : 220;
+    const availableForDays = Math.max(0, rectW - leftCol);
+    const perCol = (compact ? 48 : 96) + DAY_COL_PADDING;
+    const epsilon = 4;
+    const fit = Math.max(1, Math.floor((availableForDays + epsilon) / perCol));
+    const capped = Math.min(60, fit);
+    setLimit((prev) => (prev !== capped ? capped : prev));
+    setLeftWidth(leftCol);
+    setContainerWidth(Math.round(rectW));
+    setDebug({ container: Math.round(rectW), leftCol: Math.round(leftCol), perCol, computed: capped, offset });
+  }, [DAY_COL_PADDING, offset]);
+
+  // Recompute filler width to right-align day columns and allocate slack to left column first
+  useEffect(() => {
+    if (!containerWidth) return;
+    const baseLeft = isCompact ? 120 : 220;
+    const perCol = (isCompact ? 48 : 96) + DAY_COL_PADDING;
+    const numCols = (history?.days?.length || 0);
+    const slack = Math.max(0, containerWidth - baseLeft - perCol * numCols);
+    const maxExtraForLeft = isCompact ? 56 : 120; // allow student column to grow first
+    const useForLeft = Math.min(slack, maxExtraForLeft);
+    const newLeft = baseLeft + useForLeft;
+    const remaining = Math.max(0, slack - useForLeft);
+    setLeftWidth(Math.round(newLeft));
+    setFillerWidth(Math.round(remaining));
+  }, [containerWidth, isCompact, DAY_COL_PADDING, history?.days?.length]);
+
+  useEffect(() => {
+    // Compute on mount and on dependencies that affect widths
+    recomputeVisible();
+    if (typeof window !== 'undefined') {
+      const onResize = () => recomputeVisible();
+      window.addEventListener('resize', onResize);
+      return () => window.removeEventListener('resize', onResize);
+    }
+  }, [isMobile, initialized, recomputeVisible]);
+
+  // Observe container size changes (not just window resizes)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      recomputeVisible();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recomputeVisible]);
+
+  // Clamp offset when limit shrinks so we don't overflow (skip while fetching)
+  useEffect(() => {
+    if (!history) return;
+    const maxOffset = Math.max(0, history.totalDays - Math.max(1, limit));
+    if (offset > maxOffset) setOffset(maxOffset);
+  }, [limit, offset, history]);
+
+  // On first data load and when layout recalculates limit, jump to final page
+  useEffect(() => {
+    if (!history) return;
+    // if the user has paged manually, do not auto-jump anymore
+    if (hasInteractedRef.current) return;
+    const total = history.totalDays || 0;
+    if (total <= 0) return;
+    const windowSize = Math.max(1, limit);
+    const maxOffset = Math.max(0, total - windowSize);
+    // Only set if different to avoid unnecessary state churn
+    if (offset !== maxOffset) setOffset(maxOffset);
+    initializedRightmostRef.current = true;
+  }, [history?.totalDays, limit, offset]);
+
+  // Preserve roster and grid during refresh; only update when new data arrives
+  const [students, setStudents] = useState<Student[]>(history?.students || []);
+  const [days, setDays] = useState(history?.days || []);
+  const [studentRecords, setStudentRecords] = useState(history?.records || []);
+  const totalDays = useMemo(() => history?.totalDays || 0, [history?.totalDays]);
+  useEffect(() => {
+    if (history) {
+      setStudents(history.students || []);
+      setDays(history.days || []);
+      setStudentRecords(history.records || []);
+    }
+  }, [history]);
+
+
+  //
+
+  // Set loading state based on Convex query
+  const isFetching = !history;
+  const isInitialLoading = !initialized;
+  const isRefreshing = initialized && isFetching;
+  const [hasRefreshDelayElapsed, setHasRefreshDelayElapsed] = useState(false);
+  useEffect(() => {
+    let id: number | undefined;
+    if (isRefreshing) {
+      id = window.setTimeout(() => setHasRefreshDelayElapsed(true), 500);
+    } else {
+      setHasRefreshDelayElapsed(false);
+    }
+    return () => { if (id) window.clearTimeout(id); };
+  }, [isRefreshing]);
+
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (hasInitializedRef.current) return;
+    if (history && !initialized) {
+      hasInitializedRef.current = true;
+      setInitialized(true);
+    }
+  }, [initialized, history]);
+
+  const startExport = useCallback(async () => {
+    try {
+      setExportError(null);
+      setExportOpen(true);
+      setExporting(true);
+      if (!params.id) throw new Error('Missing section id');
+      const data = await convex.query(api.functions.history.exportSectionHistory, { sectionId });
+      const { days, rows } = data as { days: string[]; rows: Array<{ firstName: string; lastName: string; email: string; statuses: string[] }>; };
+      const header = ['First Name', 'Last Name', 'Email', ...days];
+      const lines = [header];
+      for (const r of rows) {
+        lines.push([r.firstName, r.lastName, r.email, ...r.statuses.map(s => s || 'BLANK')]);
+      }
+      const csv = lines.map(cols => cols.map((c) => {
+        const v = String(c ?? '');
+        // Escape quotes and wrap fields containing commas, quotes or newlines
+        if (/[",\n]/.test(v)) {
+          return '"' + v.replace(/"/g, '""') + '"';
+        }
+        return v;
+      }).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const urlObj = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlObj;
+      const date = new Date().toISOString().slice(0,10);
+      a.download = `attendance_${params.id}_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(urlObj);
+      setExporting(false);
+      setExportOpen(false);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      setExportError(message);
+      setExporting(false);
+    }
+  }, [params.id]);
+
+  // (duplicate removed)
+
+  async function updateStatus(classDayId: string, studentId: string, newStatus: Status) {
+    try {
+      await updateManualStatus({
+        classDayId: classDayId as Id<'classDays'>,
+        studentId: studentId as Id<'users'>,
+        status: newStatus,
+      });
+      // Convex reactivity will refresh the history query automatically
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  }
+
+  function renderStatusCell(record: Record, studentName: string, date: string) {
+    const status = record.status;
+    const isManual = record.isManual;
+    const originalStatus = record.originalStatus;
+    
+    // Only show manual indicators if the status is actually different from original
+    const showManualIndicators = isManual && status !== originalStatus;
+    
+    // Disable selecting BLANK for previous days using Eastern Time boundary
+    const now = new Date();
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const partsNow = fmt.formatToParts(now);
+    const y = Number(partsNow.find(p => p.type === 'year')!.value);
+    const m = Number(partsNow.find(p => p.type === 'month')!.value);
+    const d = Number(partsNow.find(p => p.type === 'day')!.value);
+    const guessUtc = Date.UTC(y, m - 1, d, 5, 0, 0, 0);
+    const hms = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(guessUtc);
+    const hh = Number(hms.find(p => p.type === 'hour')!.value);
+    const mm = Number(hms.find(p => p.type === 'minute')!.value);
+    const ss = Number(hms.find(p => p.type === 'second')!.value);
+    const startOfTodayEt = guessUtc - (((hh * 60 + mm) * 60 + ss) * 1000);
+    const isPastDay = new Date(date).getTime() < startOfTodayEt;
+
+    const statusOptions: { value: Status; label: string; disabled?: boolean }[] = [
+      { value: 'PRESENT', label: 'P' },
+      { value: 'ABSENT', label: 'A' },
+      { value: 'EXCUSED', label: 'E' },
+      { value: 'NOT_JOINED', label: 'NE' },
+      { value: 'BLANK', label: '–', disabled: originalStatus !== 'BLANK' || isPastDay }
+    ];
+
+    const statusDisplay = (() => {
+      switch (status) {
+        case 'PRESENT':
+          return <Badge tone="green">P{showManualIndicators ? '*' : ''}</Badge>;
+        case 'ABSENT':
+          return <Badge tone="red">A{showManualIndicators ? '*' : ''}</Badge>;
+        case 'EXCUSED':
+          return <Badge tone="yellow">E{showManualIndicators ? '*' : ''}</Badge>;
+        case 'NOT_JOINED':
+          return <Badge tone="gray">NE{showManualIndicators ? '*' : ''}</Badge>;
+        default:
+          return <span className="text-slate-400">–{showManualIndicators ? '*' : ''}</span>;
+      }
+    })();
+
+    // Generate tooltip text based on whether it's a manual change or original status
+    let tooltipText = '';
+    if (showManualIndicators && record.manualChange) {
+      tooltipText = `Instructor manually changed the status to ${status} on ${formatDateMDY(new Date(record.manualChange.createdAt))}`;
+    } else {
+      // Standard attendance tooltip
+      switch (status) {
+        case 'PRESENT':
+          tooltipText = `${studentName} was Present in class on ${formatDateMDYFromString(date)}.`;
+          break;
+        case 'ABSENT':
+          tooltipText = `${studentName} was Absent on ${formatDateMDYFromString(date)}.`;
+          break;
+        case 'EXCUSED':
+          tooltipText = `${studentName} was Excused on ${formatDateMDYFromString(date)}.`;
+          break;
+        case 'NOT_JOINED':
+          tooltipText = `${studentName} was not enrolled in this section on ${formatDateMDYFromString(date)}.`;
+          break;
+        case 'BLANK':
+          tooltipText = `No attendance recorded for ${studentName} on ${formatDateMDYFromString(date)}.`;
+          break;
+      }
+    }
+
+    let selectEl: HTMLSelectElement | null = null;
+    return (
+      <div
+        className="relative group cursor-pointer select-none flex items-center justify-center"
+        onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+        onMouseLeave={hideTooltip}
+        onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+        onTouchEnd={hideTooltip}
+        onClick={() => { try { selectEl?.click(); } catch { /* ignore */ } }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); try { selectEl?.click(); } catch { /* ignore */ } } }}
+        tabIndex={0}
+        aria-label={tooltipText || undefined}
+      >
+        <select
+          ref={(el) => { selectEl = el; }}
+          value={status}
+          onChange={(e) => updateStatus(record.classDayId, record.studentId, e.target.value as Status)}
+          className="absolute inset-0 z-50 opacity-[0.01] bg-transparent border-none cursor-pointer pointer-events-auto w-full h-full p-0 focus:outline-none focus:ring-2 focus:ring-primary rounded"
+          aria-label="Change attendance status"
+          onMouseEnter={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+          onMouseLeave={hideTooltip}
+          onTouchStart={(e) => { if (tooltipText) showTooltip(tooltipText, (e.currentTarget as HTMLElement).getBoundingClientRect()); }}
+          onTouchEnd={hideTooltip}
+        >
+          {statusOptions.map(option => (
+            <option 
+              key={option.value} 
+              value={option.value}
+              disabled={option.disabled}
+            >
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none flex items-center justify-center group-hover:brightness-95">
+          {statusDisplay}
+        </div>
+      </div>
+    );
+  }
+
+  // Render skeleton while initializing table (do not block on empty arrays)
+  if (!initialized) {
+    return (
+      <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+      <Card className="py-4 px-2 sm:px-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className={`text-sm text-slate-600 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>Loading…</div>
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-24 rounded-xl" />
+            <Skeleton className="h-9 w-20 rounded-xl" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Skeleton className="h-6 w-56 rounded" />
+              <div className="flex gap-2">
+                {Array.from({ length: 6 }).map((_, j) => (
+                  <Skeleton key={j} className="h-6 w-12 rounded" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+      </div>
+    );
+  }
+
+  // Render shell with loading overlay instead of blank screen
+  return (
+    <div className="space-y-6">
+      <SectionHeader loaded={sectionLoaded} title={sectionTitle} gradient={sectionGradient} />
+      <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">
+        {/* Tabs just above the card, visually attached */}
+        <div className="pl-2 sm:pl-4 mb-0">
+          <div className="inline-flex rounded-t-md overflow-hidden border border-b-0 border-slate-200 dark:border-neutral-800">
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='attendance' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('attendance')}>Attendance</button>
+            <button className={`px-3 py-1.5 text-sm ${activeTab==='participation' ? 'bg-white dark:bg-neutral-900 font-medium' : 'bg-neutral-100 dark:bg-neutral-800'}`} onClick={() => setActiveTab('participation')}>Participation</button>
+          </div>
+        </div>
+        <Card className="-mt-[1px] pt-4 pb-4 px-2 sm:px-4">
+      {process.env.NEXT_PUBLIC_DEBUG_HISTORY === 'true' && debug && (
+        <div className={`mb-2 text-xs text-slate-500 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
+          cw {debug.container}px · lw {debug.leftCol}px · pc {debug.perCol}px · vis {debug.computed} · off {debug.offset}
+        </div>
+      )}
+      <div className="flex items-center justify-between mb-3">
+        <div className={`text-sm text-slate-600 dark:text-slate-400 ${isCompact ? 'pl-2' : 'pl-4'}`}>
+          {totalDays > 0
+            ? (() => {
+                const windowSize = Math.min(limit, days.length);
+                const start = Math.min(totalDays, offset + 1);
+                const end = Math.min(totalDays, offset + windowSize);
+                return <>{start}–{end} of {totalDays} class days</>;
+              })()
+            : '0 of 0 class days'}
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4">
+          <Button variant="ghost" onClick={() => startExport()} className="inline-flex items-center gap-2">
+            <HiOutlineDocumentArrowDown className="h-5 w-5" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Older page */}
+            <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const next = Math.max(0, offset - step); setOffset(next); }} disabled={offset === 0}>
+              ← <span className="hidden sm:inline">Previous</span>
+            </Button>
+            {/* Newer page */}
+            <Button variant="ghost" onClick={() => { hasInteractedRef.current = true; const step = Math.max(1, limit); const maxOffset = Math.max(0, totalDays - step); const next = Math.min(maxOffset, offset + step); setOffset(next); }} disabled={offset + Math.min(limit, days.length) >= totalDays}>
+              <span className="hidden sm:inline">Next</span> →
+            </Button>
+          </div>
+        </div>
+      </div>
+      {/* Blank-state */}
+      {initialized && !isFetching && (totalDays === 0 || students.length === 0) ? (
+        <div className="py-12 grid place-items-center">
+          <div className="text-center max-w-md">
+            <div className="text-lg font-semibold mb-1">No attendance history yet</div>
+            <div className="text-slate-600">Start taking attendance to see it appear here.</div>
+          </div>
+        </div>
+      ) : (
+      <div ref={containerRef} className="relative overflow-hidden w-full">
+        {activeTab === 'attendance' ? (
+          // Attendance table (existing)
+          <table className="border-separate border-spacing-0 table-fixed w-full">
+            <colgroup>
+              <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+              {days.map((day: any) => (
+                <col key={`col-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+                <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                {days.map((day: any) => (
+                  <th
+                    key={day.id}
+                    className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap sr-day-col"
+                    style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                  >
+                    {isRefreshing ? (
+                      hasRefreshDelayElapsed ? (
+                        <Skeleton className="h-4 w-14 sm:w-20 mx-auto" />
+                      ) : (
+                        <span className="inline-block h-4 w-14 sm:w-20" />
+                      )
+                    ) : (
+                      isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student: Student, i: number) => (
+                <tr key={student.id} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
+                  <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+                    <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
+                    <div className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+                      Absences: <span className="font-medium text-slate-700 dark:text-slate-300">{student.totalAbsences ?? '—'}</span>
+                    </div>
+                  </td>
+                  <td
+                    className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800"
+                    style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }}
+                    aria-hidden
+                  />
+                  {days.map((day: any, j: number) => {
+                    const record = studentRecords[i]?.records[j];
+                    return (
+                      <td
+                        key={`${student.id}-${day.id}`}
+                        className="pl-1 pr-2 py-2 text-center"
+                        style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}
+                      >
+                        {isRefreshing ? (
+                          hasRefreshDelayElapsed ? (
+                            <Skeleton className="h-6 w-8 mx-auto rounded" />
+                          ) : (
+                            <span className="inline-block h-6 w-8" />
+                          )
+                        ) : record ? (
+                          renderStatusCell(record, `${student.firstName} ${student.lastName}`, day.date)
+                        ) : (
+                          <span className="text-slate-400">–</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          // Participation table
+          <table className="border-separate border-spacing-0 table-fixed w-full">
+            <colgroup>
+              <col style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }} />
+              <col style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} />
+              {(participation?.days || []).map((day: any) => (
+                <col key={`colp-${day.id}`} style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }} />
+              ))}
+              <col style={{ width: 96, minWidth: 96, maxWidth: 96 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th ref={firstThRef} className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-2 text-left`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>Student</th>
+                <th className="p-0 bg-white dark:bg-neutral-900" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                {(participation?.days || []).map((day: any) => (
+                  <th key={`pth-${day.id}`} className="pl-1 pr-2 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 text-center whitespace-nowrap">{isCompact ? formatHeaderDateMDFromString(day.date) : formatDateMDYFromString(day.date)}</th>
+                ))}
+                <th className="pl-1 pr-2 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 text-center whitespace-nowrap">Total Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.map((student: Student, i: number) => {
+                const rec = (participation?.records || []).find(r => String(r.studentId) === String(student.id));
+                const total = (participation?.totals || []).find(t => String(t.studentId) === String(student.id))?.points ?? 0;
+                return (
+                  <tr key={`p-${student.id}`} className="odd:bg-slate-50 dark:odd:bg-neutral-900">
+                    <td className={`sticky left-0 z-0 bg-white dark:bg-neutral-900 ${isCompact ? 'pl-2' : 'pl-4'} pr-1 py-1 text-sm`} style={{ width: leftWidth, minWidth: leftWidth, maxWidth: leftWidth }}>
+                      <div className="font-medium truncate whitespace-nowrap overflow-hidden sr-student-name">{student.firstName} {student.lastName}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 truncate whitespace-nowrap overflow-hidden hidden sm:block">{student.email}</div>
+                    </td>
+                    <td className="p-0 bg-white dark:bg-neutral-900 odd:bg-slate-50 dark:odd:bg-neutral-800" style={{ width: fillerWidth, minWidth: fillerWidth, maxWidth: fillerWidth }} aria-hidden />
+                    {(participation?.days || []).map((day: any, j: number) => {
+                      const row = rec?.rows?.[j];
+                      return (
+                        <td key={`pc-${student.id}-${day.id}`} className="pl-1 pr-2 py-2 text-center" style={{ width: DAY_COL_CONTENT, minWidth: DAY_COL_CONTENT, maxWidth: DAY_COL_CONTENT }}>
+                          {!participation ? (
+                            hasRefreshDelayElapsed ? <Skeleton className="h-6 w-10 mx-auto rounded" /> : <span className="inline-block h-6 w-10" />
+                          ) : row ? (
+                            row.absent ? <Badge tone="red">Absent</Badge> : <span className="text-sm">{row.sharesEarned}/{Math.max(1, row.sharesTotal)}</span>
+                          ) : (
+                            <span className="text-slate-400">–</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="pl-1 pr-2 py-2 text-center font-medium">{total}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+        {isRefreshing && hasRefreshDelayElapsed && (
+          <div className="absolute inset-0 pointer-events-none" />
+        )}
+      </div>
+      )}
+      <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
+      {/* Export modal */}
+      <Modal open={exportOpen} onClose={() => (exporting ? null : setExportOpen(false))}>
+        <Card className="p-6 w-[90vw] max-w-md space-y-4">
+          <div className="text-lg font-semibold">Export Attendance</div>
+          {exportError ? (
+            <div className="text-sm text-red-600">{exportError}</div>
+          ) : (
+            <div className="text-sm text-slate-600">Preparing CSV for all days. This may take a moment…</div>
+          )}
+          <div className="h-2 w-full bg-slate-200 rounded overflow-hidden">
+            <div className={`h-full bg-slate-600 ${exporting ? 'animate-pulse' : ''}`} style={{ width: '60%' }} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setExportOpen(false)} disabled={exporting}>Close</Button>
+          </div>
+        </Card>
+      </Modal>
+    </Card>
+    </div>
+    </div>
+  );
+}

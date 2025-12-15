@@ -1,0 +1,47 @@
+{
+  "name": "@flamelink/student-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "lint": "echo \"No linter configured for mobile yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@clerk/clerk-expo": "^2.19.6",
+    "@expo/metro-runtime": "~6.1.2",
+    "@flamelink/convex-client": "^0.1.0",
+    "@flamelink/student-core": "^0.1.0",
+    "@flamelink/ui-native": "^0.1.0",
+    "@react-navigation/native": "^7.1.22",
+    "@react-navigation/native-stack": "^7.8.1",
+    "convex": "^1.14.0",
+    "expo": "~54.0.0",
+    "expo-asset": "~12.0.10",
+    "expo-constants": "~18.0.10",
+    "expo-modules-core": "~3.0.26",
+    "expo-router": "~6.0.15",
+    "nativewind": "^4.0.36",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "5.6.2",
+    "react-native-screens": "~4.16.0",
+    "tailwindcss": "^3.4.14",
+    "whatwg-fetch": "^3.6.20"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "babel-preset-expo": "^54.0.7",
+    "typescript": "^5.6.3"
+  },
+  "expo": {
+    "scheme": "snaproll"
+  }
+}
