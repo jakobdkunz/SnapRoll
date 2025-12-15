@@ -2,6 +2,10 @@
   "name": "flamelink",
   "private": true,
   "packageManager": "pnpm@9.7.0",
+  "engines": {
+    "node": "20.x",
+    "pnpm": "9.x"
+  },
   "version": "0.1.0",
   "workspaces": [
     "apps/*",

@@ -2,11 +2,12 @@
 import { useEffect } from 'react';
 import { SignIn, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 
 function DemoRedirect({ to }: { to: string }) {
   const router = useRouter();
   useEffect(() => {
-    router.replace(to);
+    router.replace(to as Route);
   }, [router, to]);
   return null;
 }
@@ -16,7 +17,7 @@ function StudentSignInClerk() {
   const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/sections');
+    if (isLoaded && isSignedIn) router.replace('/sections' as Route);
   }, [isLoaded, isSignedIn, router]);
 
   return (

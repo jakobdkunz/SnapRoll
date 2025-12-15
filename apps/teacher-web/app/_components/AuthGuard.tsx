@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { useAuth, useUser } from '@clerk/nextjs';
 
 function DemoAuthGuard() {
@@ -9,7 +10,7 @@ function DemoAuthGuard() {
   useEffect(() => {
     // Keep users inside demo (avoid auth pages)
     if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/sso-callback')) {
-      router.replace('/dashboard');
+      router.replace('/dashboard' as Route);
     }
   }, [pathname, router]);
   return null;
@@ -26,7 +27,7 @@ function ClerkAuthGuard() {
     const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
     if (!isSignedIn && !isPublic) {
       const t = setTimeout(() => {
-        if (!isSignedIn) router.replace('/sign-in');
+        if (!isSignedIn) router.replace('/sign-in' as Route);
       }, 10);
       return () => clearTimeout(t);
     }

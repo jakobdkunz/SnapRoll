@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { api } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
@@ -140,7 +141,7 @@ function StudentHeaderRightDemo() {
         <button
           onClick={() => {
             setOpen(false);
-            router.push('/sections');
+            router.push('/sections' as Route);
           }}
           className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
         >
@@ -220,7 +221,7 @@ function StudentHeaderRightClerk() {
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
     try { signOut().catch(() => {}); } catch (e) { void e; }
-    router.push('/sign-in');
+    router.push('/sign-in' as Route);
   }
 
   async function onResetDemo() {

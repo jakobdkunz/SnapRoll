@@ -1,12 +1,13 @@
 "use client";
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { useAuth } from '@clerk/nextjs';
 import Image from 'next/image';
 
 function DemoWordmarkLink() {
   const router = useRouter();
   function onClick() {
-    router.push('/sections');
+    router.push('/sections' as Route);
   }
   return (
     <button onClick={onClick} className="flex items-center gap-0.5 hover:opacity-80 transition" aria-label="FlameLink home">
@@ -21,8 +22,8 @@ function ClerkWordmarkLink() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   function onClick() {
-    if (isSignedIn) router.push('/sections');
-    else router.push('/');
+    if (isSignedIn) router.push('/sections' as Route);
+    else router.push('/' as Route);
   }
   return (
     <button onClick={onClick} className="flex items-center gap-0.5 hover:opacity-80 transition" aria-label="FlameLink home">

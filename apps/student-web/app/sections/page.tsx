@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { Card, Button, TextInput, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
@@ -443,7 +444,7 @@ function SectionsPageCore({ authReady, canUpsert }: { authReady: boolean; canUps
           <button
             className="text-blue-500 dark:text-blue-400 font-medium hover:underline"
             onClick={() => {
-              router.push('/my-attendance');
+              router.push('/my-attendance' as Route);
             }}
           >
             My attendance →

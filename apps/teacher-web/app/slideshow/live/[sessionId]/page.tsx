@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { Button, Card } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
@@ -436,9 +437,9 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     setWorking(true);
     try {
       await closeSession({ sessionId: sessionIdTyped });
-      router.push('/dashboard');
+      router.push('/dashboard' as Route);
     } catch {
-      router.push('/dashboard');
+      router.push('/dashboard' as Route);
     } finally {
       setWorking(false);
     }

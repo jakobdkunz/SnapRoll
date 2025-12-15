@@ -3,6 +3,7 @@ import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons
 import { MdDarkMode, MdLightMode, MdPhoneIphone } from 'react-icons/md';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
@@ -113,7 +114,7 @@ function TeacherHeaderRightDemo() {
         </button>
         <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
         <button
-          onClick={() => { setOpen(false); router.push('/dashboard'); }}
+          onClick={() => { setOpen(false); router.push('/dashboard' as Route); }}
           className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
         >
           Go to Dashboard
@@ -254,7 +255,7 @@ function TeacherHeaderRightClerk() {
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    router.push('/sign-in');
+    router.push('/sign-in' as Route);
   }
 
   async function onResetDemo() {
