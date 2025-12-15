@@ -255,7 +255,7 @@ function StudentHeaderRightClerk() {
   if (!isSignedIn) {
     return (
       <div>
-        <Link href="/sign-in"><Button variant="secondary">Log in</Button></Link>
+        <Link href={'/sign-in' as Route}><Button variant="secondary">Log in</Button></Link>
       </div>
     );
   }

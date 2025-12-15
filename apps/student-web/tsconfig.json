@@ -26,10 +26,10 @@
   },
   "include": [
     "next-env.d.ts",
-    ".next-student-3001/types/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next-*/types/**/*.ts",
     "**/*.ts",
-    "**/*.tsx",
-    ".next-student-demo-3003/types/**/*.ts"
+    "**/*.tsx"
   ],
   "exclude": [
     "node_modules"

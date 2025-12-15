@@ -99,7 +99,7 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
   // Section header state
   const section = useQuery(
     api.functions.sections.get,
-    isAuthReady && params.id ? { id: sectionId } : "skip"
+    authReady && params.id ? { id: sectionId } : "skip"
   ) as any;
   const [sectionLoaded, setSectionLoaded] = useState(false);
   const [sectionTitle, setSectionTitle] = useState<string>('Section');

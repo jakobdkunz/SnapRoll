@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import Image from 'next/image';
 import { Button, Card } from '@flamelink/ui';
 
@@ -13,7 +14,7 @@ export default function LandingPage() {
               <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-slate-100">A better Top Hat alternative for classroom response</h1>
               <p className="mt-3 text-slate-600 dark:text-slate-300 text-base sm:text-lg">Take attendance in seconds, run polls and word clouds, and get instant insights — at <span className="font-semibold text-slate-900 dark:text-slate-100">half the price of Top Hat</span>.</p>
               <div className="mt-5 flex items-center justify-center lg:justify-start gap-3">
-                <Link href="/sign-in"><Button className="min-w-28">Log in</Button></Link>
+                <Link href={'/sign-in' as Route}><Button className="min-w-28">Log in</Button></Link>
                 <a href="#features" className="text-blue-600 hover:underline font-medium dark:text-blue-400">Explore features →</a>
               </div>
             </div>
