@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@flamelink/convex-client/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAccessToken } from '@workos-inc/authkit-nextjs';
 import type { Id } from '@flamelink/convex-client';
 
 function getConvexUrl(): string {
@@ -13,9 +13,8 @@ function getConvexUrl(): string {
 
 export async function POST(_req: Request, { params }: { params: { sessionId: string } }) {
   try {
-    const { getToken } = await auth();
-    const token = await getToken({ template: 'convex' });
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const accessToken = await getAccessToken();
+    if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const req = _req;
     const form = await req.formData();
@@ -39,7 +38,7 @@ export async function POST(_req: Request, { params }: { params: { sessionId: str
     });
 
     const convex = new ConvexHttpClient(getConvexUrl());
-    convex.setAuth(token);
+    convex.setAuth(accessToken);
     await convex.mutation(api.functions.slideshow.addSlide, {
       sessionId: params.sessionId as Id<'slideshowSessions'>,
       index,
@@ -57,11 +56,10 @@ export async function POST(_req: Request, { params }: { params: { sessionId: str
 
 export async function GET(_req: Request, { params }: { params: { sessionId: string } }) {
   try {
-    const { getToken } = await auth();
-    const token = await getToken({ template: 'convex' });
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const accessToken = await getAccessToken();
+    if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const convex = new ConvexHttpClient(getConvexUrl());
-    convex.setAuth(token);
+    convex.setAuth(accessToken);
     const slides = await convex.query(api.functions.slideshow.getSlides, { sessionId: params.sessionId as Id<'slideshowSessions'> });
     const res = NextResponse.json({ slides });
     // Allow brief caching at the edge to reduce hot GET costs; revalidate quickly
@@ -72,5 +70,3 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-

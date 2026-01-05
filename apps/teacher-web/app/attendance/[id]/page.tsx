@@ -7,7 +7,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 type AttendanceStatus = {
   hasActiveAttendance: boolean;
@@ -19,16 +19,16 @@ type AttendanceStatus = {
 
 export default function AttendancePage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <AttendancePageDemo /> : <AttendancePageClerk />;
+  return isDemoMode ? <AttendancePageDemo /> : <AttendancePageWorkOS />;
 }
 
 function AttendancePageDemo() {
   return <AttendancePageCore authReady={true} />;
 }
 
-function AttendancePageClerk() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
+function AttendancePageWorkOS() {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
   return <AttendancePageCore authReady={authReady} />;
 }
 

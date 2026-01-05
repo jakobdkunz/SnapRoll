@@ -4,23 +4,23 @@ import { useEffect, useRef } from 'react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 type Word = { word: string; count: number };
 // removed unused Session type
 
 export default function WordCloudLivePage({ params }: { params: { sessionId: string } }) {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <WordCloudLivePageDemo params={params} /> : <WordCloudLivePageClerk params={params} />;
+  return isDemoMode ? <WordCloudLivePageDemo params={params} /> : <WordCloudLivePageWorkOS params={params} />;
 }
 
 function WordCloudLivePageDemo({ params }: { params: { sessionId: string } }) {
   return <WordCloudLivePageCore params={params} authReady={true} />;
 }
 
-function WordCloudLivePageClerk({ params }: { params: { sessionId: string } }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
+function WordCloudLivePageWorkOS({ params }: { params: { sessionId: string } }) {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
   return <WordCloudLivePageCore params={params} authReady={authReady} />;
 }
 

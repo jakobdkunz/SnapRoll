@@ -1,39 +1,27 @@
 "use client";
 import * as React from 'react';
-import { ClerkProvider, useAuth } from '@clerk/nextjs';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { ConvexProvider } from 'convex/react';
+import { AuthKitProvider, useAuth as useWorkOSAuth, useAccessToken } from '@workos-inc/authkit-nextjs/components';
+import { ConvexProviderWithAuth, ConvexProvider } from 'convex/react';
 import { createConvexClient, getConvexUrl } from '@flamelink/convex-client';
 
+function useAuthFromWorkOS() {
+  const { user, loading } = useWorkOSAuth();
+  const { accessToken, loading: tokenLoading, getAccessToken } = useAccessToken();
+
+  return React.useMemo(
+    () => ({
+      isLoading: loading || tokenLoading,
+      isAuthenticated: !!user && !!accessToken,
+      fetchAccessToken: async () => {
+        const token = await getAccessToken();
+        return token ?? null;
+      },
+    }),
+    [loading, tokenLoading, user, accessToken, getAccessToken]
+  );
+}
+
 function AuthDebug() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
-  React.useEffect(() => {
-    if (process.env.NEXT_PUBLIC_AUTH_DEBUG !== 'true') return;
-    if (!isLoaded || !isSignedIn) return;
-    (async () => {
-      try {
-        const token = await getToken({ template: 'convex' });
-        if (!token) {
-          if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-            // eslint-disable-next-line no-console
-            console.log('[auth-debug] No Convex token from Clerk.');
-          }
-          return;
-        }
-        const payloadPart = token.split('.')[1] || '';
-        const payload = (payloadPart ? JSON.parse(atob(payloadPart)) : {}) as { aud?: string; iss?: string };
-        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-          // eslint-disable-next-line no-console
-          console.log('[auth-debug] Convex JWT aud:', payload.aud, 'iss:', payload.iss);
-        }
-      } catch (e) {
-        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-          // eslint-disable-next-line no-console
-          console.log('[auth-debug] Error fetching Convex token', e);
-        }
-      }
-    })();
-  }, [isLoaded, isSignedIn, getToken]);
   return null;
 }
 
@@ -42,46 +30,28 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const url = getConvexUrl();
   if (url && !clientRef.current) clientRef.current = createConvexClient(url);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  const hasClerk = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 
-  // In demo mode, we bypass auth entirely, but we still wrap in ClerkProvider
-  // when keys are present to prevent accidental Clerk hook crashes.
+  // In demo mode, we bypass auth entirely
   if (isDemoMode) {
     const inner = clientRef.current ? (
       <ConvexProvider client={clientRef.current}>{children}</ConvexProvider>
     ) : (
       <>{children}</>
     );
-    return hasClerk ? (
-      <ClerkProvider
-        publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-        signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || '/sign-in'}
-        signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || '/sign-up'}
-      >
-        {inner}
-      </ClerkProvider>
-    ) : (
-      inner
-    );
+    return inner;
   }
 
-  // Normal mode: use Clerk + ConvexProviderWithClerk
+  // Normal mode: use WorkOS + ConvexProviderWithAuth
   return (
-    <ClerkProvider 
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || '/sign-in'}
-      signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || '/sign-up'}
-    >
+    <AuthKitProvider>
       {clientRef.current ? (
-        <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
+        <ConvexProviderWithAuth client={clientRef.current} useAuth={useAuthFromWorkOS}>
           <AuthDebug />
           {children}
-        </ConvexProviderWithClerk>
+        </ConvexProviderWithAuth>
       ) : (
         <>{children}</>
       )}
-    </ClerkProvider>
+    </AuthKitProvider>
   );
 }
-
-

@@ -4,22 +4,22 @@ import { Card, Button } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 // Removed unused PollSession type
 
 export default function PollLivePage({ params }: { params: { sessionId: string } }) {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <PollLivePageDemo params={params} /> : <PollLivePageClerk params={params} />;
+  return isDemoMode ? <PollLivePageDemo params={params} /> : <PollLivePageWorkOS params={params} />;
 }
 
 function PollLivePageDemo({ params }: { params: { sessionId: string } }) {
   return <PollLivePageCore params={params} authReady={true} />;
 }
 
-function PollLivePageClerk({ params }: { params: { sessionId: string } }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
+function PollLivePageWorkOS({ params }: { params: { sessionId: string } }) {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
   return <PollLivePageCore params={params} authReady={authReady} />;
 }
 

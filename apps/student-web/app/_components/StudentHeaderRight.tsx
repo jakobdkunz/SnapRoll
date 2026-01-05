@@ -5,7 +5,7 @@ import type { Route } from 'next';
 import { api } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
 import { useQuery } from 'convex/react';
-import { useAuth, useClerk } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
@@ -87,7 +87,7 @@ function StudentHeaderRightDemo() {
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Demo Mode'}
       </button>
       <div
-        className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-950/95 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 ${
+        className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-950/95 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${
           open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
@@ -141,7 +141,7 @@ function StudentHeaderRightDemo() {
         <button
           onClick={() => {
             setOpen(false);
-            router.push('/sections' as Route);
+            router.push('/dashboard' as Route);
           }}
           className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
         >
@@ -152,9 +152,9 @@ function StudentHeaderRightDemo() {
   );
 }
 
-function StudentHeaderRightClerk() {
+function StudentHeaderRightWorkOS() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { user: workosUser, loading, signOut } = useAuth();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -212,16 +212,16 @@ function StudentHeaderRightClerk() {
     };
   }, [open]);
 
-  const { signOut } = useClerk();
   const resetRateLimit = useMutation(api.functions.attendance.resetCheckinRateLimit);
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
   const [resetting, setResetting] = useState(false);
-  function logout() {
+  
+  async function logout() {
     setStudentId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    try { signOut().catch(() => {}); } catch (e) { void e; }
-    router.push('/sign-in' as Route);
+    // Use WorkOS signOut - this clears the session and redirects
+    await signOut({ returnTo: '/' });
   }
 
   async function onResetDemo() {
@@ -252,10 +252,10 @@ function StudentHeaderRightClerk() {
   }
 
   // In demo mode, always show the header (no auth required)
-  if (!isSignedIn) {
+  if (loading || !workosUser) {
     return (
       <div>
-        <Link href={'/sign-in' as Route}><Button variant="secondary">Log in</Button></Link>
+        <Link href={'/login' as Route}><Button variant="secondary">Log in</Button></Link>
       </div>
     );
   }
@@ -274,7 +274,7 @@ function StudentHeaderRightClerk() {
         <HiOutlineUserCircle className="h-5 w-5" />
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
-      <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-950/95 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-950/95 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
           <HiOutlineUserCircle className="h-4 w-4" /> My Profile
         </button>
@@ -354,7 +354,5 @@ function StudentHeaderRightClerk() {
 
 export function StudentHeaderRight() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <StudentHeaderRightDemo /> : <StudentHeaderRightClerk />;
+  return isDemoMode ? <StudentHeaderRightDemo /> : <StudentHeaderRightWorkOS />;
 }
-
-

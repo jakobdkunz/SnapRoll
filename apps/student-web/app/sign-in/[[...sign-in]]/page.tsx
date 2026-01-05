@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from 'react';
-import { SignIn, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 
@@ -12,23 +11,18 @@ function DemoRedirect({ to }: { to: string }) {
   return null;
 }
 
-function StudentSignInClerk() {
+function StudentSignInWorkOS() {
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useAuth();
-
+  
   useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/sections' as Route);
-  }, [isLoaded, isSignedIn, router]);
+    // Redirect to the login route which will redirect to WorkOS AuthKit
+    router.replace('/login' as Route);
+  }, [router]);
 
   return (
-    <div className="w-full flex justify-center py-10 overflow-visible">
-      <div className="w-full max-w-sm sm:max-w-md">
-        <SignIn 
-          routing="hash" 
-          signUpUrl="/sign-up" 
-          fallbackRedirectUrl="/sections" 
-          appearance={{ elements: { rootBox: 'w-full', card: 'w-full mx-auto', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
-        />
+    <div className="w-full flex justify-center py-10">
+      <div className="w-full max-w-sm sm:max-w-md text-center">
+        <p className="text-neutral-600 dark:text-neutral-400">Redirecting to sign in...</p>
       </div>
     </div>
   );
@@ -36,8 +30,6 @@ function StudentSignInClerk() {
 
 export default function StudentSignInCatchAll() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  if (isDemoMode) return <DemoRedirect to="/sections" />;
-  return <StudentSignInClerk />;
+  if (isDemoMode) return <DemoRedirect to="/dashboard" />;
+  return <StudentSignInWorkOS />;
 }
-
-

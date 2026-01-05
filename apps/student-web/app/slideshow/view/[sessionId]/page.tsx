@@ -158,7 +158,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         }
       `}</style>
       <div ref={navRef} className="relative z-10 px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
-        <Button variant="ghost" onClick={() => router.push('/sections' as Route)}>
+        <Button variant="ghost" onClick={() => router.push('/dashboard' as Route)}>
           <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
           Back
         </Button>

@@ -6,7 +6,7 @@ import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import BiblePassageStartModal from '../../../dashboard/_components/BiblePassageStartModal';
 
 function toChapterReference(reference: string): string {
@@ -27,16 +27,16 @@ function buildExternalUrl(reference: string, translationId: string | undefined) 
 
 export default function BibleLivePage({ params }: { params: { sessionId: string } }) {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <BibleLivePageDemo params={params} /> : <BibleLivePageClerk params={params} />;
+  return isDemoMode ? <BibleLivePageDemo params={params} /> : <BibleLivePageWorkOS params={params} />;
 }
 
 function BibleLivePageDemo({ params }: { params: { sessionId: string } }) {
   return <BibleLivePageCore params={params} authReady={true} />;
 }
 
-function BibleLivePageClerk({ params }: { params: { sessionId: string } }) {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
+function BibleLivePageWorkOS({ params }: { params: { sessionId: string } }) {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
   return <BibleLivePageCore params={params} authReady={authReady} />;
 }
 

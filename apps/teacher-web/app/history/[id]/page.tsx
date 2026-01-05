@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Card, Badge, Button, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@flamelink/lib';
@@ -29,16 +29,16 @@ type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
 export default function HistoryPage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <HistoryPageDemo /> : <HistoryPageClerk />;
+  return isDemoMode ? <HistoryPageDemo /> : <HistoryPageWorkOS />;
 }
 
 function HistoryPageDemo() {
   return <HistoryPageCore authReady={true} />;
 }
 
-function HistoryPageClerk() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
+function HistoryPageWorkOS() {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
   return <HistoryPageCore authReady={authReady} />;
 }
 

@@ -117,48 +117,82 @@ export const getCurrentUser = query({
     
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-    const email = (identity.email ?? identity.tokenIdentifier ?? "")
-      .toString()
-      .trim()
-      .toLowerCase();
-    if (!email) return null;
-    return await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
+    
+    // Try email first (standard OIDC claim)
+    const email = (identity.email ?? "").toString().trim().toLowerCase();
+    if (email) {
+      const userByEmail = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+      if (userByEmail) return userByEmail;
+    }
+    
+    // Fall back to tokenIdentifier (for providers like WorkOS that don't include email in access token)
+    const tokenId = identity.tokenIdentifier;
+    if (tokenId) {
+      const userByToken = await ctx.db
+        .query("users")
+        .withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", tokenId))
+        .first();
+      if (userByToken) return userByToken;
+    }
+    
+    return null;
   },
 });
 
 export const upsertCurrentUser = mutation({
   args: {
     role: v.union(v.literal("TEACHER"), v.literal("STUDENT")),
+    // Email passed from frontend (needed for providers like WorkOS where JWT doesn't include email)
+    email: v.optional(v.string()),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null as unknown as Id<'users'>;
 
-    const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) return null as unknown as Id<'users'>;
+    // Get tokenIdentifier for WorkOS/custom auth providers
+    const tokenIdentifier = identity.tokenIdentifier;
+    
+    // Email: prefer JWT claim, fall back to passed argument
+    const email = (identity.email ?? args.email ?? "").toString().trim().toLowerCase();
+    if (!email && !tokenIdentifier) return null as unknown as Id<'users'>;
 
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
+    // First try to find by tokenIdentifier (most reliable for custom auth)
+    let existing = tokenIdentifier 
+      ? await ctx.db.query("users").withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", tokenIdentifier)).first()
+      : null;
+    
+    // If not found by tokenIdentifier, try by email
+    if (!existing && email) {
+      existing = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first();
+    }
 
     if (existing) {
-      if (existing.role !== args.role) {
-        await ctx.db.patch(existing._id as Id<"users">, { role: args.role });
+      // Update role if different, and ensure tokenIdentifier is stored
+      const updates: Record<string, string> = {};
+      if (existing.role !== args.role) updates.role = args.role;
+      if (tokenIdentifier && existing.tokenIdentifier !== tokenIdentifier) updates.tokenIdentifier = tokenIdentifier;
+      if (Object.keys(updates).length > 0) {
+        await ctx.db.patch(existing._id as Id<"users">, updates);
       }
       return existing._id;
     }
 
+    // Create new user
+    if (!email) return null as unknown as Id<'users'>;
+    
     const name = (identity.name || "").trim();
-    const [firstName, ...rest] = name ? name.split(" ") : [identity.givenName || "", identity.familyName || ""];
+    const [firstNameFromToken, ...rest] = name ? name.split(" ") : [identity.givenName || "", identity.familyName || ""];
     const created = await ctx.db.insert("users", {
       email,
-      firstName: firstName || identity.givenName || "",
-      lastName: rest.join(" ") || identity.familyName || "",
+      firstName: args.firstName || firstNameFromToken || identity.givenName || "",
+      lastName: args.lastName || rest.join(" ") || identity.familyName || "",
       role: args.role,
+      tokenIdentifier: tokenIdentifier || undefined,
     });
     return created;
   },

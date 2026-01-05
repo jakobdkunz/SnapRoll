@@ -1,13 +1,13 @@
 "use client";
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import Image from 'next/image';
 
 function DemoWordmarkLink() {
   const router = useRouter();
   function onClick() {
-    router.push('/sections' as Route);
+    router.push('/dashboard' as Route);
   }
   return (
     <button onClick={onClick} className="flex items-center gap-0.5 hover:opacity-80 transition" aria-label="FlameLink home">
@@ -18,11 +18,11 @@ function DemoWordmarkLink() {
   );
 }
 
-function ClerkWordmarkLink() {
+function WorkOSWordmarkLink() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { user } = useAuth();
   function onClick() {
-    if (isSignedIn) router.push('/sections' as Route);
+    if (user) router.push('/dashboard' as Route);
     else router.push('/' as Route);
   }
   return (
@@ -36,7 +36,7 @@ function ClerkWordmarkLink() {
 
 export function WordmarkLink() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <DemoWordmarkLink /> : <ClerkWordmarkLink />;
+  return isDemoMode ? <DemoWordmarkLink /> : <WorkOSWordmarkLink />;
 }
 
 

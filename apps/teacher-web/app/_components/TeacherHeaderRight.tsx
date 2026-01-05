@@ -7,7 +7,7 @@ import type { Route } from 'next';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth, useClerk } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
 
@@ -83,7 +83,7 @@ function TeacherHeaderRightDemo() {
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Demo Mode'}
       </button>
       <div
-        className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 ${
+        className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${
           open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
@@ -124,9 +124,9 @@ function TeacherHeaderRightDemo() {
   );
 }
 
-function TeacherHeaderRightClerk() {
+function TeacherHeaderRightWorkOS() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
+  const { user: workosUser, loading, signOut } = useAuth();
   const [teacherId, setTeacherId] = useState<Id<'users'> | null>(null);
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -249,13 +249,12 @@ function TeacherHeaderRightClerk() {
     }
   }
 
-  const { signOut } = useClerk();
-  function logout() {
-    try { signOut().catch(() => { /* no-op */ }); } catch (err) { if (process.env.NEXT_PUBLIC_SLIDESHOW_DEBUG === 'true') { /* eslint-disable-next-line no-console */ console.warn('Sign out failed', err); } }
+  async function logout() {
     setTeacherId(null);
     setFirstName(''); setLastName('');
     setOpen(false); setProfileOpen(false);
-    router.push('/sign-in' as Route);
+    // Use WorkOS signOut - this clears the session and redirects
+    await signOut({ returnTo: '/' });
   }
 
   async function onResetDemo() {
@@ -292,7 +291,7 @@ function TeacherHeaderRightClerk() {
           <HiOutlineUserCircle className="h-5 w-5" />
           {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Demo Mode'}
         </button>
-        <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+        <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
           <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Demo Mode</div>
           <div className="px-3 py-2 text-xs text-neutral-600 dark:text-neutral-400">
             You're exploring the demo site. No login required.
@@ -323,10 +322,10 @@ function TeacherHeaderRightClerk() {
     );
   }
 
-  if (!isSignedIn) {
+  if (loading || !workosUser) {
     return (
       <div>
-        <Link href={'/sign-in' as Route}><Button variant="secondary">Log in</Button></Link>
+        <Link href={'/login' as Route}><Button variant="secondary">Log in</Button></Link>
       </div>
     );
   }
@@ -345,7 +344,7 @@ function TeacherHeaderRightClerk() {
         <HiOutlineUserCircle className="h-5 w-5" />
         {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Profile'}
       </button>
-      <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
+      <div className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
         <button className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2" onClick={() => { setOpen(false); setProfileOpen(true); }}>
           <HiOutlineUserCircle className="h-4 w-4" /> My Profile
         </button>
@@ -466,7 +465,5 @@ function TeacherHeaderRightClerk() {
 
 export function TeacherHeaderRight() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <TeacherHeaderRightDemo /> : <TeacherHeaderRightClerk />;
+  return isDemoMode ? <TeacherHeaderRightDemo /> : <TeacherHeaderRightWorkOS />;
 }
-
-

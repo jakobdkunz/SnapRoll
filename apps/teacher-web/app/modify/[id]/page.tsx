@@ -8,7 +8,7 @@ import { ImportCsvModal } from './_components/ImportCsvModal';
 import { api } from '../../../../../convex/_generated/api';
 import { useQuery, useMutation } from 'convex/react';
 import type { Id } from '@flamelink/convex-client';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { isValidEmail } from '@flamelink/lib';
 import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
@@ -17,20 +17,26 @@ type Student = { id: Id<'users'>; email: string; firstName: string; lastName: st
 
 export default function ModifyPage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <ModifyPageDemo /> : <ModifyPageClerk />;
+  return isDemoMode ? <ModifyPageDemo /> : <ModifyPageWorkOS />;
 }
 
 function ModifyPageDemo() {
   return <ModifyPageCore canUpsert={false} />;
 }
 
-function ModifyPageClerk() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const canUpsert = isLoaded && isSignedIn;
-  return <ModifyPageCore canUpsert={canUpsert} />;
+function ModifyPageWorkOS() {
+  const { user, loading } = useAuth();
+  const canUpsert = !loading && !!user;
+  // Pass user info for upsert (WorkOS JWT doesn't include email, but user object does)
+  const userInfo = user ? {
+    email: user.email ?? undefined,
+    firstName: user.firstName ?? undefined,
+    lastName: user.lastName ?? undefined,
+  } : undefined;
+  return <ModifyPageCore canUpsert={canUpsert} userInfo={userInfo} />;
 }
 
-function ModifyPageCore({ canUpsert }: { canUpsert: boolean }) {
+function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
   const params = useParams<{ id: string }>();
   const [newEmail, setNewEmail] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
@@ -44,9 +50,14 @@ function ModifyPageCore({ canUpsert }: { canUpsert: boolean }) {
     if (!canUpsert) return;
     if (currentUser === undefined) return; // still loading
     if (!currentUser) {
-      upsertUser({ role: 'TEACHER' }).catch(() => {});
+      upsertUser({ 
+        role: 'TEACHER',
+        email: userInfo?.email,
+        firstName: userInfo?.firstName,
+        lastName: userInfo?.lastName,
+      }).catch(() => {});
     }
-  }, [canUpsert, currentUser, upsertUser]);
+  }, [canUpsert, currentUser, upsertUser, userInfo]);
   const teacherReady = !!(currentUser && currentUser._id);
 
   const section = useQuery(api.functions.sections.get, (params.id && teacherReady) ? { id: params.id as Id<'sections'> } : "skip");

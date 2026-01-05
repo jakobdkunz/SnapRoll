@@ -7,7 +7,7 @@ import { HiOutlineUserGroup } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 type Section = {
   id: string;
@@ -17,7 +17,7 @@ type Section = {
 
 export default function SectionsPage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  return isDemoMode ? <SectionsPageDemo /> : <SectionsPageClerk />;
+  return isDemoMode ? <SectionsPageDemo /> : <SectionsPageWorkOS />;
 }
 
 function SectionsPageDemo() {
@@ -25,13 +25,19 @@ function SectionsPageDemo() {
   return <SectionsPageCore authReady={true} canUpsert={false} />;
 }
 
-function SectionsPageClerk() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const authReady = isLoaded && isSignedIn;
-  return <SectionsPageCore authReady={authReady} canUpsert={authReady} />;
+function SectionsPageWorkOS() {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
+  // Pass user info for upsert (WorkOS JWT doesn't include email, but user object does)
+  const userInfo = user ? {
+    email: user.email ?? undefined,
+    firstName: user.firstName ?? undefined,
+    lastName: user.lastName ?? undefined,
+  } : undefined;
+  return <SectionsPageCore authReady={authReady} canUpsert={authReady} userInfo={userInfo} />;
 }
 
-function SectionsPageCore({ authReady, canUpsert }: { authReady: boolean; canUpsert: boolean }) {
+function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { authReady: boolean; canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [studentName, setStudentName] = useState<string | null>(null);
@@ -50,6 +56,7 @@ function SectionsPageCore({ authReady, canUpsert }: { authReady: boolean; canUps
     isDemoMode ? { email: 'demo-student@example.com' } : "skip"
   );
   const currentUser = (isDemoMode ? demoStudent : currentUserAuthed) as typeof currentUserAuthed;
+
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   const didUpsertRef = useRef(false);
   useEffect(() => {
@@ -60,14 +67,19 @@ function SectionsPageCore({ authReady, canUpsert }: { authReady: boolean; canUps
       (async () => {
         try {
           didUpsertRef.current = true;
-          await upsertUser({ role: 'STUDENT' });
+          await upsertUser({ 
+            role: 'STUDENT',
+            email: userInfo?.email,
+            firstName: userInfo?.firstName,
+            lastName: userInfo?.lastName,
+          });
         } catch (e) {
           // Best-effort upsert; ignore failures in UI but log for debugging
           console.error(e);
         }
       })();
     }
-  }, [canUpsert, currentUser, upsertUser]);
+  }, [canUpsert, currentUser, upsertUser, userInfo]);
   const effectiveUserId = (currentUser?._id as Id<'users'> | undefined);
 
   // Get student's enrolled sections
@@ -367,6 +379,30 @@ function SectionsPageCore({ authReady, canUpsert }: { authReady: boolean; canUps
       inputRefs[3].current?.focus();
     }
   };
+
+  // Role mismatch: user exists but is not a STUDENT
+  if (currentUser && currentUser.role !== 'STUDENT') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <Card className="p-8 max-w-md text-center space-y-4">
+          <div className="text-red-500 text-5xl mb-2">⚠️</div>
+          <div className="text-xl font-semibold text-slate-800 dark:text-slate-100">Wrong Account Type</div>
+          <div className="text-slate-600 dark:text-slate-400">
+            You&apos;re signed in as <span className="font-medium">{currentUser.email}</span>, which is registered as a <span className="font-semibold capitalize">{currentUser.role?.toLowerCase()}</span> account.
+          </div>
+          <div className="text-slate-500 dark:text-slate-400 text-sm">
+            This is the student portal. Please sign in with a student account, or use the teacher portal if you&apos;re an instructor.
+          </div>
+          <Button
+            className="w-full mt-4"
+            onClick={() => { window.location.href = '/logout'; }}
+          >
+            Sign Out
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   // Skeleton when missing effective user
   if (!effectiveUserId) {

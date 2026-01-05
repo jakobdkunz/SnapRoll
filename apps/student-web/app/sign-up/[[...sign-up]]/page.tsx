@@ -1,6 +1,5 @@
 "use client";
 import { useEffect } from 'react';
-import { SignUp, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 
@@ -12,24 +11,19 @@ function DemoRedirect({ to }: { to: string }) {
   return null;
 }
 
-function StudentSignUpClerk() {
+function StudentSignUpWorkOS() {
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useAuth();
-
+  
   useEffect(() => {
-    if (isLoaded && isSignedIn) router.replace('/' as Route);
-  }, [isLoaded, isSignedIn, router]);
+    // Redirect to the login route which will redirect to WorkOS AuthKit
+    // WorkOS AuthKit handles both sign-in and sign-up in a unified flow
+    router.replace('/login' as Route);
+  }, [router]);
 
   return (
-    <div className="w-full flex justify-center py-10 overflow-visible">
-      <div className="w-full max-w-sm sm:max-w-md">
-        <SignUp 
-          routing="hash" 
-          signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL || '/'} 
-          afterSignUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
-          fallbackRedirectUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL || '/'} 
-          appearance={{ elements: { rootBox: 'w-full', card: 'w-full mx-auto', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
-        />
+    <div className="w-full flex justify-center py-10">
+      <div className="w-full max-w-sm sm:max-w-md text-center">
+        <p className="text-neutral-600 dark:text-neutral-400">Redirecting to sign up...</p>
       </div>
     </div>
   );
@@ -37,8 +31,6 @@ function StudentSignUpClerk() {
 
 export default function StudentSignUpCatchAll() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
-  if (isDemoMode) return <DemoRedirect to="/sections" />;
-  return <StudentSignUpClerk />;
+  if (isDemoMode) return <DemoRedirect to="/dashboard" />;
+  return <StudentSignUpWorkOS />;
 }
-
-
