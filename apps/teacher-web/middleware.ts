@@ -32,6 +32,7 @@ const workosMiddleware = authkitMiddleware({
     enabled: true,
     unauthenticatedPaths: ['/', '/sign-in', '/sign-up', '/callback', '/login', '/manifest.json', '/sw.js'],
   },
+  redirectUri: process.env.WORKOS_REDIRECT_URI,
 });
 
 // Wrapper to catch and expose errors
@@ -41,12 +42,14 @@ async function safeWorkosMiddleware(req: NextRequest, event: NextFetchEvent) {
     const clientId = process.env.WORKOS_CLIENT_ID;
     const apiKey = process.env.WORKOS_API_KEY;
     const cookiePassword = process.env.WORKOS_COOKIE_PASSWORD;
+    const redirectUri = process.env.WORKOS_REDIRECT_URI;
     
-    if (!clientId || !apiKey || !cookiePassword) {
+    if (!clientId || !apiKey || !cookiePassword || !redirectUri) {
       console.error('WorkOS env check failed:', {
         hasClientId: !!clientId,
         hasApiKey: !!apiKey,
         hasCookiePassword: !!cookiePassword,
+        hasRedirectUri: !!redirectUri,
         cookiePasswordLength: cookiePassword?.length,
       });
       return new NextResponse(
@@ -56,8 +59,10 @@ async function safeWorkosMiddleware(req: NextRequest, event: NextFetchEvent) {
             WORKOS_CLIENT_ID: !clientId,
             WORKOS_API_KEY: !apiKey,
             WORKOS_COOKIE_PASSWORD: !cookiePassword,
+            WORKOS_REDIRECT_URI: !redirectUri,
           },
           cookiePasswordLength: cookiePassword?.length,
+          redirectUri: redirectUri || 'NOT SET',
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
