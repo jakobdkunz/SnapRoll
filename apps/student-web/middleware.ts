@@ -2,11 +2,6 @@ import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const isPublicRoute = (pathname: string) => {
-  const publicRoutes = ["/", "/manifest.json", "/sw.js", "/sign-up", "/sign-in", "/callback", "/login"];
-  return publicRoutes.some(route => pathname === route || pathname.startsWith(route + '/') || pathname.startsWith(route + '?'));
-};
-
 // In demo mode, skip WorkOS middleware entirely
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
@@ -31,7 +26,7 @@ async function demoMiddleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-// WorkOS middleware configuration
+// WorkOS middleware - export directly for non-demo mode
 const workosMiddleware = authkitMiddleware({
   middlewareAuth: {
     enabled: true,
@@ -39,21 +34,7 @@ const workosMiddleware = authkitMiddleware({
   },
 });
 
-export default isDemoMode
-  ? demoMiddleware
-  : async (req: NextRequest) => {
-      // For authenticated users on home page, redirect to sections
-      // This is handled after WorkOS middleware processes the request
-      const response = await workosMiddleware(req);
-      
-      // Check if this is the home page and user should be redirected
-      if (req.nextUrl.pathname === '/') {
-        // The redirect to sections for authenticated users will be handled 
-        // in the page component using withAuth
-      }
-      
-      return response;
-    };
+export default isDemoMode ? demoMiddleware : workosMiddleware;
 
 export const config = {
   matcher: [
