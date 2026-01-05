@@ -7,9 +7,12 @@ export default defineSchema({
     firstName: v.string(),
     lastName: v.string(),
     role: v.union(v.literal("TEACHER"), v.literal("STUDENT")),
+    // External auth provider token identifier (e.g., WorkOS user ID)
+    tokenIdentifier: v.optional(v.string()),
   })
     .index("by_email", ["email"])
-    .index("by_role", ["role"]),
+    .index("by_role", ["role"])
+    .index("by_tokenIdentifier", ["tokenIdentifier"]),
 
   sections: defineTable({
     title: v.string(),

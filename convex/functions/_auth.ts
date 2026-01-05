@@ -67,17 +67,28 @@ export async function requireCurrentUser(ctx: QueryCtx | MutationCtx): Promise<A
   
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) throw new Error("Unauthenticated");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "")
-    .toString()
-    .trim()
-    .toLowerCase();
-  if (!email) throw new Error("Unauthenticated");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new Error("User not provisioned");
-  return user as AuthenticatedUser;
+  
+  // Try to find user by email first (standard OIDC)
+  const email = (identity.email ?? "").toString().trim().toLowerCase();
+  if (email) {
+    const userByEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+    if (userByEmail) return userByEmail as AuthenticatedUser;
+  }
+  
+  // Fall back to tokenIdentifier (for providers like WorkOS that don't include email in access token)
+  const tokenId = identity.tokenIdentifier;
+  if (tokenId) {
+    const userByToken = await ctx.db
+      .query("users")
+      .withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", tokenId))
+      .first();
+    if (userByToken) return userByToken as AuthenticatedUser;
+  }
+  
+  throw new Error("User not provisioned");
 }
 
 export async function requireTeacher(ctx: QueryCtx | MutationCtx): Promise<AuthenticatedUser> {

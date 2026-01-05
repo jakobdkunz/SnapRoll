@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { Card, Badge, Button, Skeleton, Modal } from '@flamelink/ui';
 import { HiOutlineDocumentArrowDown } from 'react-icons/hi2';
 import { formatDateMDY } from '@flamelink/lib';
@@ -28,9 +28,22 @@ type Record = {
 type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
 
 export default function HistoryPage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <HistoryPageDemo /> : <HistoryPageWorkOS />;
+}
+
+function HistoryPageDemo() {
+  return <HistoryPageCore authReady={true} />;
+}
+
+function HistoryPageWorkOS() {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
+  return <HistoryPageCore authReady={authReady} />;
+}
+
+function HistoryPageCore({ authReady }: { authReady: boolean }) {
   const params = useParams<{ id: string }>();
-  const { isLoaded, isSignedIn } = useAuth();
-  const isAuthReady = isLoaded && isSignedIn;
   //
   const [offset, setOffset] = useState<number>(0);
   // Server-side window equals the number of columns that fit
@@ -39,12 +52,12 @@ export default function HistoryPage() {
   const sectionId = params.id as unknown as Id<'sections'>;
   const history = useQuery(
     api.functions.history.getSectionHistory,
-    isAuthReady && params.id ? { sectionId, offset, limit } : "skip"
+    authReady && params.id ? { sectionId, offset, limit } : "skip"
   ) as any;
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const participation = useQuery(
     api.functions.history.getParticipationBySection,
-    isAuthReady && params.id && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
+    authReady && params.id && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
   ) as {
     days: { id: string; date: string }[];
     records: { studentId: string; rows: { classDayId: string; sharesEarned: number; sharesTotal: number; absent: boolean }[] }[];
@@ -86,7 +99,7 @@ export default function HistoryPage() {
   // Section header state
   const section = useQuery(
     api.functions.sections.get,
-    isAuthReady && params.id ? { id: sectionId } : "skip"
+    authReady && params.id ? { id: sectionId } : "skip"
   ) as any;
   const [sectionLoaded, setSectionLoaded] = useState(false);
   const [sectionTitle, setSectionTitle] = useState<string>('Section');

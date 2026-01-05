@@ -9,6 +9,12 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:web:regular": "node scripts/dev-web.mjs regular",
+    "dev:web:all4": "node scripts/dev-web.mjs all4",
+    "dev:web:student": "node scripts/dev-web.mjs student",
+    "dev:web:student-demo": "node scripts/dev-web.mjs student-demo",
+    "dev:web:teacher": "node scripts/dev-web.mjs teacher",
+    "dev:web:teacher-demo": "node scripts/dev-web.mjs teacher-demo",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",

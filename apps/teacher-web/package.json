@@ -11,10 +11,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@flamelink/convex-client": "^0.1.0",
     "@flamelink/config": "^0.1.0",
+    "@flamelink/convex-client": "^0.1.0",
     "@flamelink/lib": "^0.1.0",
     "@flamelink/ui": "^0.1.0",
+    "@workos-inc/authkit-nextjs": "^2.12.2",
     "jszip": "^3.10.1",
     "next": "^14.1.0",
     "pdfjs-dist": "^3.11.174",

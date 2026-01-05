@@ -7,7 +7,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
 type AttendanceStatus = {
   hasActiveAttendance: boolean;
@@ -18,10 +18,23 @@ type AttendanceStatus = {
 };
 
 export default function AttendancePage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <AttendancePageDemo /> : <AttendancePageWorkOS />;
+}
+
+function AttendancePageDemo() {
+  return <AttendancePageCore authReady={true} />;
+}
+
+function AttendancePageWorkOS() {
+  const { user, loading } = useAuth();
+  const authReady = !loading && !!user;
+  return <AttendancePageCore authReady={authReady} />;
+}
+
+function AttendancePageCore({ authReady }: { authReady: boolean }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const { isLoaded, isSignedIn } = useAuth();
-  const isAuthReady = isLoaded && isSignedIn;
   const [code, setCode] = useState<string>('....');
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
 
@@ -43,11 +56,11 @@ export default function AttendancePage() {
 
   const getAttendanceStatus = useQuery(
     api.functions.attendance.getAttendanceStatus,
-    isAuthReady && params.id ? (devMode && selectedEpochMs ? { sectionId, date: selectedEpochMs } : { sectionId }) : "skip"
+    authReady && params.id ? (devMode && selectedEpochMs ? { sectionId, date: selectedEpochMs } : { sectionId }) : "skip"
   );
   const section = useQuery(
     api.functions.sections.get,
-    isAuthReady && params.id ? { id: sectionId } : "skip"
+    authReady && params.id ? { id: sectionId } : "skip"
   );
 
   const [isStarting, setIsStarting] = useState(false);

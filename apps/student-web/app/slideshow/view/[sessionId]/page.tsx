@@ -3,6 +3,7 @@
 import type { Id } from '@flamelink/convex-client';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 import { Card, Button } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
@@ -157,7 +158,7 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
         }
       `}</style>
       <div ref={navRef} className="relative z-10 px-4 py-3 flex items-center gap-3 border-b bg-white/80 backdrop-blur">
-        <Button variant="ghost" onClick={() => router.push('/sections')}>
+        <Button variant="ghost" onClick={() => router.push('/dashboard' as Route)}>
           <HiOutlineArrowLeft className="h-5 w-5 mr-1" />
           Back
         </Button>

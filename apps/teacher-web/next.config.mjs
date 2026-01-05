@@ -1,4 +1,7 @@
+const distDir = process.env.NEXT_DIST_DIR || '.next';
+
 const nextConfig = {
+  distDir,
   transpilePackages: ['@flamelink/ui', '@flamelink/lib', '@flamelink/config', '@flamelink/convex-client'],
   experimental: { typedRoutes: true, serverMinification: false },
   images: {

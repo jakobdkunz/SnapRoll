@@ -1,39 +1,34 @@
 "use client";
 import * as React from 'react';
-import { ClerkProvider, useAuth } from '@clerk/nextjs';
-import { ConvexProviderWithClerk } from 'convex/react-clerk';
-import { ConvexProvider } from 'convex/react';
+import { AuthKitProvider, useAuth as useWorkOSAuth, useAccessToken } from '@workos-inc/authkit-nextjs/components';
+import { ConvexProviderWithAuth, ConvexProvider } from 'convex/react';
 import { createConvexClient, getConvexUrl } from '@flamelink/convex-client';
 
+function useAuthFromWorkOS() {
+  const { user, loading } = useWorkOSAuth();
+  const { accessToken, loading: tokenLoading, getAccessToken } = useAccessToken();
+
+  return React.useMemo(
+    () => ({
+      isLoading: loading || tokenLoading,
+      isAuthenticated: !!user && !!accessToken,
+      fetchAccessToken: async () => {
+        const token = await getAccessToken();
+        return token ?? null;
+      },
+    }),
+    [loading, tokenLoading, user, accessToken, getAccessToken]
+  );
+}
+
 function AuthDebug() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { user, loading } = useWorkOSAuth();
   React.useEffect(() => {
     if (process.env.NEXT_PUBLIC_AUTH_DEBUG !== 'true') return;
-    if (!isLoaded || !isSignedIn) return;
-    (async () => {
-      try {
-        const token = await getToken({ template: 'convex' });
-        if (!token) {
-          if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-            // eslint-disable-next-line no-console
-            console.log('[auth-debug] No Convex token from Clerk.');
-          }
-          return;
-        }
-        const payloadPart = token.split('.')[1] || '';
-        const payload = (payloadPart ? JSON.parse(atob(payloadPart)) : {}) as { aud?: string; iss?: string };
-        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-          // eslint-disable-next-line no-console
-          console.log('[auth-debug] Convex JWT aud:', payload.aud, 'iss:', payload.iss);
-        }
-      } catch (e) {
-        if (process.env.NEXT_PUBLIC_AUTH_DEBUG === 'true') {
-          // eslint-disable-next-line no-console
-          console.log('[auth-debug] Error fetching Convex token', e);
-        }
-      }
-    })();
-  }, [isLoaded, isSignedIn, getToken]);
+    if (loading || !user) return;
+    // eslint-disable-next-line no-console
+    console.log('[auth-debug] WorkOS user:', user.email);
+  }, [loading, user]);
   return null;
 }
 
@@ -43,38 +38,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
   if (url && !clientRef.current) clientRef.current = createConvexClient(url);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
 
-  // In demo mode, use ConvexProvider directly without Clerk
+  // In demo mode, we bypass auth entirely
   if (isDemoMode) {
-    return (
-      <>
-        {clientRef.current ? (
-          <ConvexProvider client={clientRef.current}>
-            {children}
-          </ConvexProvider>
-        ) : (
-          <>{children}</>
-        )}
-      </>
+    const inner = clientRef.current ? (
+      <ConvexProvider client={clientRef.current}>{children}</ConvexProvider>
+    ) : (
+      <>{children}</>
     );
+    return inner;
   }
 
-  // Normal mode: use Clerk + ConvexProviderWithClerk
+  // Normal mode: use WorkOS + ConvexProviderWithAuth
   return (
-    <ClerkProvider 
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      signInUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || '/sign-in'}
-      signUpUrl={process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || '/sign-up'}
-    >
+    <AuthKitProvider>
       {clientRef.current ? (
-        <ConvexProviderWithClerk client={clientRef.current} useAuth={useAuth}>
+        <ConvexProviderWithAuth client={clientRef.current} useAuth={useAuthFromWorkOS}>
           <AuthDebug />
           {children}
-        </ConvexProviderWithClerk>
+        </ConvexProviderWithAuth>
       ) : (
         <>{children}</>
       )}
-    </ClerkProvider>
+    </AuthKitProvider>
   );
 }
-
-

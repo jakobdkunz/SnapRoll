@@ -1,23 +1,26 @@
-// Convex auth configuration for Clerk per docs:
-// https://docs.convex.dev/auth/clerk
+// Convex auth configuration for WorkOS AuthKit
+// https://docs.convex.dev/auth/authkit
 
-// In demo mode, we don't need Clerk auth
-const isDemoMode = process.env.DEMO_MODE === "true";
-
-const issuerEnv = process.env.CLERK_JWT_ISSUER_DOMAIN || "";
-// Allow comma-separated issuers to support multiple Clerk instances (student + instructor)
-const issuerDomains = issuerEnv
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean)
-  // de-dupe
-  .filter((v, i, a) => a.indexOf(v) === i);
+const clientId = "client_01KAGX2D64TMX8M8K554JYENQ3";
+const jwksUrl = `https://api.workos.com/sso/jwks/${clientId}`;
 
 export default {
-  providers: isDemoMode ? [] : issuerDomains.map((domain) => ({
-    domain,
-    applicationID: "convex",
-  })),
+  providers: [
+    // Provider for standard WorkOS API issuer
+    {
+      type: "customJwt",
+      issuer: "https://api.workos.com/",
+      algorithm: "RS256",
+      applicationID: clientId,
+      jwks: jwksUrl,
+    },
+    // Provider for user_management issuer (used by AuthKit session tokens)
+    {
+      type: "customJwt",
+      issuer: `https://api.workos.com/user_management/${clientId}`,
+      algorithm: "RS256",
+      applicationID: clientId,
+      jwks: jwksUrl,
+    },
+  ],
 };
-
-

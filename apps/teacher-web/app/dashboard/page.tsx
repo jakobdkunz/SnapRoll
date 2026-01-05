@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import { HiOutlineCog6Tooth, HiOutlineUserGroup, HiOutlineDocumentChartBar, HiOutlinePlus, HiOutlineSparkles, HiOutlineTrash, HiOutlineChevronDown } from 'react-icons/hi2';
@@ -27,6 +27,28 @@ function hasId(record: unknown): record is { _id: string } {
 type CurrentUser = { _id: string } | null | undefined;
 
 export default function DashboardPage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <DashboardPageDemo /> : <DashboardPageWorkOS />;
+}
+
+function DashboardPageDemo() {
+  // Demo mode has no Clerk; allow queries immediately and skip upsert.
+  return <DashboardPageCore canUpsert={false} />;
+}
+
+function DashboardPageWorkOS() {
+  const { user, loading } = useAuth();
+  const canUpsert = !loading && !!user;
+  // Pass user info for upsert (WorkOS JWT doesn't include email, but user object does)
+  const userInfo = user ? {
+    email: user.email ?? undefined,
+    firstName: user.firstName ?? undefined,
+    lastName: user.lastName ?? undefined,
+  } : undefined;
+  return <DashboardPageCore canUpsert={canUpsert} userInfo={userInfo} />;
+}
+
+function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: SectionDoc | null }>({ open: false, section: null });
@@ -53,11 +75,12 @@ export default function DashboardPage() {
   const updateSection = useMutation(api.functions.sections.update);
   const deleteSection = useMutation(api.functions.sections.deleteSection);
 
-  // Current user via Clerk/Convex
+  // Current user (demo returns demo teacher without auth)
   const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser);
-  const teacherId: Id<'users'> | null = hasId(currentUser) ? (currentUser._id as Id<'users'>) : null;
+  // Only set teacherId if user exists AND has TEACHER role (prevents getByTeacher query from erroring for students)
+  const currentUserRole = (currentUser as unknown as { role?: string })?.role;
+  const teacherId: Id<'users'> | null = hasId(currentUser) && currentUserRole === 'TEACHER' ? (currentUser._id as Id<'users'>) : null;
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
-  const { isLoaded, isSignedIn } = useAuth();
 
   // Data queries
   const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
@@ -99,12 +122,17 @@ export default function DashboardPage() {
 
   // Fallback: if signed in but no Convex user yet, upsert as TEACHER
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-    if (currentUser === undefined) return; // still loading
+    if (!canUpsert) return;
+    if (currentUser === undefined) return;
     if (!currentUser) {
-      upsertUser({ role: 'TEACHER' }).catch(() => {});
+      upsertUser({ 
+        role: 'TEACHER',
+        email: userInfo?.email,
+        firstName: userInfo?.firstName,
+        lastName: userInfo?.lastName,
+      }).catch(() => {});
     }
-  }, [isLoaded, isSignedIn, currentUser, upsertUser]);
+  }, [canUpsert, currentUser, upsertUser, userInfo]);
 
   // Word cloud start handled by dynamic modal
 
@@ -170,6 +198,31 @@ export default function DashboardPage() {
   }
 
   if (!mounted) return null;
+
+  // Role mismatch: user exists but is not a TEACHER
+  if (currentUser && currentUserRole !== 'TEACHER') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <Card className="p-8 max-w-md text-center space-y-4">
+          <div className="text-red-500 text-5xl mb-2">⚠️</div>
+          <div className="text-xl font-semibold text-slate-800 dark:text-slate-100">Wrong Account Type</div>
+          <div className="text-slate-600 dark:text-slate-400">
+            You&apos;re signed in as <span className="font-medium">{(currentUser as unknown as { email?: string })?.email}</span>, which is registered as a <span className="font-semibold capitalize">{currentUserRole?.toLowerCase() || 'unknown'}</span> account.
+          </div>
+          <div className="text-slate-500 dark:text-slate-400 text-sm">
+            This is the instructor portal. Please sign in with a teacher account, or use the student portal if you&apos;re a student.
+          </div>
+          <Button
+            className="w-full mt-4"
+            onClick={() => { window.location.href = '/logout'; }}
+          >
+            Sign Out
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
   if (!teacherId || isSectionsLoading) {
     return (
       <div className="relative">

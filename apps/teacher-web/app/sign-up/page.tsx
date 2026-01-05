@@ -1,19 +1,36 @@
 "use client";
-import { SignUp } from '@clerk/nextjs';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Route } from 'next';
 
-export default function InstructorSignUpPage() {
+function DemoRedirect({ to }: { to: string }) {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(to as Route);
+  }, [router, to]);
+  return null;
+}
+
+function InstructorSignUpWorkOS() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Redirect to the login route which will redirect to WorkOS AuthKit
+    // WorkOS AuthKit handles both sign-in and sign-up in a unified flow
+    router.replace('/login' as Route);
+  }, [router]);
+
   return (
-    <div className="w-full flex justify-center py-10 overflow-visible">
-      <div className="w-full max-w-sm sm:max-w-md">
-        <SignUp 
-          routing="hash"
-          signInUrl="/sign-in"
-          fallbackRedirectUrl="/dashboard"
-          appearance={{ elements: { rootBox: 'w-full', card: 'w-full mx-auto', formButtonPrimary: 'w-full bg-blue-600 hover:bg-blue-700' } }} 
-        />
+    <div className="w-full flex justify-center py-10">
+      <div className="w-full max-w-sm sm:max-w-md text-center">
+        <p className="text-neutral-600 dark:text-neutral-400">Redirecting to sign up...</p>
       </div>
     </div>
   );
 }
 
-
+export default function InstructorSignUpPage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  if (isDemoMode) return <DemoRedirect to="/dashboard" />;
+  return <InstructorSignUpWorkOS />;
+}

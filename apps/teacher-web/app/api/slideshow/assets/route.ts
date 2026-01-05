@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@flamelink/convex-client/server';
-import { auth } from '@clerk/nextjs/server';
+import { withAuth } from '@workos-inc/authkit-nextjs';
 
 function getConvexUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -12,9 +12,8 @@ function getConvexUrl(): string {
 
 export async function POST(req: Request) {
   try {
-    const { getToken } = await auth();
-    const token = await getToken({ template: 'convex' });
-    if (!token) {
+    const { accessToken } = await withAuth();
+    if (!accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -44,7 +43,7 @@ export async function POST(req: Request) {
     });
 
     const convex = new ConvexHttpClient(getConvexUrl());
-    convex.setAuth(token);
+    convex.setAuth(accessToken);
 
     const assetId = await convex.mutation(api.functions.slideshow.createAsset, {
       title,
@@ -58,5 +57,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-

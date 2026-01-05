@@ -23,7 +23,7 @@ const orbitron = Orbitron({
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={orbitron.variable}>
+    <html lang="en" className={orbitron.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `
           (function(){
@@ -48,11 +48,44 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </header>
             <AuthGuard />
-            <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 pb-6 sm:pb-8">{children}</main>
+            <main className="relative z-0 mx-auto max-w-6xl px-4 sm:px-6 pt-6 sm:pt-8 pb-6 sm:pb-8">{children}</main>
           </div>
         </Providers>
         <script src="/theme.js" />
-        <script dangerouslySetInnerHTML={{ __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js')); }` }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                try {
+                  var isLocal = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+                  if (!('serviceWorker' in navigator)) return;
+                  if (isLocal) {
+                    // In local dev, never let a service worker cache stale Next bundles across restarts/env swaps.
+                    var already = false;
+                    try { already = sessionStorage.getItem('__flamelink_sw_purged__') === '1'; } catch(e) {}
+                    var purgeAndReload = function() {
+                      try { sessionStorage.setItem('__flamelink_sw_purged__','1'); } catch(e) {}
+                      try { location.reload(); } catch(e) {}
+                    };
+                    navigator.serviceWorker.getRegistrations().then(function(rs){
+                      rs.forEach(function(r){ try { r.unregister(); } catch(e){} });
+                      if (window.caches && caches.keys) {
+                        caches.keys().then(function(keys){
+                          keys.forEach(function(k){ try { caches.delete(k); } catch(e){} });
+                          if (!already) purgeAndReload();
+                        }).catch(function(){ if (!already) purgeAndReload(); });
+                      } else {
+                        if (!already) purgeAndReload();
+                      }
+                    }).catch(function(){ /* ignore */ });
+                    return; // do not register in localhost
+                  }
+                  window.addEventListener('load', function(){ navigator.serviceWorker.register('/sw.js'); });
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
       </body>
     </html>
   );

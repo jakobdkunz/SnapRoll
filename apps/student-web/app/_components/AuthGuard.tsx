@@ -1,40 +1,51 @@
 "use client";
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth, useUser } from '@clerk/nextjs';
+import type { Route } from 'next';
+import { useAuth } from '@workos-inc/authkit-nextjs/components';
 
-export function AuthGuard() {
+function DemoAuthGuard() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
-  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  useEffect(() => {
+    // Set cookie for service worker
+    try {
+      document.cookie = `flamelink_auth=1; Path=/; SameSite=Lax`;
+    } catch (e) { void e; }
+
+    // Keep users inside demo (avoid auth pages)
+    if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/callback') || pathname.startsWith('/login')) {
+      router.replace('/dashboard' as Route);
+    }
+  }, [pathname, router]);
+
+  return null;
+}
+
+function WorkOSAuthGuard() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
-    // Skip auth checks in demo mode
-    if (isDemoMode) {
-      // Set cookie for service worker
-      try {
-        document.cookie = `flamelink_auth=1; Path=/; SameSite=Lax`;
-      } catch (e) { void e; }
-      return;
-    }
-    
-    if (!isLoaded) return;
-    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up');
-    if (!isSignedIn && !isPublic) {
+    if (loading) return;
+    const isPublic = pathname === '/' || pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up') || pathname.startsWith('/callback') || pathname.startsWith('/login');
+    if (!user && !isPublic) {
       const t = setTimeout(() => {
-        if (!isSignedIn) router.replace('/sign-in');
+        if (!user) router.replace('/login' as Route);
       }, 10);
       return () => clearTimeout(t);
     }
     // Set a non-PII cookie to indicate auth state for the service worker
     try {
-      document.cookie = `flamelink_auth=${isSignedIn ? '1' : '0'}; Path=/; SameSite=Lax`;
+      document.cookie = `flamelink_auth=${user ? '1' : '0'}; Path=/; SameSite=Lax`;
     } catch (e) { void e; }
-  }, [isLoaded, isSignedIn, user, pathname, router, isDemoMode]);
+  }, [loading, user, pathname, router]);
 
   return null;
 }
 
-
+export function AuthGuard() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <DemoAuthGuard /> : <WorkOSAuthGuard />;
+}
