@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@flamelink/convex-client/server';
-import { getAccessToken } from '@workos-inc/authkit-nextjs';
+import { withAuth } from '@workos-inc/authkit-nextjs';
 import type { Id } from '@flamelink/convex-client';
 
 function getConvexUrl(): string {
@@ -11,12 +11,11 @@ function getConvexUrl(): string {
   return url;
 }
 
-export async function POST(_req: Request, { params }: { params: { sessionId: string } }) {
+export const POST = withAuth(async (req: Request, { session, params }: { session: { accessToken?: string } | null; params: { sessionId: string } }) => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = session?.accessToken;
     if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const req = _req;
     const form = await req.formData();
     const file = form.get('file');
     const indexRaw = form.get('index');
@@ -52,11 +51,11 @@ export async function POST(_req: Request, { params }: { params: { sessionId: str
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});
 
-export async function GET(_req: Request, { params }: { params: { sessionId: string } }) {
+export const GET = withAuth(async (_req: Request, { session, params }: { session: { accessToken?: string } | null; params: { sessionId: string } }) => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = session?.accessToken;
     if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const convex = new ConvexHttpClient(getConvexUrl());
     convex.setAuth(accessToken);
@@ -69,4 +68,4 @@ export async function GET(_req: Request, { params }: { params: { sessionId: stri
     const message = err instanceof Error ? err.message : 'Failed to fetch slides';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@flamelink/convex-client/server';
-import { getAccessToken } from '@workos-inc/authkit-nextjs';
+import { withAuth } from '@workos-inc/authkit-nextjs';
 
 function getConvexUrl(): string {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
@@ -10,9 +10,9 @@ function getConvexUrl(): string {
   return url;
 }
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (req: Request, { session }) => {
   try {
-    const accessToken = await getAccessToken();
+    const accessToken = session?.accessToken;
     if (!accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -56,4 +56,4 @@ export async function POST(req: Request) {
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+});
