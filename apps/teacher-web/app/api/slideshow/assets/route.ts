@@ -10,9 +10,9 @@ function getConvexUrl(): string {
   return url;
 }
 
-export const POST = withAuth(async (req: Request, { session }) => {
+export async function POST(req: Request) {
   try {
-    const accessToken = session?.accessToken;
+    const { accessToken } = await withAuth();
     if (!accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -56,4 +56,4 @@ export const POST = withAuth(async (req: Request, { session }) => {
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}

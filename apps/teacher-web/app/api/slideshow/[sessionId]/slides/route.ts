@@ -11,9 +11,9 @@ function getConvexUrl(): string {
   return url;
 }
 
-export const POST = withAuth(async (req: Request, { session, params }: { session: { accessToken?: string } | null; params: { sessionId: string } }) => {
+export async function POST(req: Request, { params }: { params: { sessionId: string } }) {
   try {
-    const accessToken = session?.accessToken;
+    const { accessToken } = await withAuth();
     if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const form = await req.formData();
@@ -51,11 +51,11 @@ export const POST = withAuth(async (req: Request, { session, params }: { session
     const message = err instanceof Error ? err.message : 'Upload failed';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}
 
-export const GET = withAuth(async (_req: Request, { session, params }: { session: { accessToken?: string } | null; params: { sessionId: string } }) => {
+export async function GET(_req: Request, { params }: { params: { sessionId: string } }) {
   try {
-    const accessToken = session?.accessToken;
+    const { accessToken } = await withAuth();
     if (!accessToken) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const convex = new ConvexHttpClient(getConvexUrl());
     convex.setAuth(accessToken);
@@ -68,4 +68,4 @@ export const GET = withAuth(async (_req: Request, { session, params }: { session
     const message = err instanceof Error ? err.message : 'Failed to fetch slides';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-});
+}
