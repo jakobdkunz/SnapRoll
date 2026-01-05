@@ -1,6 +1,6 @@
 import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import type { NextRequest, NextFetchEvent } from 'next/server';
 
 // In demo mode, skip WorkOS middleware entirely
 const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -34,7 +34,61 @@ const workosMiddleware = authkitMiddleware({
   },
 });
 
-export default isDemoMode ? demoMiddleware : workosMiddleware;
+// Wrapper to catch and expose errors
+async function safeWorkosMiddleware(req: NextRequest, event: NextFetchEvent) {
+  try {
+    // Check env vars before calling WorkOS
+    const clientId = process.env.WORKOS_CLIENT_ID;
+    const apiKey = process.env.WORKOS_API_KEY;
+    const cookiePassword = process.env.WORKOS_COOKIE_PASSWORD;
+    
+    if (!clientId || !apiKey || !cookiePassword) {
+      console.error('WorkOS env check failed:', {
+        hasClientId: !!clientId,
+        hasApiKey: !!apiKey,
+        hasCookiePassword: !!cookiePassword,
+        cookiePasswordLength: cookiePassword?.length,
+      });
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'WorkOS configuration error',
+          missing: {
+            WORKOS_CLIENT_ID: !clientId,
+            WORKOS_API_KEY: !apiKey,
+            WORKOS_COOKIE_PASSWORD: !cookiePassword,
+          },
+          cookiePasswordLength: cookiePassword?.length,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (cookiePassword.length !== 32) {
+      console.error('WORKOS_COOKIE_PASSWORD must be exactly 32 characters, got:', cookiePassword.length);
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'WORKOS_COOKIE_PASSWORD must be exactly 32 characters',
+          actualLength: cookiePassword.length,
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    return await workosMiddleware(req, event);
+  } catch (error) {
+    console.error('WorkOS middleware error:', error);
+    return new NextResponse(
+      JSON.stringify({ 
+        error: 'Middleware error',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+}
+
+export default isDemoMode ? demoMiddleware : safeWorkosMiddleware;
 
 export const config = {
   matcher: [
