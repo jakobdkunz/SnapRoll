@@ -1,6 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { DEMO_STUDENTS, DEMO_INSTRUCTORS, seedDemoDataHandler } from "./seed";
+
+// Build a set of valid demo emails for quick lookup
+const VALID_DEMO_EMAILS: Set<string> = new Set([
+  ...DEMO_STUDENTS.map(s => s.email),
+  ...DEMO_INSTRUCTORS.map(i => i.email),
+]);
 
 export const authenticateTeacher = mutation({
   args: {
@@ -81,37 +88,63 @@ export const getUser = query({
   },
 });
 
+/**
+ * Get a user by email. In demo mode, allows lookup of any demo user.
+ * In non-demo mode, this query is forbidden.
+ */
 export const getUserByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    // This query is intended for demo flows only (e.g. fetching demo-student / demo-teacher).
-    // Avoid exposing arbitrary user lookup by email in non-demo deployments.
+    // This query is intended for demo flows only
     if (process.env.DEMO_MODE !== "true") {
       throw new Error("Forbidden");
     }
     const clean = args.email.trim().toLowerCase();
-    if (clean !== "demo-teacher@example.com" && clean !== "demo-student@example.com") {
-      throw new Error("Forbidden");
+    
+    // Only allow lookup of valid demo users
+    if (!VALID_DEMO_EMAILS.has(clean)) {
+      throw new Error("Forbidden: not a valid demo user email");
     }
+    
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", clean))
       .first();
   },
 });
 
+/**
+ * Get the current user. In demo mode, accepts an optional demoUserEmail parameter
+ * to specify which demo user to return.
+ */
 export const getCurrentUser = query({
-  args: {},
-  handler: async (ctx) => {
-    // In demo mode, return demo teacher user
+  args: {
+    demoUserEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // In demo mode, return the specified demo user or default
     if (process.env.DEMO_MODE === "true") {
-      const demoEmail = "demo-teacher@example.com";
+      let demoEmail: string;
+      
+      if (args.demoUserEmail) {
+        const clean = args.demoUserEmail.trim().toLowerCase();
+        // Validate it's a known demo user
+        if (VALID_DEMO_EMAILS.has(clean)) {
+          demoEmail = clean;
+        } else {
+          // Fall back to default (James Mitchell for teacher context)
+          demoEmail = DEMO_INSTRUCTORS[0].email;
+        }
+      } else {
+        // Default to James Mitchell (first instructor)
+        demoEmail = DEMO_INSTRUCTORS[0].email;
+      }
+      
       const user = await ctx.db
         .query("users")
         .withIndex("by_email", (q) => q.eq("email", demoEmail))
         .first();
       
-      // In query context, user must already exist (created by seed function)
       return user;
     }
     
@@ -136,6 +169,70 @@ export const getCurrentUser = query({
         .withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", tokenId))
         .first();
       if (userByToken) return userByToken;
+    }
+    
+    return null;
+  },
+});
+
+/**
+ * Get the current student user. In demo mode, accepts an optional demoUserEmail parameter.
+ * This is specifically for student-facing queries.
+ */
+export const getCurrentStudent = query({
+  args: {
+    demoUserEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // In demo mode, return the specified demo student or default
+    if (process.env.DEMO_MODE === "true") {
+      let demoEmail: string;
+      
+      if (args.demoUserEmail) {
+        const clean = args.demoUserEmail.trim().toLowerCase();
+        // Validate it's a known demo student
+        const isValidStudent = DEMO_STUDENTS.some(s => s.email === clean);
+        if (isValidStudent) {
+          demoEmail = clean;
+        } else {
+          // Fall back to default (Alice Anderson)
+          demoEmail = DEMO_STUDENTS[0].email;
+        }
+      } else {
+        // Default to Alice Anderson (first student)
+        demoEmail = DEMO_STUDENTS[0].email;
+      }
+      
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", demoEmail))
+        .first();
+      
+      return user;
+    }
+    
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+    
+    // Try email first (standard OIDC claim)
+    const email = (identity.email ?? "").toString().trim().toLowerCase();
+    if (email) {
+      const userByEmail = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .filter((q) => q.eq(q.field("role"), "STUDENT"))
+        .first();
+      if (userByEmail) return userByEmail;
+    }
+    
+    // Fall back to tokenIdentifier
+    const tokenId = identity.tokenIdentifier;
+    if (tokenId) {
+      const userByToken = await ctx.db
+        .query("users")
+        .withIndex("by_tokenIdentifier", (q) => q.eq("tokenIdentifier", tokenId))
+        .first();
+      if (userByToken && userByToken.role === "STUDENT") return userByToken;
     }
     
     return null;
@@ -195,5 +292,36 @@ export const upsertCurrentUser = mutation({
       tokenIdentifier: tokenIdentifier || undefined,
     });
     return created;
+  },
+});
+
+/**
+ * Ensure demo data exists. Call this from the frontend when in demo mode.
+ * This mutation is idempotent - if demo data already exists, it does nothing.
+ * Returns true if data was seeded, false if it already existed.
+ */
+export const ensureDemoDataExists = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Only works in demo mode
+    if (process.env.DEMO_MODE !== "true") {
+      // In non-demo mode, just return false silently
+      return { seeded: false, reason: "not_demo_mode" };
+    }
+
+    // Check if demo data already exists by looking for the first instructor
+    const firstInstructor = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", DEMO_INSTRUCTORS[0].email))
+      .first();
+
+    if (firstInstructor) {
+      // Demo data already exists
+      return { seeded: false, reason: "already_exists" };
+    }
+
+    // Seed demo data
+    await seedDemoDataHandler(ctx);
+    return { seeded: true, reason: "seeded" };
   },
 });

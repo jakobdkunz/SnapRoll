@@ -8,10 +8,9 @@ import { useQuery } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
-import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
+import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle, HiOutlineCog6Tooth, HiOutlineArrowPath } from 'react-icons/hi2';
 import { MdDarkMode, MdLightMode, MdPhoneIphone } from 'react-icons/md';
-
-// type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
+import { useDemoUser } from './DemoUserContext';
 
 function StudentHeaderRightDemo() {
   const router = useRouter();
@@ -24,10 +23,11 @@ function StudentHeaderRightDemo() {
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Demo user from Convex (student role)
-  const currentUser = useQuery(api.functions.auth.getUserByEmail, { email: 'demo-student@example.com' });
+  const { isHydrated } = useDemoUser();
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
   const [resetting, setResetting] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -52,27 +52,25 @@ function StudentHeaderRightDemo() {
     };
   }, [open]);
 
-  async function onResetDemo() {
-    if (!confirm("Are you sure you want to reset all demo data? This will delete everything and reseed with fresh data.")) {
-      return;
-    }
+  async function onResetDemoConfirm() {
     setResetting(true);
+    setResetError(null);
     try {
       await resetDemo({});
-      alert("Demo data reset successfully! The page will reload.");
-      window.location.reload();
+      setResetConfirmOpen(false);
+      router.replace('/dashboard' as Route);
     } catch (error) {
-      alert(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setResetError(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setResetting(false);
     }
   }
 
   // Don't render anything until client-side hydration is complete
-  if (!isClient) {
+  if (!isClient || !isHydrated) {
     return (
       <div className="opacity-0 pointer-events-none select-none">
-        <button className="text-sm">Profile</button>
+        <button className="text-sm">Options</button>
       </div>
     );
   }
@@ -83,19 +81,14 @@ function StudentHeaderRightDemo() {
         onClick={() => setOpen((v) => !v)}
         className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 transition inline-flex items-center gap-2"
       >
-        <HiOutlineUserCircle className="h-5 w-5" />
-        {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Demo Mode'}
+        <HiOutlineCog6Tooth className="h-5 w-5" />
+        Options
       </button>
       <div
         className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-950/95 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${
           open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
-        <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Demo Mode</div>
-        <div className="px-3 py-2 text-xs text-neutral-600 dark:text-neutral-400">
-          You're exploring the demo site. No login required.
-        </div>
-        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
         <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Appearance</div>
         <div className="px-1 pb-2">
           <button
@@ -130,24 +123,33 @@ function StudentHeaderRightDemo() {
         <button
           onClick={() => {
             setOpen(false);
-            onResetDemo();
+            setResetError(null);
+            setResetConfirmOpen(true);
           }}
           disabled={resetting}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-orange-600 dark:text-orange-400"
+          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
         >
+          <HiOutlineArrowPath className="h-4 w-4" />
           {resetting ? 'Resetting...' : 'Reset Demo Data'}
         </button>
-        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
-        <button
-          onClick={() => {
-            setOpen(false);
-            router.push('/dashboard' as Route);
-          }}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
-        >
-          Go to Sections
-        </button>
       </div>
+      <Modal open={resetConfirmOpen} onClose={() => { if (!resetting) { setResetConfirmOpen(false); setResetError(null); } }}>
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-neutral-900 dark:text-neutral-100">
+          <div className="text-lg font-semibold">Reset demo data?</div>
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">
+            This will delete all demo records and reseed fresh demo data.
+          </div>
+          {resetError && (
+            <div className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+              {resetError}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => { setResetConfirmOpen(false); setResetError(null); }} disabled={resetting}>Cancel</Button>
+            <Button onClick={onResetDemoConfirm} disabled={resetting}>{resetting ? 'Resetting…' : 'Reset Demo Data'}</Button>
+          </div>
+        </Card>
+      </Modal>
     </div>
   );
 }
@@ -171,8 +173,7 @@ function StudentHeaderRightWorkOS() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Convex hooks
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
-  const resetDemo = useMutation(api.functions.demo.resetDemoData);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, {});
 
   useEffect(() => {
     setIsClient(true);
@@ -214,7 +215,6 @@ function StudentHeaderRightWorkOS() {
 
   const resetRateLimit = useMutation(api.functions.attendance.resetCheckinRateLimit);
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
-  const [resetting, setResetting] = useState(false);
   
   async function logout() {
     setStudentId(null);
@@ -222,24 +222,6 @@ function StudentHeaderRightWorkOS() {
     setOpen(false); setProfileOpen(false);
     // Use WorkOS signOut - this clears the session and redirects
     await signOut({ returnTo: '/' });
-  }
-
-  async function onResetDemo() {
-    // Only available in demo deployments; keep hidden in regular mode.
-    return;
-    if (!confirm("Are you sure you want to reset all demo data? This will delete everything and reseed with fresh data.")) {
-      return;
-    }
-    setResetting(true);
-    try {
-      await resetDemo({});
-      alert("Demo data reset successfully! The page will reload.");
-      window.location.reload();
-    } catch (error) {
-      alert(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setResetting(false);
-    }
   }
 
   // Don't render anything until client-side hydration is complete

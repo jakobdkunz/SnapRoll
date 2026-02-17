@@ -1,5 +1,5 @@
 "use client";
-import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle } from 'react-icons/hi2';
+import { HiOutlineUserCircle, HiOutlineArrowRightOnRectangle, HiOutlineCog6Tooth, HiOutlineArrowPath } from 'react-icons/hi2';
 import { MdDarkMode, MdLightMode, MdPhoneIphone } from 'react-icons/md';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import Link from 'next/link';
 import { Modal, Card, Button, TextInput } from '@flamelink/ui';
+import { useDemoUser } from './DemoUserContext';
 
 function TeacherHeaderRightDemo() {
   const router = useRouter();
@@ -22,9 +23,11 @@ function TeacherHeaderRightDemo() {
   };
   const [isClient, setIsClient] = useState(false);
 
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const { isHydrated } = useDemoUser();
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
   const [resetting, setResetting] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -49,26 +52,24 @@ function TeacherHeaderRightDemo() {
     };
   }, [open]);
 
-  async function onResetDemo() {
-    if (!confirm("Are you sure you want to reset all demo data? This will delete everything and reseed with fresh data.")) {
-      return;
-    }
+  async function onResetDemoConfirm() {
     setResetting(true);
+    setResetError(null);
     try {
       await resetDemo({});
-      alert("Demo data reset successfully! The page will reload.");
-      window.location.reload();
+      setResetConfirmOpen(false);
+      router.replace('/dashboard' as Route);
     } catch (error) {
-      alert(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setResetError(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setResetting(false);
     }
   }
 
-  if (!isClient) {
+  if (!isClient || !isHydrated) {
     return (
       <div className="opacity-0 pointer-events-none select-none">
-        <button className="text-sm">Profile</button>
+        <button className="text-sm">Options</button>
       </div>
     );
   }
@@ -79,19 +80,14 @@ function TeacherHeaderRightDemo() {
         onClick={() => setOpen((v) => !v)}
         className="text-sm text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100 transition inline-flex items-center gap-2"
       >
-        <HiOutlineUserCircle className="h-5 w-5" />
-        {currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : 'Demo Mode'}
+        <HiOutlineCog6Tooth className="h-5 w-5" />
+        Options
       </button>
       <div
         className={`absolute right-0 mt-2 w-56 rounded-lg border bg-white dark:bg-neutral-900 dark:border-neutral-800 shadow-md origin-top-right transition-all duration-150 z-[60] ${
           open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
         }`}
       >
-        <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Demo Mode</div>
-        <div className="px-3 py-2 text-xs text-neutral-600 dark:text-neutral-400">
-          You're exploring the demo site. No login required.
-        </div>
-        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
         <div className="px-3 py-2 text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Appearance</div>
         <div className="px-1 pb-2">
           <button className="flex w-full items-center gap-2 px-2 py-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 text-sm" onClick={() => { setOpen(false); setTheme('light'); }}>
@@ -106,20 +102,31 @@ function TeacherHeaderRightDemo() {
         </div>
         <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
         <button
-          onClick={() => { setOpen(false); onResetDemo(); }}
+          onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }}
           disabled={resetting}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-orange-600 dark:text-orange-400"
+          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
         >
+          <HiOutlineArrowPath className="h-4 w-4" />
           {resetting ? 'Resetting...' : 'Reset Demo Data'}
         </button>
-        <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
-        <button
-          onClick={() => { setOpen(false); router.push('/dashboard' as Route); }}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800"
-        >
-          Go to Dashboard
-        </button>
       </div>
+      <Modal open={resetConfirmOpen} onClose={() => { if (!resetting) { setResetConfirmOpen(false); setResetError(null); } }}>
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-neutral-900 dark:text-neutral-100">
+          <div className="text-lg font-semibold">Reset demo data?</div>
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">
+            This will delete all demo records and reseed fresh demo data.
+          </div>
+          {resetError && (
+            <div className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+              {resetError}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => { setResetConfirmOpen(false); setResetError(null); }} disabled={resetting}>Cancel</Button>
+            <Button onClick={onResetDemoConfirm} disabled={resetting}>{resetting ? 'Resetting…' : 'Reset Demo Data'}</Button>
+          </div>
+        </Card>
+      </Modal>
     </div>
   );
 }
@@ -152,9 +159,11 @@ function TeacherHeaderRightWorkOS() {
   const [pctBlank, setPctBlank] = useState(10);
   const [pctNotEnrolledManual, setPctNotEnrolledManual] = useState(10);
   const [generating, setGenerating] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+  const [devSuccess, setDevSuccess] = useState<string | null>(null);
 
   // Convex hooks
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, {});
   const updateUser = useMutation(api.functions.users.update);
   const generateDemo = useMutation(api.functions.demo.generateDemoData);
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
@@ -221,14 +230,18 @@ function TeacherHeaderRightWorkOS() {
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   const [resetting, setResetting] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   async function onGenerateDemo() {
     if (!devMode) return;
     setGenerating(true);
+    setDevError(null);
+    setDevSuccess(null);
     try {
       const total = pctPresent + pctPresentManual + pctAbsentManual + pctBlank + pctNotEnrolledManual;
       if (total !== 100) {
-        alert("Percentages must add up to 100%");
+        setDevError("Percentages must add up to 100%");
         return;
       }
       await generateDemo({
@@ -243,7 +256,9 @@ function TeacherHeaderRightWorkOS() {
           notEnrolledManual: pctNotEnrolledManual,
         },
       });
-      alert("Demo data generated");
+      setDevSuccess("Demo data generated.");
+    } catch (error) {
+      setDevError(error instanceof Error ? error.message : "Failed to generate demo data.");
     } finally {
       setGenerating(false);
     }
@@ -259,16 +274,14 @@ function TeacherHeaderRightWorkOS() {
 
   async function onResetDemo() {
     if (!isDemoMode) return;
-    if (!confirm("Are you sure you want to reset all demo data? This will delete everything and reseed with fresh data.")) {
-      return;
-    }
     setResetting(true);
+    setResetError(null);
     try {
       await resetDemo({});
-      alert("Demo data reset successfully! The page will reload.");
-      window.location.reload();
+      setResetConfirmOpen(false);
+      router.replace('/dashboard' as Route);
     } catch (error) {
-      alert(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setResetError(`Failed to reset demo data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setResetting(false);
     }
@@ -311,11 +324,11 @@ function TeacherHeaderRightWorkOS() {
           </div>
           <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
           <button 
-            onClick={() => { setOpen(false); onResetDemo(); }} 
+            onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }} 
             disabled={resetting}
-            className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-orange-600 dark:text-orange-400"
+            className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
           >
-            {resetting ? 'Resetting...' : '🔄 Reset Demo Data'}
+            {resetting ? 'Resetting...' : 'Reset Demo Data'}
           </button>
         </div>
       </div>
@@ -365,11 +378,11 @@ function TeacherHeaderRightWorkOS() {
           <>
             <div className="border-t border-neutral-200 dark:border-neutral-800 my-1" />
             <button 
-              onClick={() => { setOpen(false); onResetDemo(); }} 
+              onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }} 
               disabled={resetting}
-              className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-orange-600 dark:text-orange-400"
+              className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
             >
-              {resetting ? 'Resetting...' : '🔄 Reset Demo Data'}
+              {resetting ? 'Resetting...' : 'Reset Demo Data'}
             </button>
           </>
         )}
@@ -446,6 +459,16 @@ function TeacherHeaderRightWorkOS() {
                     </div>
                   </div>
                   <div className="text-xs text-neutral-600 dark:text-neutral-400">Percentages must add to 100%.</div>
+                  {devError && (
+                    <div className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+                      {devError}
+                    </div>
+                  )}
+                  {devSuccess && (
+                    <div className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded p-2">
+                      {devSuccess}
+                    </div>
+                  )}
                   <Button onClick={onGenerateDemo} disabled={generating}>
                     {generating ? 'Generating…' : 'Generate demo data'}
                   </Button>
@@ -456,6 +479,23 @@ function TeacherHeaderRightWorkOS() {
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" onClick={() => setProfileOpen(false)}>Cancel</Button>
             <Button onClick={saveProfile} disabled={saving || !firstName.trim() || !lastName.trim()}>{saving ? 'Saving…' : 'Save'}</Button>
+          </div>
+        </Card>
+      </Modal>
+      <Modal open={resetConfirmOpen} onClose={() => { if (!resetting) { setResetConfirmOpen(false); setResetError(null); } }}>
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-neutral-900 dark:text-neutral-100">
+          <div className="text-lg font-semibold">Reset demo data?</div>
+          <div className="text-sm text-neutral-600 dark:text-neutral-400">
+            This will delete all demo records and reseed fresh demo data.
+          </div>
+          {resetError && (
+            <div className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+              {resetError}
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => { setResetConfirmOpen(false); setResetError(null); }} disabled={resetting}>Cancel</Button>
+            <Button onClick={onResetDemo} disabled={resetting}>{resetting ? 'Resetting…' : 'Reset Demo Data'}</Button>
           </div>
         </Card>
       </Modal>

@@ -23,6 +23,8 @@ export default function TeacherProfilePage() {
   const [pctBlank, setPctBlank] = useState(10);
   const [pctNotEnrolledManual, setPctNotEnrolledManual] = useState(10);
   const [generating, setGenerating] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+  const [devSuccess, setDevSuccess] = useState<string | null>(null);
 
   // Convex hooks
   const updateUser = useMutation(api.functions.users.update);
@@ -68,10 +70,12 @@ export default function TeacherProfilePage() {
   async function onGenerateDemo() {
     if (!devMode) return;
     setGenerating(true);
+    setDevError(null);
+    setDevSuccess(null);
     try {
       const total = pctPresent + pctPresentManual + pctAbsentManual + pctBlank + pctNotEnrolledManual;
       if (total !== 100) {
-        alert("Percentages must add up to 100%");
+        setDevError("Percentages must add up to 100%");
         return;
       }
       await generateDemo({
@@ -86,7 +90,9 @@ export default function TeacherProfilePage() {
           notEnrolledManual: pctNotEnrolledManual,
         },
       });
-      alert("Demo data generated");
+      setDevSuccess("Demo data generated.");
+    } catch (error) {
+      setDevError(error instanceof Error ? error.message : "Failed to generate demo data.");
     } finally {
       setGenerating(false);
     }
@@ -162,6 +168,16 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
                 <div className="text-xs text-slate-500">Percentages must add to 100%.</div>
+                {devError && (
+                  <div className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+                    {devError}
+                  </div>
+                )}
+                {devSuccess && (
+                  <div className="text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded p-2">
+                    {devSuccess}
+                  </div>
+                )}
                 <Button onClick={onGenerateDemo} disabled={generating}>
                   {generating ? 'Generating…' : 'Generate demo data'}
                 </Button>
@@ -173,5 +189,4 @@ export default function TeacherProfilePage() {
     </div>
   );
 }
-
 

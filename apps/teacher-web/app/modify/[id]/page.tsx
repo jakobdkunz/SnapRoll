@@ -1,5 +1,5 @@
 "use client";
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Card, TextInput, Modal, Skeleton } from '@flamelink/ui';
 import { RosterRow } from './_components/RosterRow';
@@ -12,6 +12,7 @@ import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import { isValidEmail } from '@flamelink/lib';
 import { HiOutlineTrash, HiOutlineArrowUpTray } from 'react-icons/hi2';
 import Papa from 'papaparse';
+import { useDemoUser } from '../../_components/DemoUserContext';
 
 type Student = { id: Id<'users'>; email: string; firstName: string; lastName: string };
 
@@ -21,7 +22,8 @@ export default function ModifyPage() {
 }
 
 function ModifyPageDemo() {
-  return <ModifyPageCore canUpsert={false} />;
+  const { demoUserEmail, isHydrated } = useDemoUser();
+  return <ModifyPageCore canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
 }
 
 function ModifyPageWorkOS() {
@@ -36,15 +38,21 @@ function ModifyPageWorkOS() {
   return <ModifyPageCore canUpsert={canUpsert} userInfo={userInfo} />;
 }
 
-function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
+function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string }; demoUserEmail?: string }) {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   const [newEmail, setNewEmail] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
   const [newLastName, setNewLastName] = useState('');
 
   // Convex hooks
   // Ensure the current Clerk user is provisioned in Convex before running protected queries
-  const currentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser = useQuery(api.functions.auth.getCurrentUser, { demoUserEmail });
+  const demoArgs = useMemo(
+    () => ((isDemoMode && demoUserEmail) ? { demoUserEmail } : {}),
+    [isDemoMode, demoUserEmail]
+  );
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
   useEffect(() => {
     if (!canUpsert) return;
@@ -60,8 +68,14 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
   }, [canUpsert, currentUser, upsertUser, userInfo]);
   const teacherReady = !!(currentUser && currentUser._id);
 
-  const section = useQuery(api.functions.sections.get, (params.id && teacherReady) ? { id: params.id as Id<'sections'> } : "skip");
-  const enrollments = useQuery(api.functions.enrollments.getBySection, (params.id && teacherReady) ? { sectionId: params.id as Id<'sections'> } : "skip");
+  const section = useQuery(
+    api.functions.sections.get,
+    (params.id && teacherReady) ? { id: params.id as Id<'sections'>, ...demoArgs } : "skip"
+  );
+  const enrollments = useQuery(
+    api.functions.enrollments.getBySection,
+    (params.id && teacherReady && !!section) ? { sectionId: params.id as Id<'sections'> } : "skip"
+  );
   const allStudents = useQuery(api.functions.users.list, teacherReady ? { role: "STUDENT" } : "skip");
   
   // Combine enrollments with student data
@@ -100,6 +114,14 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       setSectionLoaded(true);
     }
   }, [section]);
+
+  // After demo reset, stale section ids may no longer exist; return to dashboard.
+  useEffect(() => {
+    if (!teacherReady) return;
+    if (section === null) {
+      router.replace('/dashboard');
+    }
+  }, [teacherReady, section, router]);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importWorking, setImportWorking] = useState(false);
@@ -134,6 +156,11 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
   const [toastMessage, setToastMessage] = useState('');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [undoWorking, setUndoWorking] = useState(false);
+  const [dialogError, setDialogError] = useState<string | null>(null);
+
+  function showDialogError(message: string) {
+    setDialogError(message);
+  }
 
   function validateRolesForImport(roles: ColumnRole[]): { ok: boolean; message?: string } {
     const emailCount = roles.filter((r) => r === 'email').length;
@@ -173,7 +200,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
 
   async function handleAdd() {
     if (!newEmail.trim() || !isValidEmail(newEmail.trim())) {
-      alert('Please enter a valid email address.');
+      showDialogError('Please enter a valid email address.');
       return;
     }
     try {
@@ -207,7 +234,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to add student';
-      alert(errorMessage);
+      showDialogError(errorMessage);
     }
   }
 
@@ -227,7 +254,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
 
   async function saveEdit(studentId: string) {
     if (!editEmail.trim() || !isValidEmail(editEmail.trim()) || !editFirstName.trim() || !editLastName.trim()) {
-      alert('Please enter a valid email and name.');
+      showDialogError('Please enter a valid email and name.');
       return;
     }
     try {
@@ -235,7 +262,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       cancelEdit();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
-      alert(errorMessage);
+      showDialogError(errorMessage);
     }
   }
 
@@ -263,7 +290,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       });
       const allRows: string[][] = (parsed.data as unknown as string[][]).map((r) => (Array.isArray(r) ? r : []));
       if (allRows.length === 0) {
-        alert('No rows found in CSV.');
+        showDialogError('No rows found in CSV.');
         return;
       }
       const maxCols = allRows.reduce((m, r) => Math.max(m, r.length), 0);
@@ -276,7 +303,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       );
       const bestEmailIdx = emailScores.reduce((best, score, idx) => (score > emailScores[best] ? idx : best), 0);
       if (emailScores[bestEmailIdx] === 0) {
-        alert('Could not find an email column (no values with @).');
+        showDialogError('Could not find an email column (no values with @).');
         return;
       }
       const firstRow = allRows[0] || [];
@@ -353,7 +380,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
       setMappingOpen(true);
       return;
     } catch {
-      alert('Failed to import CSV.');
+      showDialogError('Failed to import CSV.');
     } finally {
       setImporting(false);
       // reset input value so the same file can be chosen again
@@ -494,7 +521,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
                   if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
                   toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                 } catch {
-                  alert('Failed to remove student');
+                  showDialogError('Failed to remove student');
                 } finally {
                   setDeletingIds((prev) => { const n = new Set(prev); n.delete(s.id); return n; });
                 }
@@ -558,9 +585,9 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
         />
       )}
       <Modal open={confirmClearOpen} onClose={() => { if (!confirmWorking) setConfirmClearOpen(false); }}>
-          <div className="w-[min(92vw,520px)] bg-white rounded-xl shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
+          <div className="w-[min(92vw,520px)] bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded-lg shadow-xl p-4 sm:p-6 transition-all duration-200 ease-out">
             <div className="text-lg font-semibold mb-1">Remove all students?</div>
-            <div className="text-sm text-slate-600 mb-4">This action cannot be undone.</div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">This action cannot be undone.</div>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmClearOpen(false)} disabled={confirmWorking}>Cancel</Button>
               <Button className="!text-white !bg-rose-600 hover:!bg-rose-500 inline-flex items-center gap-2" onClick={async () => {
@@ -577,7 +604,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
                   toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
                   setConfirmClearOpen(false);
                 } catch {
-                  alert('Failed to remove all students');
+                  showDialogError('Failed to remove all students');
                 } finally {
                   setConfirmWorking(false);
                 }
@@ -613,7 +640,7 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
                   ]);
                   setToastVisible(false);
                 } catch {
-                  alert('Failed to undo.');
+                  showDialogError('Failed to undo.');
                 } finally {
                   setUndoWorking(false);
                 }
@@ -624,7 +651,15 @@ function ModifyPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?
           </div>
         </div>
       )}
+      <Modal open={!!dialogError} onClose={() => setDialogError(null)}>
+        <div className="w-[min(92vw,520px)] bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 rounded-lg shadow-xl p-4 sm:p-6">
+          <div className="text-lg font-semibold mb-2">Unable to complete action</div>
+          <div className="text-sm text-neutral-600 dark:text-neutral-300 mb-4">{dialogError}</div>
+          <div className="flex justify-end">
+            <Button onClick={() => setDialogError(null)}>OK</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
-

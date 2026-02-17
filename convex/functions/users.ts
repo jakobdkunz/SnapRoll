@@ -1,35 +1,36 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { requireTeacher } from "./_auth";
+import { isDemoMode, requireCurrentUser, requireTeacher } from "./_auth";
 
 export const get = query({
   args: { id: v.id("users") },
   handler: async (ctx, args) => {
+    if (isDemoMode()) {
+      return await ctx.db.get(args.id);
+    }
     // Only allow fetching your own user via this generic endpoint
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
-      .first();
-    if (!currentUser) throw new Error("Unauthenticated");
+    const currentUser = await requireCurrentUser(ctx);
     if (currentUser._id !== args.id) throw new Error("Forbidden");
-    return currentUser;
+    return await ctx.db.get(args.id);
   },
 });
 
 export const getByEmail = query({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    const clean = args.email.toLowerCase().trim();
+    if (isDemoMode()) {
+      return await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", clean))
+        .first();
+    }
     // Only allow self-lookup by email
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    if (email !== args.email.toLowerCase().trim()) throw new Error("Forbidden");
+    const currentUser = await requireCurrentUser(ctx);
+    if ((currentUser.email || "").toLowerCase().trim() !== clean) throw new Error("Forbidden");
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", clean))
       .first();
   },
 });
@@ -83,16 +84,11 @@ export const update = mutation({
     lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Only allow self-updates for basic fields
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
-      .first();
-    if (!currentUser) throw new Error("Unauthenticated");
-    if (currentUser._id !== args.id) throw new Error("Forbidden");
+    if (!isDemoMode()) {
+      // Only allow self-updates for basic fields outside demo mode.
+      const currentUser = await requireCurrentUser(ctx);
+      if (currentUser._id !== args.id) throw new Error("Forbidden");
+    }
     const { id, ...updates } = args;
     return await ctx.db.patch(id, updates);
   },

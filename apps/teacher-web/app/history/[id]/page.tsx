@@ -8,7 +8,7 @@ import { formatDateMDY } from '@flamelink/lib';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { SectionHeader } from '../../modify/[id]/_components/SectionHeader';
 
 type Student = { id: string; firstName: string; lastName: string; email: string; totalAbsences?: number };
@@ -44,20 +44,25 @@ function HistoryPageWorkOS() {
 
 function HistoryPageCore({ authReady }: { authReady: boolean }) {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   //
   const [offset, setOffset] = useState<number>(0);
   // Server-side window equals the number of columns that fit
   const [limit, setLimit] = useState<number>(12);
   const [activeTab, setActiveTab] = useState<'attendance' | 'participation'>('attendance');
   const sectionId = params.id as unknown as Id<'sections'>;
+  const section = useQuery(
+    api.functions.sections.get,
+    authReady && params.id ? { id: sectionId } : "skip"
+  ) as any;
   const history = useQuery(
     api.functions.history.getSectionHistory,
-    authReady && params.id ? { sectionId, offset, limit } : "skip"
+    authReady && params.id && !!section ? { sectionId, offset, limit } : "skip"
   ) as any;
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const participation = useQuery(
     api.functions.history.getParticipationBySection,
-    authReady && params.id && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
+    authReady && params.id && !!section && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
   ) as {
     days: { id: string; date: string }[];
     records: { studentId: string; rows: { classDayId: string; sharesEarned: number; sharesTotal: number; absent: boolean }[] }[];
@@ -97,10 +102,6 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
   const convex = useConvex();
   const [debug, setDebug] = useState<{ container: number; leftCol: number; perCol: number; computed: number; offset: number } | null>(null);
   // Section header state
-  const section = useQuery(
-    api.functions.sections.get,
-    authReady && params.id ? { id: sectionId } : "skip"
-  ) as any;
   const [sectionLoaded, setSectionLoaded] = useState(false);
   const [sectionTitle, setSectionTitle] = useState<string>('Section');
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
@@ -111,6 +112,14 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
       setSectionGradient(section.gradient || 'gradient-1');
     }
   }, [section]);
+
+  // After demo reset, stale section ids may no longer exist; return to dashboard.
+  useEffect(() => {
+    if (!authReady) return;
+    if (section === null) {
+      router.replace('/dashboard');
+    }
+  }, [authReady, section, router]);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -668,15 +677,15 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
       <TooltipOverlay visible={tooltip.visible} text={tooltip.text} anchorX={tooltip.anchorX} anchorY={tooltip.anchorY} />
       {/* Export modal */}
       <Modal open={exportOpen} onClose={() => (exporting ? null : setExportOpen(false))}>
-        <Card className="p-6 w-[90vw] max-w-md space-y-4">
+        <Card className="p-6 w-[90vw] max-w-md space-y-4 text-slate-900 dark:text-slate-100">
           <div className="text-lg font-semibold">Export Attendance</div>
           {exportError ? (
-            <div className="text-sm text-red-600">{exportError}</div>
+            <div className="text-sm text-red-600 dark:text-red-400">{exportError}</div>
           ) : (
-            <div className="text-sm text-slate-600">Preparing CSV for all days. This may take a moment…</div>
+            <div className="text-sm text-slate-600 dark:text-slate-300">Preparing CSV for all days. This may take a moment…</div>
           )}
-          <div className="h-2 w-full bg-slate-200 rounded overflow-hidden">
-            <div className={`h-full bg-slate-600 ${exporting ? 'animate-pulse' : ''}`} style={{ width: '60%' }} />
+          <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded overflow-hidden">
+            <div className={`h-full bg-slate-600 dark:bg-slate-300 ${exporting ? 'animate-pulse' : ''}`} style={{ width: '60%' }} />
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setExportOpen(false)} disabled={exporting}>Close</Button>

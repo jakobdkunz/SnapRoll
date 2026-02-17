@@ -112,6 +112,7 @@ export const generateDemoData = mutation({
         date: dayStart,
         attendanceCode: code,
         attendanceCodeExpiresAt: dayStart + DAY_MS,
+        hasActivity: true,
       });
       results.push({ classDayId: classDayId as Id<'classDays'>, date: dayStart });
 

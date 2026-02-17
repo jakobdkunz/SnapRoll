@@ -87,21 +87,21 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Presentation Settings</h4>
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={showOnDevices} onChange={(e) => setShowOnDevices(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={showOnDevices} onChange={(e) => setShowOnDevices(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Show on Student Devices</div><div className="text-sm text-slate-600 dark:text-slate-300">Students can view the slideshow on their devices</div></div>
               </label>
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Allow Students to Download</div><div className="text-sm text-slate-600 dark:text-slate-300">Students can download the slideshow files</div></div>
               </label>
               {!requireStay && (
                 <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                  <input type="checkbox" checked={preventJump} onChange={(e) => setPreventJump(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                  <input type="checkbox" checked={preventJump} onChange={(e) => setPreventJump(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                   <div><div className="font-medium text-slate-900 dark:text-slate-100">Prevent Students from Jumping Ahead</div><div className="text-sm text-slate-600 dark:text-slate-300">Students cannot navigate to future slides</div></div>
                 </label>
               )}
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={requireStay} onChange={(e) => { const v = e.target.checked; setRequireStay(v); if (v) setPreventJump(false); }} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={requireStay} onChange={(e) => { const v = e.target.checked; setRequireStay(v); if (v) setPreventJump(false); }} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Require Students to Stay on Current Slide</div><div className="text-sm text-slate-600 dark:text-slate-300">Students cannot navigate away from the current slide</div></div>
               </label>
             </div>
@@ -142,5 +142,4 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
     </Modal>
   );
 }
-
 

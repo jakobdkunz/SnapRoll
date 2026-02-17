@@ -8,6 +8,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 type Section = {
   id: string;
@@ -21,8 +22,9 @@ export default function SectionsPage() {
 }
 
 function SectionsPageDemo() {
+  const { demoUserEmail, isHydrated } = useDemoUser();
   // Demo mode has no Clerk; allow queries immediately and skip upsert.
-  return <SectionsPageCore authReady={true} canUpsert={false} />;
+  return <SectionsPageCore authReady={true} canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
 }
 
 function SectionsPageWorkOS() {
@@ -37,7 +39,7 @@ function SectionsPageWorkOS() {
   return <SectionsPageCore authReady={authReady} canUpsert={authReady} userInfo={userInfo} />;
 }
 
-function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { authReady: boolean; canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
+function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUserEmail }: { authReady: boolean; canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string }; demoUserEmail?: string }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [studentName, setStudentName] = useState<string | null>(null);
@@ -49,11 +51,11 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
   const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
   // Get current user.
-  // In demo deployments, Convex's getCurrentUser returns the demo *teacher*, so we explicitly fetch demo-student.
-  const currentUserAuthed = useQuery(api.functions.auth.getCurrentUser);
+  // In demo mode, use getCurrentStudent with the selected demo user email.
+  const currentUserAuthed = useQuery(api.functions.auth.getCurrentUser, {});
   const demoStudent = useQuery(
-    api.functions.auth.getUserByEmail,
-    isDemoMode ? { email: 'demo-student@example.com' } : "skip"
+    api.functions.auth.getCurrentStudent,
+    isDemoMode && demoUserEmail ? { demoUserEmail } : "skip"
   );
   const currentUser = (isDemoMode ? demoStudent : currentUserAuthed) as typeof currentUserAuthed;
 
@@ -93,9 +95,17 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
     if (!enrollments) return null as Id<'sections'>[] | null;
     return enrollments.map((e: { sectionId: Id<'sections'> }) => e.sectionId as Id<'sections'>);
   }, [enrollments]);
+  const sectionsQueryArgs = useMemo(() => {
+    if (!sectionIds || sectionIds.length === 0) return "skip" as const;
+    if (isDemoMode) {
+      if (!demoUserEmail) return "skip" as const;
+      return { ids: sectionIds, demoUserEmail };
+    }
+    return { ids: sectionIds };
+  }, [sectionIds, isDemoMode, demoUserEmail]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
-    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+    sectionsQueryArgs
   );
   
   // Shape sections for display
@@ -690,10 +700,10 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
   };
   return (
     <Modal open={open} onClose={onClose}>
-      <Card className="p-5 w-[92vw] max-w-sm">
+      <Card className="p-5 w-[92vw] max-w-sm text-neutral-900 dark:text-neutral-100">
         <div className="text-center mb-3">
           <div className="font-medium">Enter Join Code</div>
-          <div className="text-slate-500 text-sm">Ask your instructor for the 6-digit code.</div>
+          <div className="text-slate-500 dark:text-slate-400 text-sm">Ask your instructor for the 6-digit code.</div>
         </div>
         <div className="flex items-center justify-center gap-2 mb-3">
           <TextInput
@@ -709,7 +719,7 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
           />
         </div>
         {error && (
-          <div id="join-error" className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-center">
+          <div id="join-error" className="text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-2 text-sm text-center">
             {error}
           </div>
         )}

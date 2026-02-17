@@ -1,43 +1,42 @@
 import { v } from "convex/values";
-import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-
-async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Unauthenticated");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new Error("Unauthenticated");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new Error("User not provisioned");
-  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
-}
+import { isDemoMode, requireCurrentUser } from "./_auth";
 
 export const get = query({
-  args: { id: v.id("sections") },
+  args: { id: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
-    // Allow teachers to fetch their own section; allow students if enrolled
     const section = await ctx.db.get(args.id);
     if (!section) return null;
+    // In demo mode, some teacher pages call without demoUserEmail. Avoid false
+    // forbiddens by allowing access to existing section docs.
+    if (isDemoMode() && !args.demoUserEmail) return section;
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
+    // Allow teachers to fetch their own section; allow students if enrolled
     if (user.role === "TEACHER" && section.teacherId === user._id) return section;
     if (user.role === "STUDENT") {
       const enrollment = await ctx.db
         .query("enrollments")
         .withIndex("by_section_student", (q) => q.eq("sectionId", args.id).eq("studentId", user._id))
         .first();
-      if (enrollment) return section;
+      if (enrollment && enrollment.removedAt === undefined) return section;
     }
     throw new Error("Forbidden");
   },
 });
 
 export const getByTeacher = query({
-  args: { teacherId: v.id("users") },
+  args: { teacherId: v.id("users"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    if (isDemoMode()) {
+      const teacher = await ctx.db.get(args.teacherId);
+      if (!teacher || teacher.role !== "TEACHER") throw new Error("Forbidden");
+      return await ctx.db
+        .query("sections")
+        .withIndex("by_teacher", (q) => q.eq("teacherId", args.teacherId))
+        .collect();
+    }
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER" || user._id !== args.teacherId) throw new Error("Forbidden");
     return await ctx.db
       .query("sections")
@@ -55,9 +54,10 @@ export const create = mutation({
     policyTimesPerWeek: v.optional(v.number()),
     policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
     participationCreditPointsPossible: v.optional(v.number()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     const title = (args.title || "").trim();
     if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
@@ -92,9 +92,9 @@ export const create = mutation({
 });
 
 export const backfillJoinCodesForTeacher = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireCurrentUser(ctx);
+  args: { demoUserEmail: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     async function generateUniqueJoinCode(): Promise<string> {
       let attempts = 0;
@@ -128,8 +128,9 @@ export const backfillJoinCodesForTeacher = mutation({
 });
 
 export const list = query({
-  handler: async (ctx) => {
-    const user = await requireCurrentUser(ctx);
+  args: { demoUserEmail: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     return await ctx.db
       .query("sections")
@@ -150,9 +151,10 @@ export const update = mutation({
     policyDuration: v.optional(v.union(v.literal("semester"), v.literal("8week"))),
     participationCreditPointsPossible: v.optional(v.number()),
     clearParticipation: v.optional(v.boolean()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     const { id, ...updates } = args;
     const section = await ctx.db.get(id);
@@ -218,9 +220,9 @@ export const update = mutation({
 });
 
 export const deleteSection = mutation({
-  args: { id: v.id("sections") },
+  args: { id: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     const section = await ctx.db.get(args.id);
     if (!section || section.teacherId !== user._id) throw new Error("Forbidden");
@@ -229,9 +231,9 @@ export const deleteSection = mutation({
 });
 
 export const getByIds = query({
-  args: { ids: v.array(v.id("sections")) },
+  args: { ids: v.array(v.id("sections")), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     const docs = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
     const sections = docs.filter(Boolean) as Array<{ _id: Id<'sections'>; teacherId: Id<'users'>; title: string; gradient?: string; permittedAbsences?: number | null }>;
     if (user.role === "TEACHER") {
@@ -242,16 +244,20 @@ export const getByIds = query({
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", user._id))
       .collect();
-    const allowed = new Set(enrollments.map((e) => e.sectionId));
+    const allowed = new Set(
+      enrollments
+        .filter((e) => e.removedAt === undefined)
+        .map((e) => e.sectionId)
+    );
     return sections.filter((s) => allowed.has(s._id));
   },
 });
 
 // Return section details including instructor info for authorized student
 export const getDetailsByIds = query({
-  args: { ids: v.array(v.id("sections")) },
+  args: { ids: v.array(v.id("sections")), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     const docs = await Promise.all(args.ids.map((id) => ctx.db.get(id)));
     const sections = (docs.filter(Boolean) as Array<{
       _id: Id<'sections'>;
@@ -281,7 +287,11 @@ export const getDetailsByIds = query({
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", user._id))
       .collect();
-    const allowed = new Set(enrollments.map((e) => e.sectionId));
+    const allowed = new Set(
+      enrollments
+        .filter((e) => e.removedAt === undefined)
+        .map((e) => e.sectionId)
+    );
     const filtered = sections.filter((s) => allowed.has(s._id));
     // Fetch instructor docs
     const teacherIds = Array.from(new Set(filtered.map((s) => s.teacherId)));

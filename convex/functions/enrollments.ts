@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
+import { isDemoMode, requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 
 export const create = mutation({
   args: {
@@ -9,8 +9,13 @@ export const create = mutation({
     studentId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
-    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    if (isDemoMode()) {
+      const section = await ctx.db.get(args.sectionId);
+      if (!section) throw new Error("Forbidden");
+    } else {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    }
     // Check if enrollment already exists
     const existing = await ctx.db
       .query("enrollments")
@@ -38,8 +43,13 @@ export const create = mutation({
 export const getBySection = query({
   args: { sectionId: v.id("sections") },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
-    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    if (isDemoMode()) {
+      const section = await ctx.db.get(args.sectionId);
+      if (!section) throw new Error("Forbidden");
+    } else {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    }
     return await ctx.db
       .query("enrollments")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
@@ -48,23 +58,21 @@ export const getBySection = query({
 });
 
 export const getByStudent = query({
-  args: { studentId: v.id("users") },
+  args: { studentId: v.id("users"), includeRemoved: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
-    // Allow teacher access only to students enrolled in their sections via other endpoints.
-    // Here we restrict to the student themselves.
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
-      .first();
-    if (!currentUser) throw new Error("Unauthenticated");
-    if (currentUser._id !== args.studentId) throw new Error("Forbidden");
-    return await ctx.db
+    if (isDemoMode()) {
+      const targetStudent = await ctx.db.get(args.studentId);
+      if (!targetStudent || targetStudent.role !== "STUDENT") throw new Error("Forbidden");
+    } else {
+      const currentStudent = await requireStudent(ctx);
+      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
+    }
+    const rows = await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .collect();
+    if (args.includeRemoved) return rows;
+    return rows.filter((e) => e.removedAt === undefined);
   },
 });
 
@@ -74,8 +82,13 @@ export const remove = mutation({
     studentId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
-    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    if (isDemoMode()) {
+      const section = await ctx.db.get(args.sectionId);
+      if (!section) throw new Error("Forbidden");
+    } else {
+      const teacher = await requireTeacher(ctx);
+      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
+    }
     const enrollment = await ctx.db
       .query("enrollments")
       .withIndex("by_section_student", (q) => 

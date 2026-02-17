@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { isDemoMode, requireStudent } from "./_auth";
 
 export const getActiveInteractive = query({
   args: { studentId: v.id("users"), tick: v.optional(v.number()) },
@@ -8,13 +9,13 @@ export const getActiveInteractive = query({
     try {
     // Only allow the student themselves to query their active interactive.
     // Be defensive: on any auth mismatch, return null instead of throwing to avoid crashing the client UI.
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) return null;
-    // Authorize: ensure the provided studentId matches the caller's identity email
-    const currentUser = await ctx.db.get(args.studentId);
-    if (!currentUser) return null;
-    if ((currentUser.email || "").toString().trim().toLowerCase() !== email) return null;
+    if (isDemoMode()) {
+      const targetStudent = await ctx.db.get(args.studentId);
+      if (!targetStudent || targetStudent.role !== "STUDENT") return null;
+    } else {
+      const currentStudent = await requireStudent(ctx);
+      if (currentStudent._id !== args.studentId) return null;
+    }
     // Get student's enrollments
     const enrollments = await ctx.db
       .query("enrollments")

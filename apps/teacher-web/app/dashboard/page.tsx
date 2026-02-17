@@ -12,6 +12,7 @@ import WordCloudStartModal from './_components/WordCloudStartModal';
 import PollStartModal from './_components/PollStartModal';
 import SlideshowPresentModal from './_components/SlideshowPresentModal';
 import BiblePassageStartModal from './_components/BiblePassageStartModal';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 type SectionDoc = Doc<'sections'>;
 
@@ -32,8 +33,9 @@ export default function DashboardPage() {
 }
 
 function DashboardPageDemo() {
+  const { demoUserEmail, isHydrated } = useDemoUser();
   // Demo mode has no Clerk; allow queries immediately and skip upsert.
-  return <DashboardPageCore canUpsert={false} />;
+  return <DashboardPageCore canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
 }
 
 function DashboardPageWorkOS() {
@@ -48,8 +50,9 @@ function DashboardPageWorkOS() {
   return <DashboardPageCore canUpsert={canUpsert} userInfo={userInfo} />;
 }
 
-function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
+function DashboardPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string }; demoUserEmail?: string }) {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
   const [mounted, setMounted] = useState(false);
   const [customizeModal, setCustomizeModal] = useState<{ open: boolean; section: SectionDoc | null }>({ open: false, section: null });
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -76,14 +79,20 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
   const deleteSection = useMutation(api.functions.sections.deleteSection);
 
   // Current user (demo returns demo teacher without auth)
-  const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser);
+  const currentUser: CurrentUser = useQuery(api.functions.auth.getCurrentUser, { demoUserEmail });
   // Only set teacherId if user exists AND has TEACHER role (prevents getByTeacher query from erroring for students)
   const currentUserRole = (currentUser as unknown as { role?: string })?.role;
   const teacherId: Id<'users'> | null = hasId(currentUser) && currentUserRole === 'TEACHER' ? (currentUser._id as Id<'users'>) : null;
   const upsertUser = useMutation(api.functions.auth.upsertCurrentUser);
+  const demoArgs = useMemo(() => (
+    isDemoMode && demoUserEmail ? { demoUserEmail } : {}
+  ), [isDemoMode, demoUserEmail]);
 
   // Data queries
-  const sectionsResult = useQuery(api.functions.sections.getByTeacher, teacherId ? { teacherId } : "skip") as SectionDoc[] | undefined;
+  const sectionsResult = useQuery(
+    api.functions.sections.getByTeacher,
+    teacherId ? { teacherId, ...demoArgs } : "skip"
+  ) as SectionDoc[] | undefined;
   const isSectionsLoading = !!teacherId && sectionsResult === undefined;
   const sections = useMemo(() => (sectionsResult ?? []) as SectionDoc[], [sectionsResult]);
   const backfillJoinCodes = useMutation(api.functions.sections.backfillJoinCodesForTeacher);
@@ -116,9 +125,9 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
     if (!sections || sections.length === 0) return;
     const missing = sections.some(s => !(typeof (s as { joinCode?: unknown }).joinCode === 'string' && ((s as { joinCode?: string }).joinCode || '').length > 0));
     if (missing) {
-      backfillJoinCodes().catch(() => {});
+      backfillJoinCodes({ ...demoArgs }).catch(() => {});
     }
-  }, [sections, backfillJoinCodes]);
+  }, [sections, backfillJoinCodes, demoArgs]);
 
   // Fallback: if signed in but no Convex user yet, upsert as TEACHER
   useEffect(() => {
@@ -185,6 +194,7 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
       policyDuration: permittedAbsences == null ? undefined : policyDuration,
       participationCreditPointsPossible: participationCreditPointsPossible == null ? undefined : participationCreditPointsPossible,
       clearParticipation: clearParticipation ? true : undefined,
+      ...demoArgs,
     });
     handleCloseCustomize();
   }
@@ -257,12 +267,7 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
         <Card className="p-8 text-center">
           <div className="text-lg font-medium">No sections yet</div>
           <div className="text-slate-500 dark:text-slate-300">Create your first section to begin.</div>
-          <Button variant="primary" className="mt-4 inline-flex items-center gap-2" onClick={async () => {
-            const title = prompt('Section title?');
-            if (!title || !teacherId) return;
-            const gradient = pickAutoGradient();
-            await createSection({ title, gradient });
-          }}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
+          <Button variant="primary" className="mt-4 inline-flex items-center gap-2" onClick={() => setCreateModalOpen(true)}><HiOutlinePlus className="h-5 w-5" /> Create New Section</Button>
         </Card>
       ) : (
         <>
@@ -368,7 +373,7 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
               onSave={saveCustomization}
               onCancel={handleCloseCustomize}
               onDelete={async (id: string) => {
-                await deleteSection({ id: id as Id<'sections'> });
+                await deleteSection({ id: id as Id<'sections'>, ...demoArgs });
                 handleCloseCustomize();
               }}
             />
@@ -513,6 +518,7 @@ function DashboardPageCore({ canUpsert, userInfo }: { canUpsert: boolean; userIn
                     permittedAbsencesMode,
                     policyTimesPerWeek,
                     policyDuration,
+                    ...demoArgs,
                   });
                   setCreateModalOpen(false);
                   setCreateTitle('');
@@ -825,4 +831,3 @@ function CustomizeModal({
     </div>
   );
 }
-

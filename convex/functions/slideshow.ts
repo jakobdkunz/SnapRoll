@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection, requireCurrentUser } from "./_auth";
+import { isDemoMode, requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 import { checkAndIncrementRateLimit } from "./_rateLimit";
 
 // Asset management
@@ -90,19 +90,20 @@ export const getActiveSlideshow = query({
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     } catch {
       // Not teacher owner; allow only enrolled students
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) throw new Error("Forbidden");
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .first();
-      if (!currentUser) throw new Error("Forbidden");
-      const enrollment = await ctx.db
-        .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", args.sectionId).eq("studentId", currentUser._id))
-        .first();
-      if (!enrollment) throw new Error("Forbidden");
+      if (isDemoMode()) {
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
+          .first();
+        if (!enrollment) throw new Error("Forbidden");
+      } else {
+        const currentStudent = await requireStudent(ctx);
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section_student", (q) => q.eq("sectionId", args.sectionId).eq("studentId", currentStudent._id))
+          .first();
+        if (!enrollment) throw new Error("Forbidden");
+      }
     }
     return await ctx.db
       .query("slideshowSessions")
@@ -209,19 +210,20 @@ export const getSlides = query({
         const teacher = await requireTeacher(ctx);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       } catch {
-        const identity = await ctx.auth.getUserIdentity();
-        const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-        if (!email) return [];
-        const currentUser = await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", email))
-          .first();
-        if (!currentUser) return [];
-        const enrollment = await ctx.db
-          .query("enrollments")
-          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
-          .first();
-        if (!enrollment) return [];
+        if (isDemoMode()) {
+          const enrollment = await ctx.db
+            .query("enrollments")
+            .withIndex("by_section", (q) => q.eq("sectionId", session.sectionId))
+            .first();
+          if (!enrollment) return [];
+        } else {
+          const currentStudent = await requireStudent(ctx);
+          const enrollment = await ctx.db
+            .query("enrollments")
+            .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
+            .first();
+          if (!enrollment) return [];
+        }
       }
       return await ctx.db
         .query("slideshowSlides")
@@ -273,20 +275,22 @@ export const getActiveSession = query({
       isTeacherOwner = true;
     } catch {
       // Not a teacher; verify enrolled student
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) return null;
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .first();
-      if (!currentUser) return null;
-      const enrollment = await ctx.db
-        .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
-        .first();
-      if (!enrollment) return null;
-      isAuthorizedStudent = true;
+      if (isDemoMode()) {
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section", (q) => q.eq("sectionId", session.sectionId))
+          .first();
+        if (!enrollment) return null;
+        isAuthorizedStudent = true;
+      } else {
+        const currentStudent = await requireStudent(ctx);
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
+          .first();
+        if (!enrollment) return null;
+        isAuthorizedStudent = true;
+      }
     }
 
     // Include asset details expected by the client UI
@@ -322,19 +326,20 @@ export const getDrawings = query({
       const teacher = await requireTeacher(ctx);
       await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     } catch {
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) return [];
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q: any) => q.eq("email", email))
-        .first();
-      if (!currentUser) return [];
-      const enrollment = await ctx.db
-        .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
-        .first();
-      if (!enrollment) return [];
+      if (isDemoMode()) {
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section", (q) => q.eq("sectionId", session.sectionId))
+          .first();
+        if (!enrollment) return [];
+      } else {
+        const currentStudent = await requireStudent(ctx);
+        const enrollment = await ctx.db
+          .query("enrollments")
+          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
+          .first();
+        if (!enrollment) return [];
+      }
     }
     return [] as any;
   },

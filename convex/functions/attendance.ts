@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
+import { isDemoMode, requireCurrentUser } from "./_auth";
 
 type RateLimitBucket = {
   _id: Id<'rateLimits'>;
@@ -13,22 +14,10 @@ type RateLimitBucket = {
   blockedUntil?: number;
 };
 
-async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new ConvexError("Please sign in to continue.");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new ConvexError("Please sign in to continue.");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new ConvexError("Account not provisioned. Try refreshing or contact your instructor.");
-  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
-}
-
 async function requireTeacherOwnsSection(ctx: QueryCtx | MutationCtx, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
   const section = await ctx.db.get(sectionId);
-  if (!section || section.teacherId !== teacherUserId) throw new Error("Forbidden");
+  if (!section) throw new Error("Forbidden");
+  if (!isDemoMode() && section.teacherId !== teacherUserId) throw new Error("Forbidden");
   return section;
 }
 
@@ -158,7 +147,7 @@ export const checkIn = mutation({
       )
       .first();
     
-    if (!enrollment) {
+    if (!enrollment || enrollment.removedAt !== undefined) {
       const nextCount = bucket!.count + 1;
       const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
       await ctx.db.patch(bucket!._id, { count: nextCount, blockedUntil });
