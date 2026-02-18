@@ -5,9 +5,13 @@ import { Button, Card, TextInput } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 export default function TeacherProfilePage() {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { demoUserEmail } = useDemoUser();
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -29,14 +33,24 @@ export default function TeacherProfilePage() {
   // Convex hooks
   const updateUser = useMutation(api.functions.users.update);
   const generateDemo = useMutation(api.functions.demo.generateDemoData);
+  const currentUser = useQuery(
+    api.functions.auth.getCurrentUser,
+    isDemoMode ? { demoUserEmail } : {}
+  );
 
   // Get teacher data
-  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'> } : "skip");
+  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'>, ...demoArgs } : "skip");
 
   useEffect(() => {
-    const id = localStorage.getItem('flamelink.teacherId');
-    setTeacherId(id);
-  }, []);
+    if (currentUser?._id) {
+      setTeacherId(currentUser._id as unknown as string);
+      return;
+    }
+    if (!isDemoMode) {
+      const id = localStorage.getItem('flamelink.teacherId');
+      setTeacherId(id);
+    }
+  }, [currentUser, isDemoMode]);
 
   // Update form when teacher data loads
   useEffect(() => {
@@ -51,7 +65,7 @@ export default function TeacherProfilePage() {
     if (!teacherId) return;
     setSaving(true);
     try {
-      await updateUser({ id: teacherId as Id<'users'>, firstName, lastName });
+      await updateUser({ id: teacherId as Id<'users'>, firstName, lastName, ...demoArgs });
       const name = `${firstName} ${lastName}`;
       localStorage.setItem('flamelink.teacherName', name);
       try { router.refresh(); } catch {
@@ -89,6 +103,7 @@ export default function TeacherProfilePage() {
           blank: pctBlank,
           notEnrolledManual: pctNotEnrolledManual,
         },
+        ...demoArgs,
       });
       setDevSuccess("Demo data generated.");
     } catch (error) {
@@ -189,4 +204,3 @@ export default function TeacherProfilePage() {
     </div>
   );
 }
-

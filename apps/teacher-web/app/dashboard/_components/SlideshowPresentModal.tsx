@@ -5,9 +5,10 @@ import type { Id } from '@flamelink/convex-client';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 
-export default function SlideshowPresentModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
-  const teacherId = (typeof window !== 'undefined' ? (localStorage.getItem('flamelink.teacherId') || null) : null) as Id<'users'> | null;
-  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : 'skip');
+export default function SlideshowPresentModal({ open, onClose, sectionId, teacherId, demoUserEmail }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null; teacherId: Id<'users'> | null; demoUserEmail?: string }) {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
+  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId, ...demoArgs } : 'skip');
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
   const [selectedAssetId, setSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -117,7 +118,7 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
             setWorking(true); setError(null);
             try {
               if (selectedAssetId) {
-                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: selectedAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump });
+                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: selectedAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump, ...demoArgs });
                 onClose();
               } else if (uploadFile) {
                 const fd = new FormData();
@@ -128,7 +129,7 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
                 const j = await res.json();
                 const newAssetId: string | undefined = j.assetId || j.id || j._id;
                 if (!newAssetId) throw new Error('Upload succeeded but no assetId returned');
-                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump });
+                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump, ...demoArgs });
                 onClose();
               }
             } catch (e) {
@@ -142,4 +143,3 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
     </Modal>
   );
 }
-

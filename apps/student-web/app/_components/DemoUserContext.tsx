@@ -39,7 +39,7 @@ const DEFAULT_EMAIL = DEMO_STUDENTS[0].email;
 interface DemoUserContextValue {
   /** The currently selected demo user email */
   demoUserEmail: string;
-  /** Set the demo user email (only active users can be selected) */
+  /** Set the demo user email */
   setDemoUserEmail: (email: string) => void;
   /** Whether the context has been hydrated from localStorage */
   isHydrated: boolean;
@@ -55,8 +55,8 @@ export function DemoUserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      // Validate it's a known active demo student
-      const isValid = DEMO_STUDENTS.some(s => s.email === stored && s.active);
+      // Validate it's a known demo student
+      const isValid = DEMO_STUDENTS.some(s => s.email === stored);
       if (isValid) {
         setDemoUserEmailState(stored);
       } else {
@@ -68,9 +68,9 @@ export function DemoUserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setDemoUserEmail = useCallback((email: string) => {
-    // Only allow setting active demo users
+    // Only allow setting known demo users
     const student = DEMO_STUDENTS.find(s => s.email === email);
-    if (!student || !student.active) {
+    if (!student) {
       return;
     }
     setDemoUserEmailState(email);
@@ -103,4 +103,3 @@ export function useDemoUser(): DemoUserContextValue {
 export function getCurrentDemoStudent(email: string) {
   return DEMO_STUDENTS.find(s => s.email === email) ?? DEMO_STUDENTS[0];
 }
-

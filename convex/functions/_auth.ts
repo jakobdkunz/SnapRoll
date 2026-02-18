@@ -93,17 +93,18 @@ export async function requireCurrentUser(
 ): Promise<AuthenticatedUser> {
   if (isDemoMode()) {
     // In demo mode, resolve the provided demo user email across both roles.
-    // If no valid override is provided, default to teacher for back-compat.
+    // Fail closed if no explicit identity is provided.
     const clean = (demoUserEmail ?? "").trim().toLowerCase();
-    if (clean) {
-      if (isValidDemoEmail(clean, "STUDENT")) {
-        return await getDemoUser(ctx, "STUDENT", clean);
-      }
-      if (isValidDemoEmail(clean, "TEACHER")) {
-        return await getDemoUser(ctx, "TEACHER", clean);
-      }
+    if (!clean) {
+      throw new Error("Forbidden");
     }
-    return await getDemoUser(ctx, "TEACHER");
+    if (isValidDemoEmail(clean, "STUDENT")) {
+      return await getDemoUser(ctx, "STUDENT", clean);
+    }
+    if (isValidDemoEmail(clean, "TEACHER")) {
+      return await getDemoUser(ctx, "TEACHER", clean);
+    }
+    throw new Error("Forbidden");
   }
   
   const identity = await ctx.auth.getUserIdentity();
@@ -177,9 +178,6 @@ export async function requireTeacherOwnsSection(
 ) {
   const section = await ctx.db.get(sectionId);
   if (!section) throw new Error("Forbidden");
-  // In demo mode, teacher pages may omit demoUserEmail in some calls.
-  // Allow access to existing sections to avoid cross-page identity drift.
-  if (isDemoMode()) return section;
   const teacherIdToCheck = teacherUserId ?? (await requireTeacher(ctx))._id;
   if (section.teacherId !== teacherIdToCheck) throw new Error("Forbidden");
   return section;

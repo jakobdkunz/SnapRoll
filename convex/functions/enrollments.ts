@@ -1,21 +1,17 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { isDemoMode, requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
+import { requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 
 export const create = mutation({
   args: {
     sectionId: v.id("sections"),
     studentId: v.id("users"),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (isDemoMode()) {
-      const section = await ctx.db.get(args.sectionId);
-      if (!section) throw new Error("Forbidden");
-    } else {
-      const teacher = await requireTeacher(ctx);
-      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
-    }
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     // Check if enrollment already exists
     const existing = await ctx.db
       .query("enrollments")
@@ -41,15 +37,10 @@ export const create = mutation({
 });
 
 export const getBySection = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (isDemoMode()) {
-      const section = await ctx.db.get(args.sectionId);
-      if (!section) throw new Error("Forbidden");
-    } else {
-      const teacher = await requireTeacher(ctx);
-      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
-    }
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     return await ctx.db
       .query("enrollments")
       .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
@@ -58,15 +49,10 @@ export const getBySection = query({
 });
 
 export const getByStudent = query({
-  args: { studentId: v.id("users"), includeRemoved: v.optional(v.boolean()) },
+  args: { studentId: v.id("users"), includeRemoved: v.optional(v.boolean()), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (isDemoMode()) {
-      const targetStudent = await ctx.db.get(args.studentId);
-      if (!targetStudent || targetStudent.role !== "STUDENT") throw new Error("Forbidden");
-    } else {
-      const currentStudent = await requireStudent(ctx);
-      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
-    }
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
     const rows = await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
@@ -80,15 +66,11 @@ export const remove = mutation({
   args: {
     sectionId: v.id("sections"),
     studentId: v.id("users"),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    if (isDemoMode()) {
-      const section = await ctx.db.get(args.sectionId);
-      if (!section) throw new Error("Forbidden");
-    } else {
-      const teacher = await requireTeacher(ctx);
-      await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
-    }
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
+    await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const enrollment = await ctx.db
       .query("enrollments")
       .withIndex("by_section_student", (q) => 
@@ -104,9 +86,9 @@ export const remove = mutation({
 });
 
 export const joinByCode = mutation({
-  args: { code: v.string() },
+  args: { code: v.string(), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const student = await requireStudent(ctx);
+    const student = await requireStudent(ctx, args.demoUserEmail);
     const code = (args.code || "").trim();
     if (!/^\d{6}$/.test(code)) {
       return { ok: false as const, error: "Enter a 6-digit join code." };

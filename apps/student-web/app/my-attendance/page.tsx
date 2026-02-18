@@ -97,16 +97,17 @@ export default function MyAttendancePage() {
   const currentUserAuthed = useQuery(convexApi.auth.getCurrentUser, {});
   const currentDemoStudent = useQuery(
     api.functions.auth.getCurrentStudent,
-    isDemoMode && isHydrated ? { demoUserEmail } : "skip"
+    isDemoMode ? { demoUserEmail } : "skip"
   );
   const currentUser = (isDemoMode ? currentDemoStudent : currentUserAuthed) as typeof currentUserAuthed;
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const history = useQuery(
     api.functions.history.getStudentHistory,
-    currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit } : "skip"
+    currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit, ...demoArgs } : "skip"
   );
   const enrollments = useQuery(
     api.functions.enrollments.getByStudent,
-    currentUser?._id ? { studentId: currentUser._id as Id<"users"> } : "skip"
+    currentUser?._id ? { studentId: currentUser._id as Id<"users">, ...demoArgs } : "skip"
   );
 
   // Column width calculations
@@ -309,19 +310,17 @@ export default function MyAttendancePage() {
   const sectionQueryArgs = useMemo(() => {
     if (!sectionIds || sectionIds.length === 0) return "skip" as const;
     if (isDemoMode) {
-      if (!isHydrated) return "skip" as const;
       return { ids: sectionIds, demoUserEmail };
     }
     return { ids: sectionIds };
-  }, [sectionIds, isDemoMode, isHydrated, demoUserEmail]);
+  }, [sectionIds, isDemoMode, demoUserEmail]);
   const contactSectionQueryArgs = useMemo(() => {
     if (!activeEnrollmentSectionIds || activeEnrollmentSectionIds.length === 0) return "skip" as const;
     if (isDemoMode) {
-      if (!isHydrated) return "skip" as const;
       return { ids: activeEnrollmentSectionIds, demoUserEmail };
     }
     return { ids: activeEnrollmentSectionIds };
-  }, [activeEnrollmentSectionIds, isDemoMode, isHydrated, demoUserEmail]);
+  }, [activeEnrollmentSectionIds, isDemoMode, demoUserEmail]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
     sectionQueryArgs

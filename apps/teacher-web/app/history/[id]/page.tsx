@@ -10,6 +10,7 @@ import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation, useConvex } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
 import { SectionHeader } from '../../modify/[id]/_components/SectionHeader';
+import { useDemoUser } from '../../_components/DemoUserContext';
 
 type Student = { id: string; firstName: string; lastName: string; email: string; totalAbsences?: number };
 type Record = { 
@@ -26,6 +27,9 @@ type Record = {
 };
 
 type Status = 'PRESENT' | 'ABSENT' | 'EXCUSED' | 'NOT_JOINED' | 'BLANK';
+type SectionAccessStatus =
+  | { status: "ok"; section: { title?: string; gradient?: string } }
+  | { status: "forbidden" | "not_found" };
 
 export default function HistoryPage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
@@ -33,7 +37,8 @@ export default function HistoryPage() {
 }
 
 function HistoryPageDemo() {
-  return <HistoryPageCore authReady={true} />;
+  const { demoUserEmail } = useDemoUser();
+  return <HistoryPageCore authReady={true} demoUserEmail={demoUserEmail} />;
 }
 
 function HistoryPageWorkOS() {
@@ -42,7 +47,7 @@ function HistoryPageWorkOS() {
   return <HistoryPageCore authReady={authReady} />;
 }
 
-function HistoryPageCore({ authReady }: { authReady: boolean }) {
+function HistoryPageCore({ authReady, demoUserEmail }: { authReady: boolean; demoUserEmail?: string }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   //
@@ -51,18 +56,26 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
   const [limit, setLimit] = useState<number>(12);
   const [activeTab, setActiveTab] = useState<'attendance' | 'participation'>('attendance');
   const sectionId = params.id as unknown as Id<'sections'>;
-  const section = useQuery(
-    api.functions.sections.get,
-    authReady && params.id ? { id: sectionId } : "skip"
-  ) as any;
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = useMemo(
+    () => (isDemoMode && demoUserEmail ? { demoUserEmail } : {}),
+    [isDemoMode, demoUserEmail]
+  );
+  const sectionAccess = useQuery(
+    api.functions.sections.getAccessStatus,
+    authReady && params.id ? { id: sectionId, ...demoArgs } : "skip"
+  ) as SectionAccessStatus | undefined;
+  const section = sectionAccess?.status === "ok" ? sectionAccess.section : null;
   const history = useQuery(
     api.functions.history.getSectionHistory,
-    authReady && params.id && !!section ? { sectionId, offset, limit } : "skip"
+    authReady && params.id && sectionAccess?.status === "ok" ? { sectionId, offset, limit, ...demoArgs } : "skip"
   ) as any;
   const updateManualStatus = useMutation(api.functions.attendance.updateManualStatus);
   const participation = useQuery(
     api.functions.history.getParticipationBySection,
-    authReady && params.id && !!section && activeTab === 'participation' ? { sectionId, offset, limit } : "skip"
+    authReady && params.id && sectionAccess?.status === "ok" && activeTab === 'participation'
+      ? { sectionId, offset, limit, ...demoArgs }
+      : "skip"
   ) as {
     days: { id: string; date: string }[];
     records: { studentId: string; rows: { classDayId: string; sharesEarned: number; sharesTotal: number; absent: boolean }[] }[];
@@ -106,20 +119,14 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
   const [sectionTitle, setSectionTitle] = useState<string>('Section');
   const [sectionGradient, setSectionGradient] = useState<string>('gradient-1');
   useEffect(() => {
-    if (section) {
+    if (sectionAccess?.status === "ok" && section) {
       setSectionLoaded(true);
       setSectionTitle(section.title || 'Section');
       setSectionGradient(section.gradient || 'gradient-1');
+    } else if (sectionAccess && sectionAccess.status !== "ok") {
+      setSectionLoaded(false);
     }
-  }, [section]);
-
-  // After demo reset, stale section ids may no longer exist; return to dashboard.
-  useEffect(() => {
-    if (!authReady) return;
-    if (section === null) {
-      router.replace('/dashboard');
-    }
-  }, [authReady, section, router]);
+  }, [sectionAccess, section]);
 
   function showTooltip(text: string, rect: DOMRect) {
     setTooltip({ visible: true, text, anchorX: rect.left + rect.width / 2, anchorY: rect.top });
@@ -296,7 +303,7 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
       setExportOpen(true);
       setExporting(true);
       if (!params.id) throw new Error('Missing section id');
-      const data = await convex.query(api.functions.history.exportSectionHistory, { sectionId });
+      const data = await convex.query(api.functions.history.exportSectionHistory, { sectionId, ...demoArgs });
       const { days, rows } = data as { days: string[]; rows: Array<{ firstName: string; lastName: string; email: string; statuses: string[] }>; };
       const header = ['First Name', 'Last Name', 'Email', ...days];
       const lines = [header];
@@ -328,7 +335,7 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
       setExportError(message);
       setExporting(false);
     }
-  }, [params.id]);
+  }, [params.id, convex, sectionId, demoArgs]);
 
   // (duplicate removed)
 
@@ -338,6 +345,7 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
         classDayId: classDayId as Id<'classDays'>,
         studentId: studentId as Id<'users'>,
         status: newStatus,
+        ...demoArgs,
       });
       // Convex reactivity will refresh the history query automatically
     } catch (error) {
@@ -458,6 +466,34 @@ function HistoryPageCore({ authReady }: { authReady: boolean }) {
   }
 
   // Render skeleton while initializing table (do not block on empty arrays)
+  if (authReady && sectionAccess?.status === "not_found") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">The requested course could not be found</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Check the URL and try again.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (authReady && sectionAccess?.status === "forbidden") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">You do not have permission to view this course</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Use an authorized account or return to your dashboard.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (!initialized) {
     return (
       <div className="-mx-4 sm:mx-0 px-[5px] sm:px-0">

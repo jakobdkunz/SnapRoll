@@ -5,6 +5,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 // Removed unused PollSession type
 
@@ -14,7 +15,8 @@ export default function PollLivePage({ params }: { params: { sessionId: string }
 }
 
 function PollLivePageDemo({ params }: { params: { sessionId: string } }) {
-  return <PollLivePageCore params={params} authReady={true} />;
+  const { demoUserEmail } = useDemoUser();
+  return <PollLivePageCore params={params} authReady={true} demoUserEmail={demoUserEmail} />;
 }
 
 function PollLivePageWorkOS({ params }: { params: { sessionId: string } }) {
@@ -23,10 +25,12 @@ function PollLivePageWorkOS({ params }: { params: { sessionId: string } }) {
   return <PollLivePageCore params={params} authReady={authReady} />;
 }
 
-function PollLivePageCore({ params, authReady }: { params: { sessionId: string }; authReady: boolean }) {
+function PollLivePageCore({ params, authReady, demoUserEmail }: { params: { sessionId: string }; authReady: boolean; demoUserEmail?: string }) {
   const { sessionId } = params;
   const [toggling, setToggling] = useState(false);
   const [showLocal, setShowLocal] = useState<boolean | null>(null);
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
 
   // Convex hooks
   // Using session details from getResults response; for header we can reuse prompt if available
@@ -34,12 +38,12 @@ function PollLivePageCore({ params, authReady }: { params: { sessionId: string }
   // derive session from results when available
   const results = useQuery(
     api.functions.polls.getResults,
-    authReady ? { sessionId: params.sessionId as Id<'pollSessions'> } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'pollSessions'>, ...demoArgs } : "skip"
   );
   type PollResults = { session?: { sectionId?: string; prompt?: string; optionsJson?: string; showResults?: boolean }; results?: Array<{ count: number }>; totalAnswers?: number };
   const pr = results as unknown as PollResults | undefined;
   const sectionId = (pr?.session?.sectionId as Id<'sections'> | undefined);
-  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId } : "skip");
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId, ...demoArgs } : "skip");
   const toggleResults = useMutation(api.functions.polls.toggleResults);
   const closePoll = useMutation(api.functions.polls.closePoll);
   const heartbeat = useMutation(api.functions.polls.heartbeat);
@@ -56,15 +60,15 @@ function PollLivePageCore({ params, authReady }: { params: { sessionId: string }
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'> }); } catch { /* ignore */ }
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'> }); } catch { /* ignore */ } }, 10000);
+      try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'>, ...demoArgs }); } catch { /* ignore */ }
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionId as Id<'pollSessions'>, ...demoArgs }); } catch { /* ignore */ } }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
     document.addEventListener('visibilitychange', onVis);
     onVis();
     return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
-  }, [sessionId, heartbeat, authReady]);
+  }, [sessionId, heartbeat, authReady, demoUserEmail]);
 
   return (
     <div className="relative min-h-dvh px-4 py-6">
@@ -83,7 +87,7 @@ function PollLivePageCore({ params, authReady }: { params: { sessionId: string }
         <div className="mb-2 flex items-center justify-between gap-3">
           <button
             className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
-            onClick={async () => { try { await closePoll({ sessionId: params.sessionId as Id<'pollSessions'> }); } catch {/* ignore */} history.back(); }}
+            onClick={async () => { try { await closePoll({ sessionId: params.sessionId as Id<'pollSessions'>, ...demoArgs }); } catch {/* ignore */} history.back(); }}
           >
             ← Back
           </button>
@@ -131,7 +135,7 @@ function PollLivePageCore({ params, authReady }: { params: { sessionId: string }
               setShowLocal((prev) => !(prev ?? currentShow));
               // Fire-and-forget server toggle
               setToggling(true);
-              toggleResults({ sessionId: params.sessionId as Id<'pollSessions'> })
+              toggleResults({ sessionId: params.sessionId as Id<'pollSessions'>, ...demoArgs })
                 .catch(() => undefined)
                 .finally(() => setToggling(false));
             }}>{(showLocal ?? pr?.session?.showResults ?? false) ? 'Hide Results' : 'Show Results'}</Button>
@@ -142,5 +146,3 @@ function PollLivePageCore({ params, authReady }: { params: { sessionId: string }
     </div>
   );
 }
-
-

@@ -89,9 +89,10 @@ export const _startBibleSessionCore = internalMutation({
     translationName: v.string(),
     text: v.string(),
     versesJson: v.optional(v.string()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
 
     // Rate limit: 30 operations / 10 minutes per teacher per section
@@ -136,6 +137,7 @@ export const startBiblePassage = action({
     sectionId: v.id("sections"),
     bookAndRange: v.string(), // e.g. "John 3:16-18"
     translationId: v.optional(v.string()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     "use node";
@@ -170,6 +172,7 @@ export const startBiblePassage = action({
       translationName,
       text,
       versesJson,
+      demoUserEmail: args.demoUserEmail,
     });
 
     return sessionId;
@@ -185,9 +188,10 @@ export const _updateBibleSessionCore = internalMutation({
     translationName: v.string(),
     text: v.string(),
     versesJson: v.optional(v.string()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Bible passage session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -209,6 +213,7 @@ export const updateBiblePassage = action({
     sessionId: v.id("biblePassageSessions"),
     bookAndRange: v.string(),
     translationId: v.optional(v.string()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     "use node";
@@ -242,6 +247,7 @@ export const updateBiblePassage = action({
       translationName,
       text,
       versesJson,
+      demoUserEmail: args.demoUserEmail,
     });
 
     return sessionId;
@@ -249,14 +255,14 @@ export const updateBiblePassage = action({
 });
 
 export const getActiveBiblePassage = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Allow teachers who own the section or enrolled students to see the active passage
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     } catch {
-      await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">);
+      await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">, args.demoUserEmail);
     }
 
     const session = await ctx.db
@@ -271,27 +277,27 @@ export const getActiveBiblePassage = query({
 });
 
 export const getBibleSession = query({
-  args: { sessionId: v.id("biblePassageSessions") },
+  args: { sessionId: v.id("biblePassageSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
 
     // Allow owner teacher or enrolled students
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       return session;
     } catch {
-      await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+      await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
       return session;
     }
   },
 });
 
 export const closeBiblePassage = mutation({
-  args: { sessionId: v.id("biblePassageSessions") },
+  args: { sessionId: v.id("biblePassageSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Bible passage session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -310,9 +316,9 @@ export const closeBiblePassage = mutation({
 });
 
 export const heartbeat = mutation({
-  args: { sessionId: v.id("biblePassageSessions") },
+  args: { sessionId: v.id("biblePassageSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Bible passage session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -323,5 +329,4 @@ export const heartbeat = mutation({
     }
   },
 });
-
 

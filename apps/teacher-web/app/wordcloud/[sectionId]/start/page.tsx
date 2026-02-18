@@ -6,10 +6,14 @@ import { HiOutlineCloud, HiOutlinePlay } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useMutation } from 'convex/react';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 export default function StartWordCloudPage({ params }: { params: { sectionId: string } }) {
   const router = useRouter();
   const sectionId = params.sectionId;
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { demoUserEmail } = useDemoUser();
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const [open, setOpen] = useState(true);
   const [prompt, setPrompt] = useState('One word to describe how you feel');
   const [showPrompt, setShowPrompt] = useState(true);
@@ -26,7 +30,8 @@ export default function StartWordCloudPage({ params }: { params: { sectionId: st
         sectionId: sectionId as Id<'sections'>, 
         prompt, 
         showPromptToStudents: showPrompt, 
-        allowMultipleAnswers: allowMultiple 
+        allowMultipleAnswers: allowMultiple,
+        ...demoArgs,
       });
       setOpen(false);
       // delay to allow modal animation to dismiss before navigating

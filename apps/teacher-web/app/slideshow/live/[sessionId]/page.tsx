@@ -9,6 +9,7 @@ import type { Id } from '@flamelink/convex-client';
 // import type { Id } from '../../../../../convex/_generated/dataModel';
 import { useQuery, useMutation } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 type DrawingMode = 'mouse' | 'pen' | 'eraser';
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
@@ -18,8 +19,20 @@ type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: Drawin
 // (removed unused SessionDetails and Slide type declarations)
 
 export default function SlideshowPage({ params }: { params: { sessionId: string } }) {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <SlideshowPageDemo params={params} /> : <SlideshowPageCore params={params} />;
+}
+
+function SlideshowPageDemo({ params }: { params: { sessionId: string } }) {
+  const { demoUserEmail } = useDemoUser();
+  return <SlideshowPageCore params={params} demoUserEmail={demoUserEmail} />;
+}
+
+function SlideshowPageCore({ params, demoUserEmail }: { params: { sessionId: string }; demoUserEmail?: string }) {
   const { sessionId } = params;
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
   const [working, setWorking] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [renderMsg, setRenderMsg] = useState('');
@@ -28,12 +41,12 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
 
   // Convex hooks
   const sessionIdTyped = params.sessionId as Id<'slideshowSessions'>;
-  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionIdTyped });
+  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId: sessionIdTyped, ...demoArgs });
   const sectionIdMaybe = (details && (details as unknown as { sectionId?: string }).sectionId) as Id<'sections'> | undefined;
-  const section = useQuery(api.functions.sections.get, sectionIdMaybe ? { id: sectionIdMaybe } : "skip");
-  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionIdTyped });
+  const section = useQuery(api.functions.sections.get, sectionIdMaybe ? { id: sectionIdMaybe, ...demoArgs } : "skip");
+  const slidesQuery = useQuery(api.functions.slideshow.getSlides, { sessionId: sessionIdTyped, ...demoArgs });
   const [slides, setSlides] = useState<Array<{ index: number; imageUrl: string }>>([]);
-  const drawingsRaw = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionIdTyped });
+  const drawingsRaw = useQuery(api.functions.slideshow.getDrawings, { sessionId: sessionIdTyped, ...demoArgs });
   const drawings = useMemo<Record<number, DrawingStroke[]>>(() => {
     const d = drawingsRaw as unknown;
     if (d && typeof d === 'object') return d as Record<number, DrawingStroke[]>;
@@ -358,15 +371,15 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     let id: number | null = null;
     const start = () => {
       if (id !== null) return;
-      try { void heartbeat({ sessionId: sessionIdRef.current }); } catch { /* ignore */ }
-      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdRef.current }); } catch { /* ignore */ } }, 10000);
+      try { void heartbeat({ sessionId: sessionIdRef.current, ...demoArgs }); } catch { /* ignore */ }
+      id = window.setInterval(() => { try { void heartbeat({ sessionId: sessionIdRef.current, ...demoArgs }); } catch { /* ignore */ } }, 10000);
     };
     const stop = () => { if (id !== null) { window.clearInterval(id); id = null; } };
     const onVis = () => { if (document.visibilityState === 'visible') start(); else stop(); };
     document.addEventListener('visibilitychange', onVis);
     onVis();
     return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
-  }, [heartbeat]);
+  }, [heartbeat, demoUserEmail, isDemoMode]);
 
   // Recompute frame when aspect changes or on resize
   useEffect(() => {
@@ -381,13 +394,13 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (working || !details) return;
     setWorking(true);
     try {
-      await gotoSlideMutation({ sessionId: sessionIdRef.current, slideNumber });
+      await gotoSlideMutation({ sessionId: sessionIdRef.current, slideNumber, ...demoArgs });
     } catch (e) {
       console.error('Failed to goto slide:', e);
     } finally {
       setWorking(false);
     }
-  }, [working, details, gotoSlideMutation]);
+  }, [working, details, gotoSlideMutation, demoUserEmail, isDemoMode]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -436,7 +449,7 @@ export default function SlideshowPage({ params }: { params: { sessionId: string 
     if (working) return;
     setWorking(true);
     try {
-      await closeSession({ sessionId: sessionIdTyped });
+      await closeSession({ sessionId: sessionIdTyped, ...demoArgs });
       router.push('/dashboard' as Route);
     } catch {
       router.push('/dashboard' as Route);

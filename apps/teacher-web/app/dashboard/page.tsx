@@ -33,9 +33,9 @@ export default function DashboardPage() {
 }
 
 function DashboardPageDemo() {
-  const { demoUserEmail, isHydrated } = useDemoUser();
+  const { demoUserEmail } = useDemoUser();
   // Demo mode has no Clerk; allow queries immediately and skip upsert.
-  return <DashboardPageCore canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
+  return <DashboardPageCore canUpsert={false} demoUserEmail={demoUserEmail} />;
 }
 
 function DashboardPageWorkOS() {
@@ -538,10 +538,10 @@ function DashboardPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: 
       </Modal>
 
       {/* Activity modals */}
-      <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId} />
-      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} />
-      <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId} />
-      <BiblePassageStartModal open={bibleOpen} onClose={() => setBibleOpen(false)} sectionId={bibleSectionId} />
+      <WordCloudStartModal open={wcOpen} onClose={() => setWcOpen(false)} sectionId={wcSectionId} demoUserEmail={demoUserEmail} />
+      <PollStartModal open={pollOpen} onClose={() => setPollOpen(false)} sectionId={pollSectionId} demoUserEmail={demoUserEmail} />
+      <SlideshowPresentModal open={slideOpen} onClose={() => setSlideOpen(false)} sectionId={slideSectionId} teacherId={teacherId} demoUserEmail={demoUserEmail} />
+      <BiblePassageStartModal open={bibleOpen} onClose={() => setBibleOpen(false)} sectionId={bibleSectionId} demoUserEmail={demoUserEmail} />
     </div>
   );
 }

@@ -23,7 +23,7 @@ function TeacherHeaderRightDemo() {
   };
   const [isClient, setIsClient] = useState(false);
 
-  const { isHydrated } = useDemoUser();
+  const { demoUserEmail, isHydrated } = useDemoUser();
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
   const [resetting, setResetting] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -56,7 +56,7 @@ function TeacherHeaderRightDemo() {
     setResetting(true);
     setResetError(null);
     try {
-      await resetDemo({});
+      await resetDemo({ demoUserEmail });
       setResetConfirmOpen(false);
       router.replace('/dashboard' as Route);
     } catch (error) {
@@ -104,7 +104,7 @@ function TeacherHeaderRightDemo() {
         <button
           onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }}
           disabled={resetting}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
+          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <HiOutlineArrowPath className="h-4 w-4" />
           {resetting ? 'Resetting...' : 'Reset Demo Data'}
@@ -255,6 +255,7 @@ function TeacherHeaderRightWorkOS() {
           blank: pctBlank,
           notEnrolledManual: pctNotEnrolledManual,
         },
+        ...(currentUser?.email ? { demoUserEmail: currentUser.email } : {}),
       });
       setDevSuccess("Demo data generated.");
     } catch (error) {
@@ -277,7 +278,7 @@ function TeacherHeaderRightWorkOS() {
     setResetting(true);
     setResetError(null);
     try {
-      await resetDemo({});
+      await resetDemo(currentUser?.email ? { demoUserEmail: currentUser.email } : {});
       setResetConfirmOpen(false);
       router.replace('/dashboard' as Route);
     } catch (error) {
@@ -326,7 +327,7 @@ function TeacherHeaderRightWorkOS() {
           <button 
             onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }} 
             disabled={resetting}
-            className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
+            className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {resetting ? 'Resetting...' : 'Reset Demo Data'}
           </button>
@@ -380,7 +381,7 @@ function TeacherHeaderRightWorkOS() {
             <button 
               onClick={() => { setOpen(false); setResetError(null); setResetConfirmOpen(true); }} 
               disabled={resetting}
-              className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
+              className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resetting ? 'Resetting...' : 'Reset Demo Data'}
             </button>

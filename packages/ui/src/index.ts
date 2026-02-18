@@ -4,3 +4,7 @@ export { TextInput } from './primitives/TextInput';
 export { Badge } from './primitives/Badge';
 export { Skeleton } from './primitives/Skeleton';
 export { Modal } from './primitives/Modal';
+export { MarketingNavbar } from './composites/MarketingNavbar';
+export type { MarketingNavbarProps, MarketingCta } from './composites/MarketingNavbar';
+export { MarketingLanding } from './composites/MarketingLanding';
+export type { MarketingLandingProps } from './composites/MarketingLanding';

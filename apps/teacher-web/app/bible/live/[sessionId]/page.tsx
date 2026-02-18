@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@flamelink/ui';
 import { HiOutlinePencilSquare } from 'react-icons/hi2';
 import { api } from '@flamelink/convex-client';
@@ -8,6 +8,7 @@ import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
 import BiblePassageStartModal from '../../../dashboard/_components/BiblePassageStartModal';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 function toChapterReference(reference: string): string {
   const ref = reference.trim();
@@ -31,7 +32,8 @@ export default function BibleLivePage({ params }: { params: { sessionId: string 
 }
 
 function BibleLivePageDemo({ params }: { params: { sessionId: string } }) {
-  return <BibleLivePageCore params={params} authReady={true} />;
+  const { demoUserEmail } = useDemoUser();
+  return <BibleLivePageCore params={params} authReady={true} demoUserEmail={demoUserEmail} />;
 }
 
 function BibleLivePageWorkOS({ params }: { params: { sessionId: string } }) {
@@ -40,12 +42,17 @@ function BibleLivePageWorkOS({ params }: { params: { sessionId: string } }) {
   return <BibleLivePageCore params={params} authReady={authReady} />;
 }
 
-function BibleLivePageCore({ params, authReady }: { params: { sessionId: string }; authReady: boolean }) {
+function BibleLivePageCore({ params, authReady, demoUserEmail }: { params: { sessionId: string }; authReady: boolean; demoUserEmail?: string }) {
   const { sessionId } = params;
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = useMemo(
+    () => (isDemoMode && demoUserEmail ? { demoUserEmail } : {}),
+    [isDemoMode, demoUserEmail]
+  );
 
   const session = useQuery(
     api.functions.bible.getBibleSession,
-    authReady ? { sessionId: sessionId as Id<'biblePassageSessions'> } : 'skip'
+    authReady ? { sessionId: sessionId as Id<'biblePassageSessions'>, ...demoArgs } : 'skip'
   ) as
     | {
         _id: Id<'biblePassageSessions'>;
@@ -60,7 +67,7 @@ function BibleLivePageCore({ params, authReady }: { params: { sessionId: string 
 
   const section = useQuery(
     api.functions.sections.get,
-    session?.sectionId ? { id: session.sectionId as Id<'sections'> } : 'skip'
+    session?.sectionId ? { id: session.sectionId as Id<'sections'>, ...demoArgs } : 'skip'
   ) as { title?: string; gradient?: string } | null | undefined;
 
   const heartbeat = useMutation(api.functions.bible.heartbeat);
@@ -73,13 +80,13 @@ function BibleLivePageCore({ params, authReady }: { params: { sessionId: string 
     const start = () => {
       if (id !== null) return;
       try {
-        void heartbeat({ sessionId: sessionId as Id<'biblePassageSessions'> });
+        void heartbeat({ sessionId: sessionId as Id<'biblePassageSessions'>, ...demoArgs });
       } catch {
         // ignore
       }
       id = window.setInterval(() => {
         try {
-          void heartbeat({ sessionId: sessionId as Id<'biblePassageSessions'> });
+          void heartbeat({ sessionId: sessionId as Id<'biblePassageSessions'>, ...demoArgs });
         } catch {
           // ignore
         }
@@ -101,7 +108,7 @@ function BibleLivePageCore({ params, authReady }: { params: { sessionId: string 
       document.removeEventListener('visibilitychange', onVis);
       stop();
     };
-  }, [sessionId, heartbeat, authReady]);
+  }, [sessionId, heartbeat, authReady, demoUserEmail, isDemoMode]);
 
   if (!session) {
     return (
@@ -173,7 +180,7 @@ function BibleLivePageCore({ params, authReady }: { params: { sessionId: string 
             className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-neutral-900 border border-neutral-200 rounded-xl px-3 py-2 dark:bg-neutral-900/80 dark:hover:bg-neutral-900 dark:text-neutral-100 dark:border-neutral-700"
             onClick={async () => {
               try {
-                await close({ sessionId: session._id });
+                await close({ sessionId: session._id, ...demoArgs });
               } catch {
                 // ignore
               }
@@ -249,9 +256,8 @@ function BibleLivePageCore({ params, authReady }: { params: { sessionId: string 
         sessionId={session._id}
         initialReference={session.reference}
         initialTranslationId={session.translationId}
+        demoUserEmail={demoUserEmail}
       />
     </div>
   );
 }
-
-

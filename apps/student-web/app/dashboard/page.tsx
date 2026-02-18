@@ -22,9 +22,9 @@ export default function SectionsPage() {
 }
 
 function SectionsPageDemo() {
-  const { demoUserEmail, isHydrated } = useDemoUser();
+  const { demoUserEmail } = useDemoUser();
   // Demo mode has no Clerk; allow queries immediately and skip upsert.
-  return <SectionsPageCore authReady={true} canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
+  return <SectionsPageCore authReady={true} canUpsert={false} demoUserEmail={demoUserEmail} />;
 }
 
 function SectionsPageWorkOS() {
@@ -44,6 +44,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
   const [mounted, setMounted] = useState(false);
   const [studentName, setStudentName] = useState<string | null>(null);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
 
   // Convex hooks
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
@@ -87,7 +88,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
   // Get student's enrolled sections
   const enrollments = useQuery(
     api.functions.enrollments.getByStudent,
-    effectiveUserId ? { studentId: effectiveUserId } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId, ...demoArgs } : "skip"
   );
   
   // Get sections data (authorized) for the student's enrollments only
@@ -140,7 +141,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
       setChecking(true);
       
       // Use Convex mutation (server derives student from identity)
-      const result: unknown = await checkInMutation({ attendanceCode: code });
+      const result: unknown = await checkInMutation({ attendanceCode: code, ...demoArgs });
       if (result && typeof result === 'object' && result !== null && 'ok' in result) {
         const r = result as { ok: boolean; error?: string; attemptsLeft?: number; blockedUntil?: number };
         if (r.ok) {
@@ -192,7 +193,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
     } finally {
       setChecking(false);
     }
-  }, [effectiveUserId, checkInMutation]);
+  }, [effectiveUserId, checkInMutation, demoUserEmail, isDemoMode]);
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -210,7 +211,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
       return;
     }
     try {
-      const res = await joinByCode({ code });
+      const res = await joinByCode({ code, ...demoArgs });
       if (res && typeof res === 'object' && (res as { ok?: boolean }).ok) {
         setJoinOpen(false);
         setJoinCode('');
@@ -225,7 +226,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
       const msg = e instanceof Error ? e.message : 'Failed to join.';
       setJoinError(/no course/i.test(msg) ? 'No course matches that join code.' : 'Failed to join. Try again.');
     }
-  }, [joinByCode]);
+  }, [joinByCode, demoUserEmail, isDemoMode]);
 
   // Get interactive activity from Convex
   // Include a periodic tick to re-evaluate time-based staleness (heartbeat expiry)
@@ -236,7 +237,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
   }, []);
   const interactive = useQuery(
     api.functions.students.getActiveInteractive,
-    effectiveUserId ? { studentId: effectiveUserId, tick } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId, tick, ...demoArgs } : "skip"
   );
 
   // Smooth flicker: preserve last non-undefined value; delay clearing null briefly
@@ -551,7 +552,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
                   onClick={async () => {
                     if (!effectiveUserId || !answer.trim()) return;
                     try {
-                      await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
+                      await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim(), ...demoArgs });
                       setAnswer('');
                       setSubmitMsg('Answer submitted.');
                     } catch (e: unknown) {
@@ -581,7 +582,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUser
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: renderInteractive.sessionId as Id<'pollSessions'>, optionIdx: i });
+                        await submitPoll({ sessionId: renderInteractive.sessionId as Id<'pollSessions'>, optionIdx: i, ...demoArgs });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');

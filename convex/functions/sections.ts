@@ -8,9 +8,6 @@ export const get = query({
   handler: async (ctx, args) => {
     const section = await ctx.db.get(args.id);
     if (!section) return null;
-    // In demo mode, some teacher pages call without demoUserEmail. Avoid false
-    // forbiddens by allowing access to existing section docs.
-    if (isDemoMode() && !args.demoUserEmail) return section;
     const user = await requireCurrentUser(ctx, args.demoUserEmail);
     // Allow teachers to fetch their own section; allow students if enrolled
     if (user.role === "TEACHER" && section.teacherId === user._id) return section;
@@ -25,17 +22,42 @@ export const get = query({
   },
 });
 
+export const getAccessStatus = query({
+  args: { id: v.string(), demoUserEmail: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const normalizedId = await ctx.db.normalizeId("sections", args.id);
+    if (!normalizedId) return { status: "not_found" as const };
+
+    const section = await ctx.db.get(normalizedId);
+    if (!section) return { status: "not_found" as const };
+
+    let user: Awaited<ReturnType<typeof requireCurrentUser>> | null = null;
+    try {
+      user = await requireCurrentUser(ctx, args.demoUserEmail);
+    } catch {
+      user = null;
+    }
+    if (!user) return { status: "forbidden" as const };
+
+    if (user.role === "TEACHER" && section.teacherId === user._id) {
+      return { status: "ok" as const, section };
+    }
+    if (user.role === "STUDENT") {
+      const enrollment = await ctx.db
+        .query("enrollments")
+        .withIndex("by_section_student", (q) => q.eq("sectionId", normalizedId).eq("studentId", user._id))
+        .first();
+      if (enrollment && enrollment.removedAt === undefined) {
+        return { status: "ok" as const, section };
+      }
+    }
+    return { status: "forbidden" as const };
+  },
+});
+
 export const getByTeacher = query({
   args: { teacherId: v.id("users"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    if (isDemoMode()) {
-      const teacher = await ctx.db.get(args.teacherId);
-      if (!teacher || teacher.role !== "TEACHER") throw new Error("Forbidden");
-      return await ctx.db
-        .query("sections")
-        .withIndex("by_teacher", (q) => q.eq("teacherId", args.teacherId))
-        .collect();
-    }
     const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER" || user._id !== args.teacherId) throw new Error("Forbidden");
     return await ctx.db

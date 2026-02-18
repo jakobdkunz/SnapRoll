@@ -15,6 +15,9 @@ import Papa from 'papaparse';
 import { useDemoUser } from '../../_components/DemoUserContext';
 
 type Student = { id: Id<'users'>; email: string; firstName: string; lastName: string };
+type SectionAccessStatus =
+  | { status: "ok"; section: { title?: string; gradient?: string } }
+  | { status: "forbidden" | "not_found" };
 
 export default function ModifyPage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
@@ -22,8 +25,8 @@ export default function ModifyPage() {
 }
 
 function ModifyPageDemo() {
-  const { demoUserEmail, isHydrated } = useDemoUser();
-  return <ModifyPageCore canUpsert={false} demoUserEmail={isHydrated ? demoUserEmail : undefined} />;
+  const { demoUserEmail } = useDemoUser();
+  return <ModifyPageCore canUpsert={false} demoUserEmail={demoUserEmail} />;
 }
 
 function ModifyPageWorkOS() {
@@ -68,15 +71,16 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
   }, [canUpsert, currentUser, upsertUser, userInfo]);
   const teacherReady = !!(currentUser && currentUser._id);
 
-  const section = useQuery(
-    api.functions.sections.get,
+  const sectionAccess = useQuery(
+    api.functions.sections.getAccessStatus,
     (params.id && teacherReady) ? { id: params.id as Id<'sections'>, ...demoArgs } : "skip"
-  );
+  ) as SectionAccessStatus | undefined;
+  const section = sectionAccess?.status === "ok" ? sectionAccess.section : null;
   const enrollments = useQuery(
     api.functions.enrollments.getBySection,
-    (params.id && teacherReady && !!section) ? { sectionId: params.id as Id<'sections'> } : "skip"
+    (params.id && teacherReady && sectionAccess?.status === "ok") ? { sectionId: params.id as Id<'sections'>, ...demoArgs } : "skip"
   );
-  const allStudents = useQuery(api.functions.users.list, teacherReady ? { role: "STUDENT" } : "skip");
+  const allStudents = useQuery(api.functions.users.list, teacherReady ? { role: "STUDENT", ...demoArgs } : "skip");
   
   // Combine enrollments with student data
   const students = useMemo(() => {
@@ -108,20 +112,14 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
 
   // Update section data when Convex query returns
   useEffect(() => {
-    if (section) {
-      setSectionTitle(section.title);
+    if (sectionAccess?.status === "ok" && section) {
+      setSectionTitle(section.title || 'Roster');
       setSectionGradient(section.gradient || 'gradient-1');
       setSectionLoaded(true);
+    } else if (sectionAccess && sectionAccess.status !== "ok") {
+      setSectionLoaded(false);
     }
-  }, [section]);
-
-  // After demo reset, stale section ids may no longer exist; return to dashboard.
-  useEffect(() => {
-    if (!teacherReady) return;
-    if (section === null) {
-      router.replace('/dashboard');
-    }
-  }, [teacherReady, section, router]);
+  }, [sectionAccess, section]);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importWorking, setImportWorking] = useState(false);
@@ -209,7 +207,7 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
         const existingStudent = allStudents?.find((s: { _id: Id<'users'>; email: string; firstName: string; lastName: string }) => s.email.toLowerCase() === newEmail.trim().toLowerCase());
         if (existingStudent) {
           // Student exists, just enroll them
-          await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: existingStudent._id });
+          await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: existingStudent._id, ...demoArgs });
           setNewEmail('');
           setNewFirstName('');
           setNewLastName('');
@@ -224,9 +222,10 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
           email: newEmail.trim(),
           firstName: newFirstName.trim(),
           lastName: newLastName.trim(),
-          role: "STUDENT"
+          role: "STUDENT",
+          ...demoArgs,
         });
-        await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId });
+        await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId, ...demoArgs });
         setNewEmail('');
         setNewFirstName('');
         setNewLastName('');
@@ -258,7 +257,7 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
       return;
     }
     try {
-      await updateUser({ id: studentId as unknown as Id<'users'>, firstName: editFirstName.trim(), lastName: editLastName.trim() });
+      await updateUser({ id: studentId as unknown as Id<'users'>, firstName: editFirstName.trim(), lastName: editLastName.trim(), ...demoArgs });
       cancelEdit();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to update student';
@@ -420,11 +419,13 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
           email: emailVal, 
           firstName: first || 'Student', 
           lastName: last || '',
-          role: 'STUDENT'
+          role: 'STUDENT',
+          ...demoArgs,
         });
         await createEnrollment({ 
           sectionId: params.id as Id<'sections'>, 
-          studentId: userId
+          studentId: userId,
+          ...demoArgs,
         });
         added += 1;
         addedEmails.push(emailVal);
@@ -447,6 +448,34 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
     setToastVisible(true);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToastVisible(false), 4000);
+  }
+
+  if (teacherReady && sectionAccess?.status === "not_found") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">The requested course could not be found</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Check the URL and try again.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (teacherReady && sectionAccess?.status === "forbidden") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">You do not have permission to view this course</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Use an authorized account or return to your dashboard.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -514,7 +543,7 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
                 setDeletingIds((prev) => new Set(prev).add(s.id));
                 try {
                   const snapshot = [...students];
-                  await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
+                  await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id, ...demoArgs });
                   setLastAction({ type: 'remove_one', snapshot, label: `Removed ${s.firstName} ${s.lastName}.` });
                   setToastMessage(`Removed ${s.firstName} ${s.lastName}.`);
                   setToastVisible(true);
@@ -595,7 +624,7 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
                   setConfirmWorking(true);
                   const snapshot = [...students];
                   await runWithConcurrency(snapshot, 10, async (s) => {
-                    await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
+                    await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id, ...demoArgs });
                   });
                   setLastAction({ type: 'remove_all', snapshot, label: 'All students removed.' });
                   setToastMessage('All students removed.');
@@ -631,11 +660,11 @@ function ModifyPageCore({ canUpsert, userInfo, demoUserEmail }: { canUpsert: boo
                   const toAdd = snapshot.filter((s) => !currentIds.has(s.id));
                   await Promise.all([
                     runWithConcurrency(toDelete, 10, async (s) => {
-                      await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id });
+                      await removeEnrollment({ sectionId: params.id as Id<'sections'>, studentId: s.id, ...demoArgs });
                     }),
                     runWithConcurrency(toAdd, 8, async (s) => {
-                      const userId = await createUser({ email: s.email, firstName: s.firstName, lastName: s.lastName, role: "STUDENT" });
-                      await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: userId });
+                      const userId = await createUser({ email: s.email, firstName: s.firstName, lastName: s.lastName, role: "STUDENT", ...demoArgs });
+                      await createEnrollment({ sectionId: params.id as Id<'sections'>, studentId: userId, ...demoArgs });
                     })
                   ]);
                   setToastVisible(false);

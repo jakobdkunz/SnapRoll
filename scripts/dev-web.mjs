@@ -37,11 +37,12 @@ function usageAndExit(code = 1) {
   console.log(`
 Usage:
   node scripts/dev-web.mjs regular
-  node scripts/dev-web.mjs all4
+  node scripts/dev-web.mjs all5
   node scripts/dev-web.mjs student
   node scripts/dev-web.mjs student-demo
   node scripts/dev-web.mjs teacher
   node scripts/dev-web.mjs teacher-demo
+  node scripts/dev-web.mjs marketing
 
 Notes:
   - Reads root .env.* files (e.g. .env.student-demo) and injects them into each Next dev process.
@@ -112,11 +113,12 @@ const PRESETS = {
     { name: "teacher", appRel: "apps/teacher-web", envRel: ".env.instructor", port: 3000 },
     { name: "student", appRel: "apps/student-web", envRel: ".env.student", port: 3001 },
   ],
-  all4: [
+  all5: [
     { name: "teacher", appRel: "apps/teacher-web", envRel: ".env.instructor", port: 3000 },
     { name: "student", appRel: "apps/student-web", envRel: ".env.student", port: 3001 },
     { name: "teacher-demo", appRel: "apps/teacher-web", envRel: ".env.instructor-demo", port: 3002 },
     { name: "student-demo", appRel: "apps/student-web", envRel: ".env.student-demo", port: 3003 },
+    { name: "marketing", appRel: "apps/marketing-web", envRel: ".env.local", port: 3004 },
   ],
   student: [{ name: "student", appRel: "apps/student-web", envRel: ".env.student", port: 3001 }],
   "student-demo": [
@@ -125,6 +127,9 @@ const PRESETS = {
   teacher: [{ name: "teacher", appRel: "apps/teacher-web", envRel: ".env.instructor", port: 3000 }],
   "teacher-demo": [
     { name: "teacher-demo", appRel: "apps/teacher-web", envRel: ".env.instructor-demo", port: 3002 },
+  ],
+  marketing: [
+    { name: "marketing", appRel: "apps/marketing-web", envRel: ".env.local", port: 3004 },
   ],
 };
 
@@ -171,5 +176,4 @@ function shutdown(code = 0) {
 
 process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
-
 

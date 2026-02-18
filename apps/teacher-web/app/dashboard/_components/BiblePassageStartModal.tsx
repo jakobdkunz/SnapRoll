@@ -44,6 +44,7 @@ export default function BiblePassageStartModal({
   sessionId,
   initialReference,
   initialTranslationId,
+  demoUserEmail,
 }: {
   open: boolean;
   onClose: () => void;
@@ -51,8 +52,11 @@ export default function BiblePassageStartModal({
   sessionId?: Id<'biblePassageSessions'> | null;
   initialReference?: string | null;
   initialTranslationId?: string | null;
+  demoUserEmail?: string;
 }) {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
   const [bookQuery, setBookQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState<string>('');
   const [verseRange, setVerseRange] = useState('');
@@ -62,7 +66,7 @@ export default function BiblePassageStartModal({
 
   const section = useQuery(
     api.functions.sections.get,
-    sectionId ? { id: sectionId as Id<'sections'> } : 'skip'
+    sectionId ? { id: sectionId as Id<'sections'>, ...demoArgs } : 'skip'
   ) as { title?: string } | null | undefined;
 
   const startBible = useAction(api.functions.bible.startBiblePassage);
@@ -122,10 +126,12 @@ export default function BiblePassageStartModal({
           sessionId: Id<'biblePassageSessions'>;
           bookAndRange: string;
           translationId: string;
+          demoUserEmail?: string;
         }) => Promise<unknown>)({
           sessionId: sessionId as Id<'biblePassageSessions'>,
           bookAndRange: fullReference,
           translationId: translation,
+          ...demoArgs,
         });
         onClose();
       } else {
@@ -133,10 +139,12 @@ export default function BiblePassageStartModal({
           sectionId: Id<'sections'>;
           bookAndRange: string;
           translationId: string;
+          demoUserEmail?: string;
         }) => Promise<unknown>)({
           sectionId: sectionId as Id<'sections'>,
           bookAndRange: fullReference,
           translationId: translation,
+          ...demoArgs,
         });
         onClose();
         const idStr =
@@ -256,5 +264,4 @@ export default function BiblePassageStartModal({
     </Modal>
   );
 }
-
 

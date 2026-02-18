@@ -6,8 +6,10 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 
-export default function WordCloudStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
+export default function WordCloudStartModal({ open, onClose, sectionId, demoUserEmail }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null; demoUserEmail?: string }) {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
   const [prompt, setPrompt] = useState('One word to describe how you feel');
   const [showPrompt, setShowPrompt] = useState(true);
   const [allowMultiple, setAllowMultiple] = useState(false);
@@ -16,7 +18,7 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
   const [error, setError] = useState<string | null>(null);
   const startWordCloud = useMutation(api.functions.wordcloud.startWordCloud);
   const visible = open && !!sectionId;
-  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'> } : 'skip') as any;
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'>, ...demoArgs } : 'skip') as any;
   const participationEnabled = !!(section && (typeof section.participationCreditPointsPossible === 'number'));
 
   function hasId(v: unknown): v is { _id: string } {
@@ -65,7 +67,7 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
               try {
                 setWorking(true);
                 setError(null);
-                const sessionId = await (startWordCloud as unknown as (args: any) => Promise<unknown>)({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple, countForParticipationCredit: participationEnabled ? countForCredit : false });
+                const sessionId = await (startWordCloud as unknown as (args: any) => Promise<unknown>)({ sectionId: sectionId as Id<'sections'>, prompt, showPromptToStudents: showPrompt, allowMultipleAnswers: allowMultiple, countForParticipationCredit: participationEnabled ? countForCredit : false, ...demoArgs });
                 onClose();
                 const idStr = hasId(sessionId) ? sessionId._id : String(sessionId);
                 setTimeout(() => router.push(`/wordcloud/live/${idStr}`), 120);
@@ -83,5 +85,4 @@ export default function WordCloudStartModal({ open, onClose, sectionId }: { open
     </Modal>
   );
 }
-
 

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import type { Id, Doc } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
-import { isDemoMode, requireStudent, requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import { requireStudent, requireTeacher, requireTeacherOwnsSection } from "./_auth";
 import { getEasternDayBounds } from "./_tz";
 
 async function getActiveClassDaysForSection(
@@ -39,10 +39,11 @@ export const getSectionHistory = query({
     sectionId: v.id("sections"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Restrict to owner teacher
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
     // Include explicit active days and legacy days with recorded attendance/manual changes.
@@ -238,9 +239,10 @@ export const getParticipationBySection = query({
     sectionId: v.id("sections"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
 
     const section = await ctx.db.get(args.sectionId);
@@ -370,17 +372,13 @@ export const getStudentHistory = query({
     studentId: v.id("users"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Only allow the student to access their own consolidated history.
     // Teachers should use section-scoped history above.
-    if (isDemoMode()) {
-      const targetStudent = await ctx.db.get(args.studentId);
-      if (!targetStudent || targetStudent.role !== "STUDENT") throw new Error("Forbidden");
-    } else {
-      const currentStudent = await requireStudent(ctx);
-      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
-    }
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
     // Get all sections the student is enrolled in
     const enrollments = await ctx.db
@@ -567,9 +565,9 @@ export const getStudentHistory = query({
 
 // Export all days and student statuses for a section as a flat matrix
 export const exportSectionHistory = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
     const now = Date.now();
 
@@ -649,9 +647,9 @@ export const exportSectionHistory = query({
 
 // Gamification: list points opportunities for instructor management (with assignment counts)
 export const getPointsOpportunities = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
     const opps = await ctx.db
       .query("pointsOpportunities")
@@ -667,11 +665,11 @@ export const getPointsOpportunities = query({
 
 // Gamification: toggle undo/redo for opportunity
 export const toggleOpportunityUndone = mutation({
-  args: { opportunityId: v.id("pointsOpportunities"), undone: v.boolean() },
+  args: { opportunityId: v.id("pointsOpportunities"), undone: v.boolean(), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const opp = await ctx.db.get(args.opportunityId);
     if (!opp) throw new Error("Not found");
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, opp.sectionId as Id<'sections'>, teacher._id);
     await ctx.db.patch(args.opportunityId, { undone: args.undone });
   }
@@ -679,20 +677,15 @@ export const toggleOpportunityUndone = mutation({
 
 // Gamification: get student points in section (earned vs possible)
 export const getStudentPointsBySection = query({
-  args: { studentId: v.id("users"), sectionId: v.id("sections") },
+  args: { studentId: v.id("users"), sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // allow teacher-owner; else student self only
     try {
-      const t = await requireTeacher(ctx);
+      const t = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, t._id);
     } catch {
-      if (isDemoMode()) {
-        const targetStudent = await ctx.db.get(args.studentId);
-        if (!targetStudent || targetStudent.role !== "STUDENT") throw new Error("Forbidden");
-      } else {
-        const currentStudent = await requireStudent(ctx);
-        if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
-      }
+      const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
     }
     const assignments = await ctx.db
       .query('pointsAssignments')
@@ -710,16 +703,11 @@ export const getStudentPointsBySection = query({
 
 // Gamification: student summary across enrolled sections
 export const getStudentPointsSummary = query({
-  args: { studentId: v.id("users") },
+  args: { studentId: v.id("users"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Only allow the student to access their own summary (or a teacher viewing their student is not supported here)
-    if (isDemoMode()) {
-      const targetStudent = await ctx.db.get(args.studentId);
-      if (!targetStudent || targetStudent.role !== "STUDENT") throw new Error("Forbidden");
-    } else {
-      const currentStudent = await requireStudent(ctx);
-      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
-    }
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
 
     // Enrollments
     const enrollments = await ctx.db.query('enrollments').withIndex('by_student', (q) => q.eq('studentId', args.studentId)).collect();

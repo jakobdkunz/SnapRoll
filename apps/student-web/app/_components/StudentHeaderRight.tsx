@@ -23,7 +23,7 @@ function StudentHeaderRightDemo() {
   const [isClient, setIsClient] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { isHydrated } = useDemoUser();
+  const { demoUserEmail, isHydrated } = useDemoUser();
   const resetDemo = useMutation(api.functions.demo.resetDemoData);
   const [resetting, setResetting] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -56,7 +56,7 @@ function StudentHeaderRightDemo() {
     setResetting(true);
     setResetError(null);
     try {
-      await resetDemo({});
+      await resetDemo({ demoUserEmail });
       setResetConfirmOpen(false);
       router.replace('/dashboard' as Route);
     } catch (error) {
@@ -127,7 +127,7 @@ function StudentHeaderRightDemo() {
             setResetConfirmOpen(true);
           }}
           disabled={resetting}
-          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-black"
+          className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <HiOutlineArrowPath className="h-4 w-4" />
           {resetting ? 'Resetting...' : 'Reset Demo Data'}

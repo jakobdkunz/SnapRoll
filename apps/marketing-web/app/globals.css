@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+
+body { @apply bg-neutral-50 text-neutral-900; }
+.dark body { @apply bg-neutral-950 text-neutral-100; }
+
+@keyframes gradient_drift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+  100% { transform: translate3d(0, 0, 0); }
+}
