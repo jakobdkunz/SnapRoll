@@ -10,11 +10,12 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:web:regular": "node scripts/dev-web.mjs regular",
-    "dev:web:all4": "node scripts/dev-web.mjs all4",
+    "dev:web:all5": "node scripts/dev-web.mjs all5",
     "dev:web:student": "node scripts/dev-web.mjs student",
     "dev:web:student-demo": "node scripts/dev-web.mjs student-demo",
     "dev:web:teacher": "node scripts/dev-web.mjs teacher",
     "dev:web:teacher-demo": "node scripts/dev-web.mjs teacher-demo",
+    "dev:web:marketing": "node scripts/dev-web.mjs marketing",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
@@ -23,7 +24,8 @@
     "convex:deploy": "npx convex deploy",
     "convex:codegen": "npx convex codegen",
     "build:teacher-web": "turbo run build --filter=@flamelink/teacher-web",
-    "build:student-web": "turbo run build --filter=@flamelink/student-web"
+    "build:student-web": "turbo run build --filter=@flamelink/student-web",
+    "build:marketing-web": "turbo run build --filter=@flamelink/marketing-web"
   },
   "devDependencies": {
     "@types/node": "^20.14.11",

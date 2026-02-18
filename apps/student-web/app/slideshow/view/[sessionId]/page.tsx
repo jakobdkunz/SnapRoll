@@ -8,6 +8,7 @@ import { Card, Button } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
 import { HiOutlineArrowLeft } from 'react-icons/hi2';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 type DrawingColor = 'red' | 'blue' | 'green' | 'yellow' | 'black' | 'white';
 type DrawingPoint = { x: number; y: number };
@@ -16,15 +17,27 @@ type DrawingStroke = { color: DrawingColor; points: DrawingPoint[]; mode: 'pen' 
 // removed unused SessionResponse/SlideItem/SlidesResponse types
 
 export default function SlideshowViewPage({ params }: { params: { sessionId: string } }) {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  return isDemoMode ? <SlideshowViewPageDemo params={params} /> : <SlideshowViewPageCore params={params} />;
+}
+
+function SlideshowViewPageDemo({ params }: { params: { sessionId: string } }) {
+  const { demoUserEmail } = useDemoUser();
+  return <SlideshowViewPageCore params={params} demoUserEmail={demoUserEmail} />;
+}
+
+function SlideshowViewPageCore({ params, demoUserEmail }: { params: { sessionId: string }; demoUserEmail?: string }) {
   const router = useRouter();
   const sessionId = params.sessionId as Id<'slideshowSessions'>;
   const error: string | null = null;
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
 
   // Convex hooks
-  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId });
-  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any } : "skip");
-  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId });
-  const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId });
+  const details = useQuery(api.functions.slideshow.getActiveSession, { sessionId, ...demoArgs });
+  const section = useQuery(api.functions.sections.get, (details as any)?.sectionId ? { id: (details as any).sectionId as any, ...demoArgs } : "skip");
+  const slides = useQuery(api.functions.slideshow.getSlides, { sessionId, ...demoArgs });
+  const drawings = useQuery(api.functions.slideshow.getDrawings, { sessionId, ...demoArgs });
   const stageRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
@@ -232,5 +245,3 @@ export default function SlideshowViewPage({ params }: { params: { sessionId: str
     </div>
   );
 }
-
-

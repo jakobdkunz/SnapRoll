@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import type { QueryCtx, MutationCtx } from "../_generated/server";
 import { getEasternDayBounds, getEasternStartOfDay } from "./_tz";
 import type { Id } from "../_generated/dataModel";
+import { isDemoMode, requireCurrentUser } from "./_auth";
 
 type RateLimitBucket = {
   _id: Id<'rateLimits'>;
@@ -13,22 +14,10 @@ type RateLimitBucket = {
   blockedUntil?: number;
 };
 
-async function requireCurrentUser(ctx: QueryCtx | MutationCtx) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new ConvexError("Please sign in to continue.");
-  const email = (identity.email ?? identity.tokenIdentifier ?? "").toString().trim().toLowerCase();
-  if (!email) throw new ConvexError("Please sign in to continue.");
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_email", (q) => q.eq("email", email))
-    .first();
-  if (!user) throw new ConvexError("Account not provisioned. Try refreshing or contact your instructor.");
-  return user as { _id: Id<'users'>; role: "TEACHER" | "STUDENT" };
-}
-
 async function requireTeacherOwnsSection(ctx: QueryCtx | MutationCtx, sectionId: Id<'sections'>, teacherUserId: Id<'users'>) {
   const section = await ctx.db.get(sectionId);
-  if (!section || section.teacherId !== teacherUserId) throw new Error("Forbidden");
+  if (!section) throw new Error("Forbidden");
+  if (section.teacherId !== teacherUserId) throw new Error("Forbidden");
   return section;
 }
 
@@ -98,9 +87,10 @@ export const createClassDay = mutation({
 export const checkIn = mutation({
   args: {
     attendanceCode: v.string(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "STUDENT") throw new ConvexError("Only students can check in.");
     const studentId = user._id;
     const now = Date.now();
@@ -158,7 +148,7 @@ export const checkIn = mutation({
       )
       .first();
     
-    if (!enrollment) {
+    if (!enrollment || enrollment.removedAt !== undefined) {
       const nextCount = bucket!.count + 1;
       const blockedUntil = nextCount > MAX_ATTEMPTS ? (now + BLOCK_MS) : undefined;
       await ctx.db.patch(bucket!._id, { count: nextCount, blockedUntil });
@@ -225,9 +215,9 @@ export const checkIn = mutation({
 });
 
 export const getAttendanceStatus = query({
-  args: { sectionId: v.id("sections"), date: v.optional(v.number()) },
+  args: { sectionId: v.id("sections"), date: v.optional(v.number()), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
     const { startMs, nextStartMs } = getEasternDayBounds(args.date ?? Date.now());
@@ -279,9 +269,9 @@ export const getAttendanceStatus = query({
 });
 
 export const getAttendanceRecords = query({
-  args: { classDayId: v.id("classDays") },
+  args: { classDayId: v.id("classDays"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     return await ctx.db
@@ -302,9 +292,10 @@ export const updateManualStatus = mutation({
       v.literal("NOT_JOINED"),
       v.literal("BLANK")
     ),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     // Setting BLANK should never create a manual change; treat as "revert"
@@ -375,9 +366,9 @@ export const updateManualStatus = mutation({
 });
 
 export const getManualStatusChanges = query({
-  args: { classDayId: v.id("classDays") },
+  args: { classDayId: v.id("classDays"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnershipForClassDay(ctx, args.classDayId, user._id);
     return await ctx.db
@@ -390,9 +381,10 @@ export const getManualStatusChanges = query({
 export const startAttendance = mutation({
   args: {
     sectionId: v.id("sections"),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
     const now = Date.now();
@@ -437,9 +429,10 @@ export const startAttendanceForDate = mutation({
   args: {
     sectionId: v.id("sections"),
     date: v.number(), // any epoch ms; will be normalized to ET start-of-day
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await requireCurrentUser(ctx);
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "TEACHER") throw new Error("Forbidden");
     await requireTeacherOwnsSection(ctx, args.sectionId, user._id);
 
@@ -482,9 +475,9 @@ export const startAttendanceForDate = mutation({
 
 // Developer utility: Reset the student's check-in rate limit immediately
 export const resetCheckinRateLimit = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const user = await requireCurrentUser(ctx);
+  args: { demoUserEmail: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const user = await requireCurrentUser(ctx, args.demoUserEmail);
     if (user.role !== "STUDENT") throw new ConvexError("Only students can reset this rate limit.");
     const key = "checkin:any";
     const now = Date.now();

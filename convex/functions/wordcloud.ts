@@ -11,9 +11,10 @@ export const startWordCloud = mutation({
     showPromptToStudents: v.optional(v.boolean()),
     allowMultipleAnswers: v.optional(v.boolean()),
     countForParticipationCredit: v.optional(v.boolean()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
 
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `wc:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
@@ -40,15 +41,15 @@ export const startWordCloud = mutation({
 });
 
 export const getActiveWordCloud = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Allow teachers who own the section or enrolled students
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     } catch {
       try {
-        await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">);
+        await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">, args.demoUserEmail);
       } catch {
         throw new Error("Forbidden");
       }
@@ -66,12 +67,13 @@ export const submitAnswer = mutation({
   args: {
     sessionId: v.id("wordCloudSessions"),
     text: v.string(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const caller = await requireCurrentUser(ctx);
+    const caller = await requireCurrentUser(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("WordCloud session not found");
-    await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+    await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
 
     // Enforce 25-char limit (server-side) and max 25 submissions per student per session
     const text = (args.text || "").trim();
@@ -127,7 +129,7 @@ export const submitAnswer = mutation({
 });
 
 export const getResults = query({
-  args: { sessionId: v.id("wordCloudSessions") },
+  args: { sessionId: v.id("wordCloudSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
@@ -135,17 +137,17 @@ export const getResults = query({
     if (session.closedAt === undefined) {
       // Active: allow enrolled students or owner
       try {
-        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
       } catch {
-        const teacher = await requireTeacher(ctx);
+        const teacher = await requireTeacher(ctx, args.demoUserEmail);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       }
     } else {
       // Closed: still restrict to enrolled students or owner
       try {
-        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
       } catch {
-        const teacher = await requireTeacher(ctx);
+        const teacher = await requireTeacher(ctx, args.demoUserEmail);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       }
     }
@@ -176,9 +178,9 @@ export const getResults = query({
 });
 
 export const closeWordCloud = mutation({
-  args: { sessionId: v.id("wordCloudSessions") },
+  args: { sessionId: v.id("wordCloudSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("WordCloud session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -193,9 +195,9 @@ export const closeWordCloud = mutation({
 });
 
 export const heartbeat = mutation({
-  args: { sessionId: v.id("wordCloudSessions") },
+  args: { sessionId: v.id("wordCloudSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("WordCloud session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -225,8 +227,12 @@ export const getAnswers = query({
 });
 
 export const closeSession = mutation({
-  args: { sessionId: v.id("wordCloudSessions") },
+  args: { sessionId: v.id("wordCloudSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("WordCloud session not found");
+    await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     await ctx.db.patch(args.sessionId, {
       closedAt: Date.now(),
     });

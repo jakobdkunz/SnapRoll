@@ -3,7 +3,7 @@ import './globals.css';
 import { Orbitron } from 'next/font/google';
 import { AuthGuard } from './_components/AuthGuard';
 import { StudentHeaderRight } from './_components/StudentHeaderRight';
-import { WordmarkLink } from './_components/WordmarkLink';
+import { DemoUserSwitcher, WordmarkLink } from './_components/WordmarkLink';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
@@ -42,9 +42,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <div className="min-h-dvh bg-transparent dark:bg-transparent">
             <header className="sticky top-0 z-10 border-b border-slate-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-950/80 backdrop-blur">
-              <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-                <WordmarkLink />
-                <StudentHeaderRight />
+              <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 py-3 sm:py-4">
+                <div className="justify-self-start min-w-0">
+                  <WordmarkLink />
+                </div>
+                <div className="justify-self-center">
+                  <DemoUserSwitcher />
+                </div>
+                <div className="justify-self-end">
+                  <StudentHeaderRight />
+                </div>
               </div>
             </header>
             <AuthGuard />

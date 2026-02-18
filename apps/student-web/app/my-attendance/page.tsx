@@ -8,6 +8,7 @@ import { convexApi, api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery } from 'convex/react';
 import { Modal } from '@flamelink/ui';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 type HistoryResponse = {
   sections: { id: string; title: string }[];
@@ -33,6 +34,8 @@ function formatHeaderDateMDFromString(dateStr: string) {
 }
 
 export default function MyAttendancePage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { demoUserEmail, isHydrated } = useDemoUser();
   // const pathname = usePathname();
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState<string | null>(null);
@@ -91,10 +94,20 @@ export default function MyAttendancePage() {
   }
 
   // Convex hooks
-  const currentUser = useQuery(convexApi.auth.getCurrentUser);
+  const currentUserAuthed = useQuery(convexApi.auth.getCurrentUser, {});
+  const currentDemoStudent = useQuery(
+    api.functions.auth.getCurrentStudent,
+    isDemoMode ? { demoUserEmail } : "skip"
+  );
+  const currentUser = (isDemoMode ? currentDemoStudent : currentUserAuthed) as typeof currentUserAuthed;
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const history = useQuery(
     api.functions.history.getStudentHistory,
-    currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit } : "skip"
+    currentUser?._id ? { studentId: currentUser._id as Id<"users">, offset, limit, ...demoArgs } : "skip"
+  );
+  const enrollments = useQuery(
+    api.functions.enrollments.getByStudent,
+    currentUser?._id ? { studentId: currentUser._id as Id<"users">, ...demoArgs } : "skip"
   );
 
   // Column width calculations
@@ -281,13 +294,44 @@ export default function MyAttendancePage() {
     if (!grid) return null as Id<'sections'>[] | null;
     return grid.sections.map((s) => s.id as unknown as Id<'sections'>);
   }, [grid]);
+  const activeEnrollmentSectionIds = useMemo(() => {
+    if (!enrollments || !Array.isArray(enrollments)) return null as Id<'sections'>[] | null;
+    const seen = new Set<string>();
+    const ids: Id<'sections'>[] = [];
+    for (const e of enrollments as Array<{ sectionId: Id<'sections'>; removedAt?: number }>) {
+      if (typeof e.removedAt === "number") continue;
+      const key = String(e.sectionId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      ids.push(e.sectionId);
+    }
+    return ids;
+  }, [enrollments]);
+  const sectionQueryArgs = useMemo(() => {
+    if (!sectionIds || sectionIds.length === 0) return "skip" as const;
+    if (isDemoMode) {
+      return { ids: sectionIds, demoUserEmail };
+    }
+    return { ids: sectionIds };
+  }, [sectionIds, isDemoMode, demoUserEmail]);
+  const contactSectionQueryArgs = useMemo(() => {
+    if (!activeEnrollmentSectionIds || activeEnrollmentSectionIds.length === 0) return "skip" as const;
+    if (isDemoMode) {
+      return { ids: activeEnrollmentSectionIds, demoUserEmail };
+    }
+    return { ids: activeEnrollmentSectionIds };
+  }, [activeEnrollmentSectionIds, isDemoMode, demoUserEmail]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
-    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+    sectionQueryArgs
   );
   const sectionDetails = useQuery(
     api.functions.sections.getDetailsByIds,
-    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+    sectionQueryArgs
+  );
+  const contactSectionDetails = useQuery(
+    api.functions.sections.getDetailsByIds,
+    contactSectionQueryArgs
   );
   const gradientBySectionId = useMemo(() => {
     const map = new Map<string, string>();
@@ -315,6 +359,27 @@ export default function MyAttendancePage() {
     }
     return map;
   }, [sectionDetails]);
+  const contactRows = useMemo(() => {
+    if (!contactSectionDetails || !Array.isArray(contactSectionDetails)) return [] as Array<{
+      id: string;
+      title: string;
+      gradient: string;
+      teacherName: string;
+      teacherEmail: string;
+    }>;
+    return (contactSectionDetails as Array<{
+      id: string;
+      title: string;
+      gradient?: string;
+      teacher?: { firstName?: string; lastName?: string; email?: string };
+    }>).map((s) => ({
+      id: s.id,
+      title: s.title,
+      gradient: s.gradient || 'gradient-1',
+      teacherName: `${s.teacher?.firstName || ''} ${s.teacher?.lastName || ''}`.trim(),
+      teacherEmail: s.teacher?.email || '',
+    }));
+  }, [contactSectionDetails]);
   const emailSubject = useMemo(() => encodeURIComponent('Attendance Question'), []);
 
   // Always render the same skeleton on both server and client to avoid hydration mismatch
@@ -675,40 +740,39 @@ export default function MyAttendancePage() {
       </div>
 
       <Modal open={emailModalOpen} onClose={() => setEmailModalOpen(false)}>
-        <Card className="p-4 sm:p-6 w-[94vw] sm:w-[92vw] max-w-2xl">
+        <Card className="p-4 sm:p-6 w-[94vw] sm:w-[92vw] max-w-2xl text-slate-900 dark:text-slate-100">
           <div className="flex items-start justify-between gap-3 mb-2 sm:mb-3">
             <div>
               <div className="text-lg font-semibold">Contact your instructors</div>
-              <div className="mt-1 text-xs sm:text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">Be sure to use your school email.</div>
+              <div className="mt-1 text-xs sm:text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded px-2 py-1 inline-block">Be sure to use your school email.</div>
             </div>
             <Button variant="ghost" onClick={() => setEmailModalOpen(false)}>Close</Button>
           </div>
           {/* Stacked list (all viewports) */}
           <div className="space-y-3 mt-2">
-            {grid.sections.map((s) => {
-              const details = detailsBySectionId.get(s.id);
-              const gradientClass = (details?.gradient || gradientBySectionId.get(s.id) || 'gradient-1');
-              const teacherName = details ? `${details.teacher.firstName} ${details.teacher.lastName}`.trim() : '';
-              const email = details?.teacher.email || '';
+            {contactRows.map((s) => {
+              const gradientClass = s.gradient || gradientBySectionId.get(s.id) || 'gradient-1';
+              const teacherName = s.teacherName;
+              const email = s.teacherEmail;
               return (
-                <div key={`mob-${s.id}`} className="border border-slate-200 rounded-lg p-3">
+                <div key={`mob-${s.id}`} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-white/70 dark:bg-slate-900/60">
                   <div className="mb-2">
                     <div className={`rounded-md ${gradientClass} text-white px-3 py-1.5 w-full grid place-items-center`}>
                       <div className="font-medium truncate whitespace-nowrap overflow-hidden leading-tight text-center">{s.title}</div>
                     </div>
                   </div>
-                  <div className="text-sm text-slate-700">
+                  <div className="text-sm text-slate-700 dark:text-slate-300">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-slate-600">Instructor</div>
+                      <div className="text-slate-600 dark:text-slate-400">Instructor</div>
                       <div className="truncate">{teacherName || '—'}</div>
                     </div>
                     <div className="mt-1 flex items-start justify-between gap-2">
-                      <div className="text-slate-600">Email</div>
+                      <div className="text-slate-600 dark:text-slate-400">Email</div>
                       <div className="truncate text-right">
                         {email ? (
-                          <a className="text-indigo-600 hover:underline break-all" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
+                          <a className="text-indigo-600 dark:text-indigo-400 hover:underline break-all" href={`mailto:${email}?subject=${emailSubject}`}>{email}</a>
                         ) : (
-                          <span className="text-slate-500">—</span>
+                          <span className="text-slate-500 dark:text-slate-400">—</span>
                         )}
                       </div>
                     </div>
@@ -716,11 +780,14 @@ export default function MyAttendancePage() {
                 </div>
               );
             })}
+            {contactRows.length === 0 && (
+              <div className="text-sm text-slate-600 dark:text-slate-300">
+                {enrollments ? "No active course enrollments found." : "Loading your courses..."}
+              </div>
+            )}
           </div>
         </Card>
       </Modal>
     </div>
   );
 }
-
-

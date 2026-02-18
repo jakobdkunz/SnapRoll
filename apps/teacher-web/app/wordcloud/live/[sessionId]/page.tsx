@@ -5,6 +5,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { useDemoUser } from '../../../_components/DemoUserContext';
 
 type Word = { word: string; count: number };
 // removed unused Session type
@@ -15,7 +16,8 @@ export default function WordCloudLivePage({ params }: { params: { sessionId: str
 }
 
 function WordCloudLivePageDemo({ params }: { params: { sessionId: string } }) {
-  return <WordCloudLivePageCore params={params} authReady={true} />;
+  const { demoUserEmail } = useDemoUser();
+  return <WordCloudLivePageCore params={params} authReady={true} demoUserEmail={demoUserEmail} />;
 }
 
 function WordCloudLivePageWorkOS({ params }: { params: { sessionId: string } }) {
@@ -24,18 +26,20 @@ function WordCloudLivePageWorkOS({ params }: { params: { sessionId: string } }) 
   return <WordCloudLivePageCore params={params} authReady={authReady} />;
 }
 
-function WordCloudLivePageCore({ params, authReady }: { params: { sessionId: string }; authReady: boolean }) {
+function WordCloudLivePageCore({ params, authReady, demoUserEmail }: { params: { sessionId: string }; authReady: boolean; demoUserEmail?: string }) {
   const sessionId = params.sessionId;
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
 
   // Convex hooks
   const session = useQuery(
     api.functions.wordcloud.getActiveSession,
-    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'> } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'>, ...demoArgs } : "skip"
   );
-  const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as Id<'sections'> } : "skip");
+  const section = useQuery(api.functions.sections.get, session?.sectionId ? { id: session.sectionId as Id<'sections'>, ...demoArgs } : "skip");
   const answers = useQuery(
     api.functions.wordcloud.getAnswers,
-    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'> } : "skip"
+    authReady ? { sessionId: params.sessionId as Id<'wordCloudSessions'>, ...demoArgs } : "skip"
   );
   const heartbeat = useMutation(api.functions.wordcloud.heartbeat);
   const closeSession = useMutation(api.functions.wordcloud.closeSession);
@@ -59,9 +63,9 @@ function WordCloudLivePageCore({ params, authReady }: { params: { sessionId: str
     const start = () => {
       if (intervalId !== null) return;
       // send one immediately when visible
-      try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'> }); } catch { /* ignore */ }
+      try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'>, ...demoArgs }); } catch { /* ignore */ }
       intervalId = window.setInterval(() => {
-        try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'> }); } catch { /* ignore */ }
+        try { void heartbeat({ sessionId: sessionId as Id<'wordCloudSessions'>, ...demoArgs }); } catch { /* ignore */ }
       }, 10000);
     };
     const stop = () => { if (intervalId !== null) { window.clearInterval(intervalId); intervalId = null; } };
@@ -69,7 +73,7 @@ function WordCloudLivePageCore({ params, authReady }: { params: { sessionId: str
     document.addEventListener('visibilitychange', onVis);
     onVis();
     return () => { document.removeEventListener('visibilitychange', onVis); stop(); };
-  }, [sessionId, heartbeat, authReady]);
+  }, [sessionId, heartbeat, authReady, demoUserEmail]);
 
   const maxCount = Math.max(1, ...words.map((w: Word) => w.count));
 
@@ -368,7 +372,7 @@ function WordCloudLivePageCore({ params, authReady }: { params: { sessionId: str
             className="inline-flex items-center gap-2 bg-white/80 hover:bg-white text-slate-900 border border-slate-200 rounded-xl px-3 py-2"
             onClick={async () => {
               try {
-                await closeSession({ sessionId: params.sessionId as Id<'wordCloudSessions'> });
+                await closeSession({ sessionId: params.sessionId as Id<'wordCloudSessions'>, ...demoArgs });
               } catch { /* ignore */ }
               history.back();
             }}
@@ -412,4 +416,3 @@ function WordCloudLivePageCore({ params, authReady }: { params: { sessionId: str
     </div>
   );
 }
-

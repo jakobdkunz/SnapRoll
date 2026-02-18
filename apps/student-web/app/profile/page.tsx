@@ -4,22 +4,36 @@ import { Card, TextInput } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 type StudentProfile = { student: { id: string; email: string; firstName: string; lastName: string } };
 
 export default function StudentProfilePage() {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { demoUserEmail } = useDemoUser();
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const [studentId, setStudentId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const currentUser = useQuery(
+    api.functions.auth.getCurrentUser,
+    isDemoMode ? { demoUserEmail } : {}
+  );
 
   // Get student data
-  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as unknown as Id<'users'> } : "skip");
+  const student = useQuery(api.functions.users.get, studentId ? { id: studentId as unknown as Id<'users'>, ...demoArgs } : "skip");
 
   useEffect(() => {
-    const id = localStorage.getItem('flamelink.studentId');
-    setStudentId(id);
-  }, []);
+    if (currentUser?._id) {
+      setStudentId(currentUser._id as unknown as string);
+      return;
+    }
+    if (!isDemoMode) {
+      const id = localStorage.getItem('flamelink.studentId');
+      setStudentId(id);
+    }
+  }, [currentUser, isDemoMode]);
 
   // Update form when student data loads
   useEffect(() => {
@@ -53,5 +67,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
-

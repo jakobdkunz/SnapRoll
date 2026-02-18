@@ -8,6 +8,7 @@ import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 type Section = {
   id: string;
@@ -21,8 +22,9 @@ export default function SectionsPage() {
 }
 
 function SectionsPageDemo() {
+  const { demoUserEmail } = useDemoUser();
   // Demo mode has no Clerk; allow queries immediately and skip upsert.
-  return <SectionsPageCore authReady={true} canUpsert={false} />;
+  return <SectionsPageCore authReady={true} canUpsert={false} demoUserEmail={demoUserEmail} />;
 }
 
 function SectionsPageWorkOS() {
@@ -37,11 +39,12 @@ function SectionsPageWorkOS() {
   return <SectionsPageCore authReady={authReady} canUpsert={authReady} userInfo={userInfo} />;
 }
 
-function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { authReady: boolean; canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string } }) {
+function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo, demoUserEmail }: { authReady: boolean; canUpsert: boolean; userInfo?: { email?: string; firstName?: string; lastName?: string }; demoUserEmail?: string }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [studentName, setStudentName] = useState<string | null>(null);
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
 
   // Convex hooks
   const checkInMutation = useMutation(api.functions.attendance.checkIn);
@@ -49,11 +52,11 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
   const submitPoll = useMutation(api.functions.polls.submitAnswer);
   
   // Get current user.
-  // In demo deployments, Convex's getCurrentUser returns the demo *teacher*, so we explicitly fetch demo-student.
-  const currentUserAuthed = useQuery(api.functions.auth.getCurrentUser);
+  // In demo mode, use getCurrentStudent with the selected demo user email.
+  const currentUserAuthed = useQuery(api.functions.auth.getCurrentUser, {});
   const demoStudent = useQuery(
-    api.functions.auth.getUserByEmail,
-    isDemoMode ? { email: 'demo-student@example.com' } : "skip"
+    api.functions.auth.getCurrentStudent,
+    isDemoMode && demoUserEmail ? { demoUserEmail } : "skip"
   );
   const currentUser = (isDemoMode ? demoStudent : currentUserAuthed) as typeof currentUserAuthed;
 
@@ -85,7 +88,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
   // Get student's enrolled sections
   const enrollments = useQuery(
     api.functions.enrollments.getByStudent,
-    effectiveUserId ? { studentId: effectiveUserId } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId, ...demoArgs } : "skip"
   );
   
   // Get sections data (authorized) for the student's enrollments only
@@ -93,9 +96,17 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
     if (!enrollments) return null as Id<'sections'>[] | null;
     return enrollments.map((e: { sectionId: Id<'sections'> }) => e.sectionId as Id<'sections'>);
   }, [enrollments]);
+  const sectionsQueryArgs = useMemo(() => {
+    if (!sectionIds || sectionIds.length === 0) return "skip" as const;
+    if (isDemoMode) {
+      if (!demoUserEmail) return "skip" as const;
+      return { ids: sectionIds, demoUserEmail };
+    }
+    return { ids: sectionIds };
+  }, [sectionIds, isDemoMode, demoUserEmail]);
   const sectionsData = useQuery(
     api.functions.sections.getByIds,
-    sectionIds && sectionIds.length > 0 ? { ids: sectionIds } : "skip"
+    sectionsQueryArgs
   );
   
   // Shape sections for display
@@ -130,7 +141,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
       setChecking(true);
       
       // Use Convex mutation (server derives student from identity)
-      const result: unknown = await checkInMutation({ attendanceCode: code });
+      const result: unknown = await checkInMutation({ attendanceCode: code, ...demoArgs });
       if (result && typeof result === 'object' && result !== null && 'ok' in result) {
         const r = result as { ok: boolean; error?: string; attemptsLeft?: number; blockedUntil?: number };
         if (r.ok) {
@@ -182,7 +193,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
     } finally {
       setChecking(false);
     }
-  }, [effectiveUserId, checkInMutation]);
+  }, [effectiveUserId, checkInMutation, demoUserEmail, isDemoMode]);
 
   // Inline check-in widget state (must be declared before any returns)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null);
@@ -200,7 +211,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
       return;
     }
     try {
-      const res = await joinByCode({ code });
+      const res = await joinByCode({ code, ...demoArgs });
       if (res && typeof res === 'object' && (res as { ok?: boolean }).ok) {
         setJoinOpen(false);
         setJoinCode('');
@@ -215,7 +226,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
       const msg = e instanceof Error ? e.message : 'Failed to join.';
       setJoinError(/no course/i.test(msg) ? 'No course matches that join code.' : 'Failed to join. Try again.');
     }
-  }, [joinByCode]);
+  }, [joinByCode, demoUserEmail, isDemoMode]);
 
   // Get interactive activity from Convex
   // Include a periodic tick to re-evaluate time-based staleness (heartbeat expiry)
@@ -226,7 +237,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
   }, []);
   const interactive = useQuery(
     api.functions.students.getActiveInteractive,
-    effectiveUserId ? { studentId: effectiveUserId, tick } : "skip"
+    effectiveUserId ? { studentId: effectiveUserId, tick, ...demoArgs } : "skip"
   );
 
   // Smooth flicker: preserve last non-undefined value; delay clearing null briefly
@@ -541,7 +552,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
                   onClick={async () => {
                     if (!effectiveUserId || !answer.trim()) return;
                     try {
-                      await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim() });
+                      await submitWordcloud({ sessionId: (renderInteractive.sessionId as Id<'wordCloudSessions'>), text: answer.trim(), ...demoArgs });
                       setAnswer('');
                       setSubmitMsg('Answer submitted.');
                     } catch (e: unknown) {
@@ -571,7 +582,7 @@ function SectionsPageCore({ authReady: _authReady, canUpsert, userInfo }: { auth
                     onClick={async () => {
                       if (!effectiveUserId) return;
                       try {
-                        await submitPoll({ sessionId: renderInteractive.sessionId as Id<'pollSessions'>, optionIdx: i });
+                        await submitPoll({ sessionId: renderInteractive.sessionId as Id<'pollSessions'>, optionIdx: i, ...demoArgs });
                         setSubmitMsg('Response submitted');
                       } catch {
                         setSubmitMsg('Response submitted');
@@ -690,10 +701,10 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
   };
   return (
     <Modal open={open} onClose={onClose}>
-      <Card className="p-5 w-[92vw] max-w-sm">
+      <Card className="p-5 w-[92vw] max-w-sm text-neutral-900 dark:text-neutral-100">
         <div className="text-center mb-3">
           <div className="font-medium">Enter Join Code</div>
-          <div className="text-slate-500 text-sm">Ask your instructor for the 6-digit code.</div>
+          <div className="text-slate-500 dark:text-slate-400 text-sm">Ask your instructor for the 6-digit code.</div>
         </div>
         <div className="flex items-center justify-center gap-2 mb-3">
           <TextInput
@@ -709,7 +720,7 @@ function JoinCodeModal({ open, onClose, onSubmit, error, value, setValue }: { op
           />
         </div>
         {error && (
-          <div id="join-error" className="text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 text-sm text-center">
+          <div id="join-error" className="text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-2 text-sm text-center">
             {error}
           </div>
         )}

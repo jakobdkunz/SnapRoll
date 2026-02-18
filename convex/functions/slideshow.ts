@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection, requireCurrentUser } from "./_auth";
+import { requireTeacher, requireTeacherOwnsSection, requireStudent } from "./_auth";
 import { checkAndIncrementRateLimit } from "./_rateLimit";
 
 // Asset management
@@ -11,9 +11,10 @@ export const createAsset = mutation({
     filePath: v.string(),
     mimeType: v.string(),
     totalSlides: v.optional(v.number()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const title = (args.title || "").trim();
     if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
     const filePath = (args.filePath || "").trim();
@@ -32,9 +33,9 @@ export const createAsset = mutation({
 });
 
 export const getAssetsByTeacher = query({
-  args: { teacherId: v.id("users") },
+  args: { teacherId: v.id("users"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     if (teacher._id !== args.teacherId) throw new Error("Forbidden");
     return await ctx.db
       .query("slideshowAssets")
@@ -54,9 +55,10 @@ export const startSlideshow = mutation({
     requireStay: v.optional(v.boolean()),
     preventJump: v.optional(v.boolean()),
     officeMode: v.optional(v.boolean()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const rl = await checkAndIncrementRateLimit(ctx, teacher._id, `ss:start:${args.sectionId}` as any, 5 * 60 * 1000, 60);
     if (!rl.allowed) throw new Error("Rate limited. Please wait a moment and try again.");
@@ -82,25 +84,18 @@ export const startSlideshow = mutation({
 });
 
 export const getActiveSlideshow = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Allow owner teacher or enrolled student to see session info
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     } catch {
       // Not teacher owner; allow only enrolled students
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) throw new Error("Forbidden");
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .first();
-      if (!currentUser) throw new Error("Forbidden");
+      const currentStudent = await requireStudent(ctx, args.demoUserEmail);
       const enrollment = await ctx.db
         .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", args.sectionId).eq("studentId", currentUser._id))
+        .withIndex("by_section_student", (q) => q.eq("sectionId", args.sectionId).eq("studentId", currentStudent._id))
         .first();
       if (!enrollment) throw new Error("Forbidden");
     }
@@ -114,9 +109,9 @@ export const getActiveSlideshow = query({
 });
 
 export const closeSlideshow = mutation({
-  args: { sessionId: v.id("slideshowSessions") },
+  args: { sessionId: v.id("slideshowSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -132,9 +127,10 @@ export const gotoSlide = mutation({
   args: {
     sessionId: v.id("slideshowSessions"),
     slideNumber: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -148,9 +144,9 @@ export const gotoSlide = mutation({
 });
 
 export const heartbeat = mutation({
-  args: { sessionId: v.id("slideshowSessions") },
+  args: { sessionId: v.id("slideshowSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -171,9 +167,10 @@ export const addSlide = mutation({
     imageUrl: v.string(),
     width: v.optional(v.number()),
     height: v.optional(v.number()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     if (args.sessionId) {
       const session = await ctx.db.get(args.sessionId);
       if (!session) throw new Error("Slideshow session not found");
@@ -199,6 +196,7 @@ export const getSlides = query({
   args: {
     sessionId: v.optional(v.id("slideshowSessions")),
     assetId: v.optional(v.id("slideshowAssets")),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     if (args.sessionId) {
@@ -206,20 +204,13 @@ export const getSlides = query({
       const session = await ctx.db.get(args.sessionId);
       if (!session) return [];
       try {
-        const teacher = await requireTeacher(ctx);
+        const teacher = await requireTeacher(ctx, args.demoUserEmail);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       } catch {
-        const identity = await ctx.auth.getUserIdentity();
-        const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-        if (!email) return [];
-        const currentUser = await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", email))
-          .first();
-        if (!currentUser) return [];
+        const currentStudent = await requireStudent(ctx, args.demoUserEmail);
         const enrollment = await ctx.db
           .query("enrollments")
-          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+          .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
           .first();
         if (!enrollment) return [];
       }
@@ -229,7 +220,7 @@ export const getSlides = query({
         .order("asc")
         .collect();
     } else if (args.assetId) {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       const asset = await ctx.db.get(args.assetId);
       if (!asset || asset.teacherId !== teacher._id) throw new Error("Forbidden");
       return await ctx.db
@@ -248,9 +239,10 @@ export const saveDrawing = mutation({
     sessionId: v.id("slideshowSessions"),
     slideIndex: v.number(),
     drawingData: v.string(), // JSON string of drawing data
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -260,7 +252,7 @@ export const saveDrawing = mutation({
 });
 
 export const getActiveSession = query({
-  args: { sessionId: v.id("slideshowSessions") },
+  args: { sessionId: v.id("slideshowSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
@@ -268,22 +260,15 @@ export const getActiveSession = query({
     let isTeacherOwner = false;
     let isAuthorizedStudent = false;
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       isTeacherOwner = true;
     } catch {
       // Not a teacher; verify enrolled student
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) return null;
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q) => q.eq("email", email))
-        .first();
-      if (!currentUser) return null;
+      const currentStudent = await requireStudent(ctx, args.demoUserEmail);
       const enrollment = await ctx.db
         .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
         .first();
       if (!enrollment) return null;
       isAuthorizedStudent = true;
@@ -313,26 +298,19 @@ export const getActiveSession = query({
 });
 
 export const getDrawings = query({
-  args: { sessionId: v.id("slideshowSessions") },
+  args: { sessionId: v.id("slideshowSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return [];
     // Allow owner teacher or enrolled student (currently returns empty drawings placeholder)
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
     } catch {
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-      if (!email) return [];
-      const currentUser = await ctx.db
-        .query("users")
-        .withIndex("by_email", (q: any) => q.eq("email", email))
-        .first();
-      if (!currentUser) return [];
+      const currentStudent = await requireStudent(ctx, args.demoUserEmail);
       const enrollment = await ctx.db
         .query("enrollments")
-        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentUser._id))
+        .withIndex("by_section_student", (q) => q.eq("sectionId", session.sectionId).eq("studentId", currentStudent._id))
         .first();
       if (!enrollment) return [];
     }
@@ -341,9 +319,9 @@ export const getDrawings = query({
 });
 
 export const closeSession = mutation({
-  args: { sessionId: v.id("slideshowSessions") },
+  args: { sessionId: v.id("slideshowSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Slideshow session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);

@@ -27,12 +27,15 @@ async function demoMiddleware(req: NextRequest) {
 }
 
 // WorkOS middleware - export directly for non-demo mode
+const workosRedirectUri =
+  process.env.WORKOS_REDIRECT_URI ?? process.env.NEXT_PUBLIC_WORKOS_REDIRECT_URI;
+
 const workosMiddleware = authkitMiddleware({
   middlewareAuth: {
     enabled: true,
     unauthenticatedPaths: ['/', '/sign-in', '/sign-up', '/callback', '/login', '/manifest.json', '/sw.js'],
   },
-  redirectUri: process.env.WORKOS_REDIRECT_URI,
+  redirectUri: workosRedirectUri,
 });
 
 // Wrapper to catch and expose errors
@@ -42,7 +45,7 @@ async function safeWorkosMiddleware(req: NextRequest, event: NextFetchEvent) {
     const clientId = process.env.WORKOS_CLIENT_ID;
     const apiKey = process.env.WORKOS_API_KEY;
     const cookiePassword = process.env.WORKOS_COOKIE_PASSWORD;
-    const redirectUri = process.env.WORKOS_REDIRECT_URI;
+    const redirectUri = workosRedirectUri;
     
     if (!clientId || !apiKey || !cookiePassword || !redirectUri) {
       console.error('WorkOS env check failed:', {
@@ -68,11 +71,11 @@ async function safeWorkosMiddleware(req: NextRequest, event: NextFetchEvent) {
       );
     }
     
-    if (cookiePassword.length !== 32) {
-      console.error('WORKOS_COOKIE_PASSWORD must be exactly 32 characters, got:', cookiePassword.length);
+    if (cookiePassword.length < 32) {
+      console.error('WORKOS_COOKIE_PASSWORD must be at least 32 characters, got:', cookiePassword.length);
       return new NextResponse(
         JSON.stringify({ 
-          error: 'WORKOS_COOKIE_PASSWORD must be exactly 32 characters',
+          error: 'WORKOS_COOKIE_PASSWORD must be at least 32 characters',
           actualLength: cookiePassword.length,
         }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }

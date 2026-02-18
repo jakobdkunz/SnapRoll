@@ -5,9 +5,10 @@ import type { Id } from '@flamelink/convex-client';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 
-export default function SlideshowPresentModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
-  const teacherId = (typeof window !== 'undefined' ? (localStorage.getItem('flamelink.teacherId') || null) : null) as Id<'users'> | null;
-  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId } : 'skip');
+export default function SlideshowPresentModal({ open, onClose, sectionId, teacherId, demoUserEmail }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null; teacherId: Id<'users'> | null; demoUserEmail?: string }) {
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
+  const getAssetsByTeacher = useQuery(api.functions.slideshow.getAssetsByTeacher, teacherId ? { teacherId, ...demoArgs } : 'skip');
   const startSlideshow = useMutation(api.functions.slideshow.startSlideshow);
   const [selectedAssetId, setSelectedAssetId] = useState<Id<'slideshowAssets'> | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -87,21 +88,21 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
             <div className="space-y-4">
               <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300">Presentation Settings</h4>
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={showOnDevices} onChange={(e) => setShowOnDevices(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={showOnDevices} onChange={(e) => setShowOnDevices(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Show on Student Devices</div><div className="text-sm text-slate-600 dark:text-slate-300">Students can view the slideshow on their devices</div></div>
               </label>
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Allow Students to Download</div><div className="text-sm text-slate-600 dark:text-slate-300">Students can download the slideshow files</div></div>
               </label>
               {!requireStay && (
                 <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                  <input type="checkbox" checked={preventJump} onChange={(e) => setPreventJump(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                  <input type="checkbox" checked={preventJump} onChange={(e) => setPreventJump(e.target.checked)} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                   <div><div className="font-medium text-slate-900 dark:text-slate-100">Prevent Students from Jumping Ahead</div><div className="text-sm text-slate-600 dark:text-slate-300">Students cannot navigate to future slides</div></div>
                 </label>
               )}
               <label className="flex items-start gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer">
-                <input type="checkbox" checked={requireStay} onChange={(e) => { const v = e.target.checked; setRequireStay(v); if (v) setPreventJump(false); }} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 focus:ring-2" />
+                <input type="checkbox" checked={requireStay} onChange={(e) => { const v = e.target.checked; setRequireStay(v); if (v) setPreventJump(false); }} className="mt-0.5 w-4 h-4 text-blue-600 bg-slate-100 dark:bg-neutral-900 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500 focus:ring-2" />
                 <div><div className="font-medium text-slate-900 dark:text-slate-100">Require Students to Stay on Current Slide</div><div className="text-sm text-slate-600 dark:text-slate-300">Students cannot navigate away from the current slide</div></div>
               </label>
             </div>
@@ -117,7 +118,7 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
             setWorking(true); setError(null);
             try {
               if (selectedAssetId) {
-                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: selectedAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump });
+                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: selectedAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump, ...demoArgs });
                 onClose();
               } else if (uploadFile) {
                 const fd = new FormData();
@@ -128,7 +129,7 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
                 const j = await res.json();
                 const newAssetId: string | undefined = j.assetId || j.id || j._id;
                 if (!newAssetId) throw new Error('Upload succeeded but no assetId returned');
-                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump });
+                await startSlideshow({ sectionId: sectionId as Id<'sections'>, assetId: newAssetId as Id<'slideshowAssets'>, showOnDevices, allowDownload, requireStay, preventJump, ...demoArgs });
                 onClose();
               }
             } catch (e) {
@@ -142,5 +143,3 @@ export default function SlideshowPresentModal({ open, onClose, sectionId }: { op
     </Modal>
   );
 }
-
-

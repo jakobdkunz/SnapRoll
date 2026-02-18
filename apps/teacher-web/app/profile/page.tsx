@@ -5,9 +5,13 @@ import { Button, Card, TextInput } from '@flamelink/ui';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
+import { useDemoUser } from '../_components/DemoUserContext';
 
 export default function TeacherProfilePage() {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const { demoUserEmail } = useDemoUser();
+  const demoArgs = isDemoMode ? { demoUserEmail } : {};
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -23,18 +27,30 @@ export default function TeacherProfilePage() {
   const [pctBlank, setPctBlank] = useState(10);
   const [pctNotEnrolledManual, setPctNotEnrolledManual] = useState(10);
   const [generating, setGenerating] = useState(false);
+  const [devError, setDevError] = useState<string | null>(null);
+  const [devSuccess, setDevSuccess] = useState<string | null>(null);
 
   // Convex hooks
   const updateUser = useMutation(api.functions.users.update);
   const generateDemo = useMutation(api.functions.demo.generateDemoData);
+  const currentUser = useQuery(
+    api.functions.auth.getCurrentUser,
+    isDemoMode ? { demoUserEmail } : {}
+  );
 
   // Get teacher data
-  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'> } : "skip");
+  const teacher = useQuery(api.functions.users.get, teacherId ? { id: teacherId as unknown as Id<'users'>, ...demoArgs } : "skip");
 
   useEffect(() => {
-    const id = localStorage.getItem('flamelink.teacherId');
-    setTeacherId(id);
-  }, []);
+    if (currentUser?._id) {
+      setTeacherId(currentUser._id as unknown as string);
+      return;
+    }
+    if (!isDemoMode) {
+      const id = localStorage.getItem('flamelink.teacherId');
+      setTeacherId(id);
+    }
+  }, [currentUser, isDemoMode]);
 
   // Update form when teacher data loads
   useEffect(() => {
@@ -49,7 +65,7 @@ export default function TeacherProfilePage() {
     if (!teacherId) return;
     setSaving(true);
     try {
-      await updateUser({ id: teacherId as Id<'users'>, firstName, lastName });
+      await updateUser({ id: teacherId as Id<'users'>, firstName, lastName, ...demoArgs });
       const name = `${firstName} ${lastName}`;
       localStorage.setItem('flamelink.teacherName', name);
       try { router.refresh(); } catch {
@@ -68,10 +84,12 @@ export default function TeacherProfilePage() {
   async function onGenerateDemo() {
     if (!devMode) return;
     setGenerating(true);
+    setDevError(null);
+    setDevSuccess(null);
     try {
       const total = pctPresent + pctPresentManual + pctAbsentManual + pctBlank + pctNotEnrolledManual;
       if (total !== 100) {
-        alert("Percentages must add up to 100%");
+        setDevError("Percentages must add up to 100%");
         return;
       }
       await generateDemo({
@@ -85,8 +103,11 @@ export default function TeacherProfilePage() {
           blank: pctBlank,
           notEnrolledManual: pctNotEnrolledManual,
         },
+        ...demoArgs,
       });
-      alert("Demo data generated");
+      setDevSuccess("Demo data generated.");
+    } catch (error) {
+      setDevError(error instanceof Error ? error.message : "Failed to generate demo data.");
     } finally {
       setGenerating(false);
     }
@@ -162,6 +183,16 @@ export default function TeacherProfilePage() {
                   </div>
                 </div>
                 <div className="text-xs text-slate-500">Percentages must add to 100%.</div>
+                {devError && (
+                  <div className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded p-2">
+                    {devError}
+                  </div>
+                )}
+                {devSuccess && (
+                  <div className="text-sm text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded p-2">
+                    {devSuccess}
+                  </div>
+                )}
                 <Button onClick={onGenerateDemo} disabled={generating}>
                   {generating ? 'Generating…' : 'Generate demo data'}
                 </Button>
@@ -173,5 +204,3 @@ export default function TeacherProfilePage() {
     </div>
   );
 }
-
-

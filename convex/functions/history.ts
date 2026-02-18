@@ -1,26 +1,53 @@
 import { v } from "convex/values";
 import { query, mutation } from "../_generated/server";
 import type { Id, Doc } from "../_generated/dataModel";
-import { requireTeacher, requireTeacherOwnsSection } from "./_auth";
+import type { QueryCtx } from "../_generated/server";
+import { requireStudent, requireTeacher, requireTeacherOwnsSection } from "./_auth";
 import { getEasternDayBounds } from "./_tz";
+
+async function getActiveClassDaysForSection(
+  ctx: QueryCtx,
+  sectionId: Id<"sections">
+): Promise<Doc<"classDays">[]> {
+  const classDays = await ctx.db
+    .query("classDays")
+    .withIndex("by_section", (q) => q.eq("sectionId", sectionId))
+    .collect();
+
+  const active = await Promise.all(
+    classDays.map(async (classDay) => {
+      if (classDay.hasActivity === true) return classDay as Doc<"classDays">;
+      const [attendance, manual] = await Promise.all([
+        ctx.db
+          .query("attendanceRecords")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", classDay._id))
+          .first(),
+        ctx.db
+          .query("manualStatusChanges")
+          .withIndex("by_classDay", (q) => q.eq("classDayId", classDay._id))
+          .first(),
+      ]);
+      return attendance || manual ? (classDay as Doc<"classDays">) : null;
+    })
+  );
+
+  return active.filter((d): d is Doc<"classDays"> => Boolean(d));
+}
 
 export const getSectionHistory = query({
   args: {
     sectionId: v.id("sections"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Restrict to owner teacher
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const now = Date.now();
-    // Only include class days that have activity (filter on hasActivity)
-    const rawDays = await ctx.db
-      .query("classDays")
-      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
-      .filter((q) => q.eq(q.field("hasActivity"), true))
-      .collect();
+    // Include explicit active days and legacy days with recorded attendance/manual changes.
+    const rawDays = await getActiveClassDaysForSection(ctx, args.sectionId as Id<"sections">);
     // Ensure ascending order by date for display
     const allClassDays = rawDays.sort((a, b) => (a.date as number) - (b.date as number));
 
@@ -212,20 +239,18 @@ export const getParticipationBySection = query({
     sectionId: v.id("sections"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
 
     const section = await ctx.db.get(args.sectionId);
     const totalPoints = Number((section as any)?.participationCreditPointsPossible || 0);
 
     // Active class days (hasActivity true) in ascending order
-    const allDays = (await ctx.db
-      .query("classDays")
-      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
-      .filter((q) => q.eq(q.field("hasActivity"), true))
-      .collect()).sort((a, b) => (a.date as number) - (b.date as number));
+    const allDays = (await getActiveClassDaysForSection(ctx, args.sectionId as Id<"sections">))
+      .sort((a, b) => (a.date as number) - (b.date as number));
 
     const totalDays = allDays.length;
     const page = allDays.slice(args.offset, args.offset + args.limit);
@@ -347,38 +372,28 @@ export const getStudentHistory = query({
     studentId: v.id("users"),
     offset: v.number(),
     limit: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Only allow the student to access their own consolidated history
-    // Teachers should use section-scoped history above
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-    if (!currentUser || currentUser._id !== args.studentId) throw new Error("Forbidden");
+    // Only allow the student to access their own consolidated history.
+    // Teachers should use section-scoped history above.
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
     const now = Date.now();
     // Get all sections the student is enrolled in
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .collect();
+    const activeEnrollments = enrollments.filter((e) => e.removedAt === undefined);
 
-    const sectionIds = enrollments.map((e) => e.sectionId);
+    const sectionIds = activeEnrollments.map((e) => e.sectionId);
     const sections = await Promise.all(sectionIds.map((id) => ctx.db.get(id)));
 
     // Get all class days across these sections
     const rawDays = sectionIds.length > 0
       ? (await Promise.all(
-          sectionIds.map((id) =>
-            ctx.db
-              .query("classDays")
-              .withIndex("by_section", (q) => q.eq("sectionId", id))
-              .filter((q) => q.eq(q.field("hasActivity"), true))
-              .collect()
-          )
+          sectionIds.map((id) => getActiveClassDaysForSection(ctx, id as Id<"sections">))
         )).flat()
       : [];
 
@@ -446,7 +461,7 @@ export const getStudentHistory = query({
     for (const mc of manualChanges) manualByClassDay.set(mc.classDayId as Id<'classDays'>, mc as Doc<'manualStatusChanges'>);
 
     // Track enrollment windows per section
-    const enrollmentBySection = new Map(enrollments.map((e) => [e.sectionId, e]));
+    const enrollmentBySection = new Map(activeEnrollments.map((e) => [e.sectionId, e]));
 
     // Build records by section for the paginated dates
     const records = sections
@@ -504,11 +519,7 @@ export const getStudentHistory = query({
     // Compute total absences per section across ALL active days (not just paged window)
     const allRawDaysBySection = new Map<Id<'sections'>, Doc<'classDays'>[]>();
     for (const id of sectionIds) {
-      const days = await ctx.db
-        .query("classDays")
-        .withIndex("by_section", (q) => q.eq("sectionId", id))
-        .filter((q) => q.eq(q.field("hasActivity"), true))
-        .collect();
+      const days = await getActiveClassDaysForSection(ctx, id as Id<"sections">);
       allRawDaysBySection.set(id, days);
     }
     let totalAbsencesBySection = new Map<Id<'sections'>, number>();
@@ -531,7 +542,7 @@ export const getStudentHistory = query({
         if (!hasManual && (!ar || ar.status === "BLANK")) {
           const { nextStartMs } = getEasternDayBounds(cd.date as number);
           const endOfDay = nextStartMs;
-          const enroll = enrollments.find(e => e.sectionId === section._id);
+          const enroll = activeEnrollments.find(e => e.sectionId === section._id);
           const wasEnrolledByDay = !!enroll && enroll.createdAt <= endOfDay && (!enroll.removedAt || enroll.removedAt > endOfDay);
           if (now >= endOfDay) effective = wasEnrolledByDay ? "ABSENT" : "NOT_JOINED";
         }
@@ -554,18 +565,14 @@ export const getStudentHistory = query({
 
 // Export all days and student statuses for a section as a flat matrix
 export const exportSectionHistory = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
     const now = Date.now();
 
     // Get all active class days for this section, ordered by date asc
-    const classDays = (await ctx.db
-      .query("classDays")
-      .withIndex("by_section", (q) => q.eq("sectionId", args.sectionId))
-      .filter((q) => q.eq(q.field("hasActivity"), true))
-      .collect())
+    const classDays = (await getActiveClassDaysForSection(ctx, args.sectionId as Id<"sections">))
       .sort((a, b) => (a.date as number) - (b.date as number));
     const classDayIds = classDays.map(cd => cd._id as Id<'classDays'>);
 
@@ -640,9 +647,9 @@ export const exportSectionHistory = query({
 
 // Gamification: list points opportunities for instructor management (with assignment counts)
 export const getPointsOpportunities = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, teacher._id);
     const opps = await ctx.db
       .query("pointsOpportunities")
@@ -658,11 +665,11 @@ export const getPointsOpportunities = query({
 
 // Gamification: toggle undo/redo for opportunity
 export const toggleOpportunityUndone = mutation({
-  args: { opportunityId: v.id("pointsOpportunities"), undone: v.boolean() },
+  args: { opportunityId: v.id("pointsOpportunities"), undone: v.boolean(), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const opp = await ctx.db.get(args.opportunityId);
     if (!opp) throw new Error("Not found");
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, opp.sectionId as Id<'sections'>, teacher._id);
     await ctx.db.patch(args.opportunityId, { undone: args.undone });
   }
@@ -670,17 +677,15 @@ export const toggleOpportunityUndone = mutation({
 
 // Gamification: get student points in section (earned vs possible)
 export const getStudentPointsBySection = query({
-  args: { studentId: v.id("users"), sectionId: v.id("sections") },
+  args: { studentId: v.id("users"), sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // allow teacher-owner; else student self only
     try {
-      const t = await requireTeacher(ctx);
+      const t = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<'sections'>, t._id);
     } catch {
-      const identity = await ctx.auth.getUserIdentity();
-      const email = (identity?.email ?? identity?.tokenIdentifier ?? '').toString().trim().toLowerCase();
-      const currentUser = await ctx.db.query('users').withIndex('by_email', (q) => q.eq('email', email)).first();
-      if (!currentUser || currentUser._id !== args.studentId) throw new Error('Forbidden');
+      const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+      if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
     }
     const assignments = await ctx.db
       .query('pointsAssignments')
@@ -698,13 +703,11 @@ export const getStudentPointsBySection = query({
 
 // Gamification: student summary across enrolled sections
 export const getStudentPointsSummary = query({
-  args: { studentId: v.id("users") },
+  args: { studentId: v.id("users"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Only allow the student to access their own summary (or a teacher viewing their student is not supported here)
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? '').toString().trim().toLowerCase();
-    const currentUser = await ctx.db.query('users').withIndex('by_email', (q) => q.eq('email', email)).first();
-    if (!currentUser || currentUser._id !== args.studentId) throw new Error('Forbidden');
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
 
     // Enrollments
     const enrollments = await ctx.db.query('enrollments').withIndex('by_student', (q) => q.eq('studentId', args.studentId)).collect();

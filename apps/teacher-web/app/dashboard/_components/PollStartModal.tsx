@@ -6,14 +6,16 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@flamelink/convex-client';
 import type { Id } from '@flamelink/convex-client';
 
-export default function PollStartModal({ open, onClose, sectionId }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null }) {
+export default function PollStartModal({ open, onClose, sectionId, demoUserEmail }: { open: boolean; onClose: () => void; sectionId: Id<'sections'> | null; demoUserEmail?: string }) {
   const router = useRouter();
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = isDemoMode && demoUserEmail ? { demoUserEmail } : {};
   const [prompt, setPrompt] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [countForCredit, setCountForCredit] = useState(false);
   const [working, setWorking] = useState(false);
   const startPollMutation = useMutation(api.functions.polls.startPoll);
-  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'> } : 'skip') as any;
+  const section = useQuery(api.functions.sections.get, sectionId ? { id: sectionId as Id<'sections'>, ...demoArgs } : 'skip') as any;
   const participationEnabled = !!(section && (typeof section.participationCreditPointsPossible === 'number'));
   function setOptionAt(i: number, val: string) {
     setOptions((prev: string[]) => prev.map((v, idx) => (idx === i ? val : v)));
@@ -71,7 +73,7 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
               try {
                 setWorking(true);
                 const opts = options.map((o) => o.trim()).filter(Boolean);
-                const sessionId = await (startPollMutation as unknown as (args: any) => Promise<unknown>)({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts, countForParticipationCredit: participationEnabled ? countForCredit : false });
+                const sessionId = await (startPollMutation as unknown as (args: any) => Promise<unknown>)({ sectionId: sectionId as Id<'sections'>, prompt: prompt.trim(), options: opts, countForParticipationCredit: participationEnabled ? countForCredit : false, ...demoArgs });
                 onClose();
                 const sessionIdStr = typeof sessionId === 'string' ? sessionId : String((sessionId as unknown as { _id?: string })._id ?? sessionId);
                 setTimeout(() => router.push(`/poll/live/${sessionIdStr}`), 120);
@@ -85,5 +87,4 @@ export default function PollStartModal({ open, onClose, sectionId }: { open: boo
     </Modal>
   );
 }
-
 

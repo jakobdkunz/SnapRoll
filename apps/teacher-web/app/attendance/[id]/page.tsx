@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Card, Button, Skeleton, TextInput } from '@flamelink/ui';
 import { HiOutlineArrowPath, HiOutlineArrowLeft, HiOutlineGlobeAlt, HiOutlineDevicePhoneMobile, HiOutlineUserGroup } from 'react-icons/hi2';
 import React from 'react';
@@ -8,6 +8,7 @@ import type { Id } from '@flamelink/convex-client';
 import { useQuery, useMutation } from 'convex/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@workos-inc/authkit-nextjs/components';
+import { useDemoUser } from '../../_components/DemoUserContext';
 
 type AttendanceStatus = {
   hasActiveAttendance: boolean;
@@ -16,6 +17,9 @@ type AttendanceStatus = {
   progress: number;
   attendanceCode: string | null;
 };
+type SectionAccessStatus =
+  | { status: "ok"; section: { title?: string; gradient?: string; joinCode?: string } }
+  | { status: "forbidden" | "not_found" };
 
 export default function AttendancePage() {
   const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
@@ -23,7 +27,8 @@ export default function AttendancePage() {
 }
 
 function AttendancePageDemo() {
-  return <AttendancePageCore authReady={true} />;
+  const { demoUserEmail } = useDemoUser();
+  return <AttendancePageCore authReady={true} demoUserEmail={demoUserEmail} />;
 }
 
 function AttendancePageWorkOS() {
@@ -32,7 +37,7 @@ function AttendancePageWorkOS() {
   return <AttendancePageCore authReady={authReady} />;
 }
 
-function AttendancePageCore({ authReady }: { authReady: boolean }) {
+function AttendancePageCore({ authReady, demoUserEmail }: { authReady: boolean; demoUserEmail?: string }) {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [code, setCode] = useState<string>('....');
@@ -44,6 +49,11 @@ function AttendancePageCore({ authReady }: { authReady: boolean }) {
   const sectionId = (params.id as unknown) as Id<'sections'>;
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0,10));
   const devMode = (process.env.NEXT_PUBLIC_DEV_MODE ?? "false") === "true";
+  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "false") === "true";
+  const demoArgs = useMemo(
+    () => (isDemoMode && demoUserEmail ? { demoUserEmail } : {}),
+    [isDemoMode, demoUserEmail]
+  );
 
   // Convert YYYY-MM-DD to an epoch that safely maps to the intended ET day
   const selectedEpochMs = (() => {
@@ -54,13 +64,19 @@ function AttendancePageCore({ authReady }: { authReady: boolean }) {
     return Date.UTC(y, m - 1, d, 12, 0, 0, 0);
   })();
 
+  const sectionAccess = useQuery(
+    api.functions.sections.getAccessStatus,
+    authReady && params.id ? { id: sectionId, ...demoArgs } : "skip"
+  ) as SectionAccessStatus | undefined;
+  const section = sectionAccess?.status === "ok" ? sectionAccess.section : null;
+
   const getAttendanceStatus = useQuery(
     api.functions.attendance.getAttendanceStatus,
-    authReady && params.id ? (devMode && selectedEpochMs ? { sectionId, date: selectedEpochMs } : { sectionId }) : "skip"
-  );
-  const section = useQuery(
-    api.functions.sections.get,
-    authReady && params.id ? { id: sectionId } : "skip"
+    authReady && params.id && sectionAccess?.status === "ok"
+      ? (devMode && selectedEpochMs
+        ? { sectionId, date: selectedEpochMs, ...demoArgs }
+        : { sectionId, ...demoArgs })
+      : "skip"
   );
 
   const [isStarting, setIsStarting] = useState(false);
@@ -88,13 +104,14 @@ function AttendancePageCore({ authReady }: { authReady: boolean }) {
   }, [getAttendanceStatus]);
 
   const start = useCallback(async () => {
+    if (sectionAccess?.status !== "ok") return;
     if (isStartingRef.current) return;
     isStartingRef.current = true;
     setIsStarting(true);
     try {
       const classDayId = devMode && selectedEpochMs
-        ? await startAttendanceForDate({ sectionId, date: selectedEpochMs })
-        : await startAttendance({ sectionId });
+        ? await startAttendanceForDate({ sectionId, date: selectedEpochMs, ...demoArgs })
+        : await startAttendance({ sectionId, ...demoArgs });
       if (classDayId) {
         // The attendance status will be updated via the Convex query
         await loadStatus();
@@ -105,7 +122,7 @@ function AttendancePageCore({ authReady }: { authReady: boolean }) {
       isStartingRef.current = false;
       setIsStarting(false);
     }
-  }, [sectionId, loadStatus, startAttendance, startAttendanceForDate, devMode, selectedEpochMs]);
+  }, [sectionId, sectionAccess?.status, loadStatus, startAttendance, startAttendanceForDate, devMode, selectedEpochMs, demoArgs]);
 
   useEffect(() => {
     if (getAttendanceStatus) {
@@ -168,7 +185,35 @@ function AttendancePageCore({ authReady }: { authReady: boolean }) {
     return () => {
       if (timeout) window.clearTimeout(timeout);
     };
-  }, [params.id, start]);
+  }, [params.id, start, sectionAccess?.status]);
+
+  if (authReady && sectionAccess?.status === "not_found") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">The requested course could not be found</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Check the URL and try again.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (authReady && sectionAccess?.status === "forbidden") {
+    return (
+      <div className="min-h-[60vh] grid place-items-center">
+        <Card className="p-6 max-w-lg w-full text-center space-y-4">
+          <div className="text-xl font-semibold">You do not have permission to view this course</div>
+          <div className="text-slate-600 dark:text-slate-300 text-sm">Use an authorized account or return to your dashboard.</div>
+          <div className="flex justify-center">
+            <Button onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
 
 

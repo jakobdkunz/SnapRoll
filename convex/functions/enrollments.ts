@@ -7,9 +7,10 @@ export const create = mutation({
   args: {
     sectionId: v.id("sections"),
     studentId: v.id("users"),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     // Check if enrollment already exists
     const existing = await ctx.db
@@ -36,9 +37,9 @@ export const create = mutation({
 });
 
 export const getBySection = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     return await ctx.db
       .query("enrollments")
@@ -48,23 +49,16 @@ export const getBySection = query({
 });
 
 export const getByStudent = query({
-  args: { studentId: v.id("users") },
+  args: { studentId: v.id("users"), includeRemoved: v.optional(v.boolean()), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    // Allow teacher access only to students enrolled in their sections via other endpoints.
-    // Here we restrict to the student themselves.
-    const identity = await ctx.auth.getUserIdentity();
-    const email = (identity?.email ?? identity?.tokenIdentifier ?? "").toString().trim().toLowerCase();
-    if (!email) throw new Error("Unauthenticated");
-    const currentUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q: any) => q.eq("email", email))
-      .first();
-    if (!currentUser) throw new Error("Unauthenticated");
-    if (currentUser._id !== args.studentId) throw new Error("Forbidden");
-    return await ctx.db
+    const currentStudent = await requireStudent(ctx, args.demoUserEmail);
+    if (currentStudent._id !== args.studentId) throw new Error("Forbidden");
+    const rows = await ctx.db
       .query("enrollments")
       .withIndex("by_student", (q) => q.eq("studentId", args.studentId))
       .collect();
+    if (args.includeRemoved) return rows;
+    return rows.filter((e) => e.removedAt === undefined);
   },
 });
 
@@ -72,9 +66,10 @@ export const remove = mutation({
   args: {
     sectionId: v.id("sections"),
     studentId: v.id("users"),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     const enrollment = await ctx.db
       .query("enrollments")
@@ -91,9 +86,9 @@ export const remove = mutation({
 });
 
 export const joinByCode = mutation({
-  args: { code: v.string() },
+  args: { code: v.string(), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const student = await requireStudent(ctx);
+    const student = await requireStudent(ctx, args.demoUserEmail);
     const code = (args.code || "").trim();
     if (!/^\d{6}$/.test(code)) {
       return { ok: false as const, error: "Enter a 6-digit join code." };

@@ -24,9 +24,10 @@ export const generateDemoData = mutation({
       blank: v.number(),
       notEnrolledManual: v.number(),
     }),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
 
     const title = (args.sectionTitle || "").trim();
     if (title.length === 0 || title.length > 200) throw new Error("Title must be 1-200 chars");
@@ -112,6 +113,7 @@ export const generateDemoData = mutation({
         date: dayStart,
         attendanceCode: code,
         attendanceCodeExpiresAt: dayStart + DAY_MS,
+        hasActivity: true,
       });
       results.push({ classDayId: classDayId as Id<'classDays'>, date: dayStart });
 
@@ -169,12 +171,13 @@ export const generateDemoData = mutation({
  * Deletes all data and reseeds with fresh demo data.
  */
 export const resetDemoData = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { demoUserEmail: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     // Only allow in demo mode
     if (process.env.DEMO_MODE !== "true") {
       throw new Error("Reset is only available in demo mode");
     }
+    await requireTeacher(ctx, args.demoUserEmail);
 
     // Delete all data from all tables
     // We'll delete in reverse dependency order to avoid foreign key issues

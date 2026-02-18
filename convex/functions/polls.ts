@@ -11,9 +11,10 @@ export const startPoll = mutation({
     options: v.array(v.string()),
     showResults: v.optional(v.boolean()),
     countForParticipationCredit: v.optional(v.boolean()),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
 
     // Generous rate limit: 60 operations / 5 minutes per teacher per section
@@ -50,16 +51,16 @@ export const startPoll = mutation({
 });
 
 export const getActivePoll = query({
-  args: { sectionId: v.id("sections") },
+  args: { sectionId: v.id("sections"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     // Allow teachers who own the section or enrolled students to view basic session info
     try {
-      const teacher = await requireTeacher(ctx);
+      const teacher = await requireTeacher(ctx, args.demoUserEmail);
       await requireTeacherOwnsSection(ctx, args.sectionId as Id<"sections">, teacher._id);
     } catch {
       // If not teacher owner, require student enrollment
       try {
-        await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">);
+        await requireStudentEnrollment(ctx, args.sectionId as Id<"sections">, args.demoUserEmail);
       } catch {
         throw new Error("Forbidden");
       }
@@ -77,13 +78,14 @@ export const submitAnswer = mutation({
   args: {
     sessionId: v.id("pollSessions"),
     optionIdx: v.number(),
+    demoUserEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Bind identity; ensure student is enrolled in the session's section
-    const { _id: callerId } = await requireCurrentUser(ctx);
+    const { _id: callerId } = await requireCurrentUser(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Poll session not found");
-    await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+    await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
 
     // Generous rate limit: 120 answers / 10 minutes per student per session (prevents loops)
     const rl = await checkAndIncrementRateLimit(ctx, callerId, `poll:answer:${args.sessionId}` as any, 10 * 60 * 1000, 120);
@@ -114,14 +116,14 @@ export const submitAnswer = mutation({
 });
 
 export const getResults = query({
-  args: { sessionId: v.id("pollSessions") },
+  args: { sessionId: v.id("pollSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
     // Only owner teacher or when showResults is true
     if (!session.showResults) {
       try {
-        const teacher = await requireTeacher(ctx);
+        const teacher = await requireTeacher(ctx, args.demoUserEmail);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       } catch {
         throw new Error("Forbidden");
@@ -129,9 +131,9 @@ export const getResults = query({
     } else {
       // If results are public, still require student enrollment or teacher owner
       try {
-        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">);
+        await requireStudentEnrollment(ctx, session.sectionId as Id<"sections">, args.demoUserEmail);
       } catch {
-        const teacher = await requireTeacher(ctx);
+        const teacher = await requireTeacher(ctx, args.demoUserEmail);
         await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
       }
     }
@@ -156,9 +158,9 @@ export const getResults = query({
 });
 
 export const toggleResults = mutation({
-  args: { sessionId: v.id("pollSessions") },
+  args: { sessionId: v.id("pollSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Poll session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -173,9 +175,9 @@ export const toggleResults = mutation({
 });
 
 export const closePoll = mutation({
-  args: { sessionId: v.id("pollSessions") },
+  args: { sessionId: v.id("pollSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Poll session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);
@@ -190,9 +192,9 @@ export const closePoll = mutation({
 });
 
 export const heartbeat = mutation({
-  args: { sessionId: v.id("pollSessions") },
+  args: { sessionId: v.id("pollSessions"), demoUserEmail: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const teacher = await requireTeacher(ctx);
+    const teacher = await requireTeacher(ctx, args.demoUserEmail);
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Poll session not found");
     await requireTeacherOwnsSection(ctx, session.sectionId as Id<"sections">, teacher._id);

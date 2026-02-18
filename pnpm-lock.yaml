@@ -150,6 +150,43 @@ importers:
         specifier: ^5.6.3
         version: 5.9.3
 
+  apps/marketing-web:
+    dependencies:
+      '@flamelink/config':
+        specifier: ^0.1.0
+        version: link:../../packages/config
+      '@flamelink/ui':
+        specifier: ^0.1.0
+        version: link:../../packages/ui
+      next:
+        specifier: ^14.1.0
+        version: 14.2.35(react-dom@19.1.0)(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.10
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: ^19.1.5
+        version: 19.2.3(@types/react@19.2.7)
+      autoprefixer:
+        specifier: ^10.4.19
+        version: 10.4.23(postcss@8.5.6)
+      postcss:
+        specifier: ^8.4.41
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^3.4.9
+        version: 3.4.19
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+
   apps/student-web:
     dependencies:
       '@clerk/nextjs':
