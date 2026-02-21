@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { Card } from "../primitives/Card";
 import { MarketingNavbar, type MarketingCta } from "./MarketingNavbar";
+import { HeroAttendanceSimulation } from "./HeroAttendanceSimulation";
 
 type Feature = {
   title: string;
   description: string;
+  bullets?: string[];
 };
 
 export type MarketingLandingProps = {
@@ -14,23 +15,81 @@ export type MarketingLandingProps = {
   secondaryCta?: MarketingCta;
   instructorCta?: MarketingCta;
   studentCta?: MarketingCta;
+  featuresLinkHref?: string;
+  featuresLinkLabel?: string;
   demoLinkHref?: string;
   demoLinkLabel?: string;
+  faqLinkHref?: string;
+  faqLinkLabel?: string;
+  pricingLinkHref?: string;
+  pricingLinkLabel?: string;
   features?: Feature[];
 };
 
 const DEFAULT_FEATURES: Feature[] = [
   {
     title: "Attendance in seconds",
-    description: "Short codes and one-tap check-ins keep roll-taking fast and accurate.",
+    description: "Instant attendance with randomized codes",
+    bullets: [
+      "Start attendance with one click",
+    ],
   },
   {
     title: "Engage with polls and more",
     description: "Run polls, word clouds, and slides in seconds without extra setup.",
+    bullets: [
+      "Launch interactions from the same instructor dashboard",
+      "Collect live responses during class discussion",
+      "Use activity data as lightweight participation signals",
+    ],
   },
   {
     title: "Half the price",
     description: "All the essentials of classroom response at about 50% of Top Hat.",
+    bullets: [
+      "Lower student cost without reducing core functionality",
+      "Simple pricing for institutions and direct student use",
+      "Designed to be practical and sustainable long-term",
+    ],
+  },
+];
+
+const FEATURE_IMAGES = [
+  {
+    src: "https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE7xxh4oXSTpQFUsHlVAhxM8u6DNnPiKqLzZc0",
+    alt: "FlameLink on MacBook",
+  },
+  {
+    src: "https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE9pzLoI3Fz9VoWxJBkvIUwGrZKR4i6uQYEgMn",
+    alt: "FlameLink on iPad",
+  },
+  {
+    src: "https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepEcWE56ZJ1MDQrUL0pz8OZEKtHdsAjTXP6uBVJ",
+    alt: "FlameLink on iPhone",
+  },
+];
+
+const FEATURE_THEMES = [
+  {
+    shell: "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900",
+    glow:
+      "radial-gradient(38% 52% at 26% 28%, rgba(168,85,247,0.22), transparent), radial-gradient(46% 36% at 74% 66%, rgba(236,72,153,0.16), transparent)",
+    glowOpacity: 0.32,
+    dot: "bg-fuchsia-600 dark:bg-fuchsia-400",
+  },
+  {
+    shell: "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900",
+    glow:
+      "radial-gradient(38% 52% at 26% 28%, rgba(16,185,129,0.22), transparent), radial-gradient(46% 36% at 74% 66%, rgba(245,158,11,0.14), transparent)",
+    glowOpacity: 0.32,
+    dot: "bg-emerald-600 dark:bg-emerald-400",
+  },
+  {
+    shell: "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900",
+    glow:
+      "radial-gradient(38% 52% at 26% 28%, rgba(244,63,94,0.20), transparent), radial-gradient(46% 36% at 74% 66%, rgba(249,115,22,0.15), transparent)",
+    glowOpacity: 0.32,
+    dot: "bg-amber-600 dark:bg-amber-400",
   },
 ];
 
@@ -43,11 +102,17 @@ export function MarketingLanding({
     </>
   ),
   primaryCta = { href: "/demo", label: "Launch Demo ↗" },
-  secondaryCta = { href: "#features", label: "Explore features →" },
+  secondaryCta = { href: "#features", label: "Explore features ↓" },
   instructorCta = { href: "https://instructor.flamelink.app", label: "Instructor Login" },
   studentCta = { href: "https://student.flamelink.app", label: "Student Login" },
+  featuresLinkHref = "/#features",
+  featuresLinkLabel = "Features",
   demoLinkHref = "/demo",
   demoLinkLabel = "Demo",
+  faqLinkHref = "/faq",
+  faqLinkLabel = "FAQ",
+  pricingLinkHref = "/pricing",
+  pricingLinkLabel = "Pricing",
   features = DEFAULT_FEATURES,
 }: MarketingLandingProps) {
   const primaryCtaClassName =
@@ -58,69 +123,99 @@ export function MarketingLanding({
       <MarketingNavbar
         instructorCta={instructorCta}
         studentCta={studentCta}
+        featuresLinkHref={featuresLinkHref}
+        featuresLinkLabel={featuresLinkLabel}
         demoLinkHref={demoLinkHref}
         demoLinkLabel={demoLinkLabel}
+        faqLinkHref={faqLinkHref}
+        faqLinkLabel={faqLinkLabel}
+        pricingLinkHref={pricingLinkHref}
+        pricingLinkLabel={pricingLinkLabel}
       />
       <div className="relative overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 sm:p-10 shadow-soft">
         <div
-          className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_18s_linear_infinite]"
+          className="pointer-events-none absolute -inset-[20%] animate-[gradient_drift_18s_linear_infinite]"
           style={{
             background:
-              "radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.20), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.20), transparent)",
+              "radial-gradient(40% 60% at 30% 30%, rgba(99,102,241,0.24), transparent), radial-gradient(50% 40% at 70% 60%, rgba(16,185,129,0.22), transparent)",
+            opacity: 0.34,
           }}
         />
         <div className="relative z-10">
-          <div className="mx-auto max-w-6xl grid grid-cols-1 lg:grid-cols-2 items-center gap-6 sm:gap-10">
-            <div className="text-center lg:text-left">
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900 dark:text-neutral-100">{title}</h1>
-              <p className="mt-3 text-neutral-600 dark:text-neutral-300 text-base sm:text-lg">{description}</p>
-              <div className="mt-5 flex items-center justify-center lg:justify-start gap-3">
-                <a href={primaryCta.href} target={primaryCta.target} rel={primaryCta.rel} className={primaryCtaClassName}>
-                  {primaryCta.label}
-                </a>
-                <a href={secondaryCta.href} target={secondaryCta.target} rel={secondaryCta.rel} className="text-blue-600 hover:underline font-medium dark:text-blue-400">
-                  {secondaryCta.label}
-                </a>
-              </div>
-            </div>
-            <div className="relative h-[360px] sm:h-[440px] lg:h-[520px]">
-              <div className="absolute left-1/2 -translate-x-1/2 top-0 w-[96%] aspect-[16/10] drop-shadow-xl">
-                <img
-                  src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE7xxh4oXSTpQFUsHlVAhxM8u6DNnPiKqLzZc0"
-                  alt="FlameLink on MacBook"
-                  className="h-full w-full object-contain"
-                  loading="eager"
-                />
-              </div>
-              <div className="absolute left-[2%] bottom-2 w-[48%] aspect-[4/3] -rotate-2 drop-shadow-md">
-                <img
-                  src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepE9pzLoI3Fz9VoWxJBkvIUwGrZKR4i6uQYEgMn"
-                  alt="FlameLink on iPad"
-                  className="h-full w-full object-contain"
-                  loading="eager"
-                />
-              </div>
-              <div className="absolute right-[0%] bottom-0 w-[30%] aspect-[9/19] rotate-2 drop-shadow-md">
-                <img
-                  src="https://fkrhb9mqrd.ufs.sh/f/1N0ranQZuepEcWE56ZJ1MDQrUL0pz8OZEKtHdsAjTXP6uBVJ"
-                  alt="FlameLink on iPhone"
-                  className="h-full w-full object-contain"
-                  loading="eager"
-                />
-              </div>
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="text-3xl font-black tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">{title}</h1>
+            <p className="mt-3 text-base text-neutral-600 dark:text-neutral-300 sm:text-lg">{description}</p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <a href={primaryCta.href} target={primaryCta.target} rel={primaryCta.rel} className={primaryCtaClassName}>
+                {primaryCta.label}
+              </a>
+              <a href={secondaryCta.href} target={secondaryCta.target} rel={secondaryCta.rel} className="text-blue-600 hover:underline font-medium dark:text-blue-400">
+                {secondaryCta.label}
+              </a>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="features" className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-        {features.map((feature) => (
-          <Card key={feature.title} className="p-5">
-            <div className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">{feature.title}</div>
-            <div className="mt-1 text-neutral-600 dark:text-neutral-300 text-sm">{feature.description}</div>
-          </Card>
-        ))}
-      </div>
+      <section id="features" className="mt-8 space-y-6">
+        {features.map((feature, index) => {
+          const showAttendanceAnimation = index === 0;
+          const media = FEATURE_IMAGES[(index - 1 + FEATURE_IMAGES.length) % FEATURE_IMAGES.length];
+          const theme = FEATURE_THEMES[index % FEATURE_THEMES.length];
+          const textFirst = index % 2 === 0;
+          const titleNode = index === 0 ? (
+            <>
+              Attendance in <span className="italic">seconds</span>
+            </>
+          ) : (
+            feature.title
+          );
+          return (
+            <div
+              key={feature.title}
+              className={`relative overflow-hidden rounded-2xl border p-6 sm:p-10 shadow-soft ${theme.shell}`}
+            >
+              <div
+                className="pointer-events-none absolute -inset-[20%] animate-[gradient_drift_18s_linear_infinite]"
+                style={{
+                  background: theme.glow,
+                  opacity: theme.glowOpacity,
+                }}
+              />
+              <div className="relative z-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-2">
+                <div className={textFirst ? "" : "lg:order-2"}>
+                  <h2 className="text-3xl font-black tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">
+                    {titleNode}
+                  </h2>
+                  <p className="mt-3 text-base text-neutral-600 dark:text-neutral-300 sm:text-lg">{feature.description}</p>
+                  {feature.bullets && feature.bullets.length > 0 && (
+                    <ul className="mt-5 space-y-2">
+                      {feature.bullets.map((bullet) => (
+                        <li key={bullet} className="flex items-start gap-2 text-sm text-neutral-700 dark:text-neutral-200">
+                          <span className={`mt-1 h-1.5 w-1.5 rounded-full ${theme.dot}`} />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className={`${showAttendanceAnimation ? "relative" : "relative h-[280px] sm:h-[340px] lg:h-[380px]"} ${textFirst ? "" : "lg:order-1"}`}>
+                  {showAttendanceAnimation ? (
+                    <HeroAttendanceSimulation />
+                  ) : (
+                    <img
+                      src={media.src}
+                      alt={media.alt}
+                      className="h-full w-full object-contain drop-shadow-xl"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </section>
     </div>
   );
 }

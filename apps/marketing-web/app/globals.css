@@ -4,6 +4,11 @@
 
 :root { color-scheme: light; }
 .dark { color-scheme: dark; }
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
 
 body { @apply bg-neutral-50 text-neutral-900; }
 .dark body { @apply bg-neutral-950 text-neutral-100; }
@@ -12,4 +17,36 @@ body { @apply bg-neutral-50 text-neutral-900; }
   0% { transform: translate3d(0, 0, 0); }
   50% { transform: translate3d(2%, -2%, 0) scale(1.02); }
   100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes flamelink-fade-up {
+  0% { opacity: 0; transform: translateY(22px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes flamelink-float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+@keyframes flamelink-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes flamelink-marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.flamelink-noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 0.7px, transparent 0.7px);
+  background-size: 3px 3px;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
 }

@@ -19,11 +19,20 @@ export default function DemoPage() {
   return (
     <div className="space-y-6">
       <MarketingNavbar demoLinkHref="/demo" demoLinkLabel="Demo" />
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:p-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-3xl">Try the Demo</h1>
-        <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-300 sm:text-base">
-          Use FlameLink with a real instance. Take attendance, it&apos;s easy!
-        </p>
+      <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 text-center shadow-soft dark:border-neutral-800 dark:bg-neutral-900 sm:p-9">
+        <div
+          className="pointer-events-none absolute -inset-[20%] opacity-30 animate-[gradient_drift_18s_linear_infinite]"
+          style={{
+            background:
+              'radial-gradient(35% 55% at 28% 25%, rgba(59,130,246,0.16), transparent), radial-gradient(38% 42% at 75% 70%, rgba(16,185,129,0.14), transparent)',
+          }}
+        />
+        <div className="relative z-10">
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100 sm:text-4xl">Try the Demo</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-base text-neutral-600 dark:text-neutral-300">
+            Use FlameLink with a real instance. Take attendance, it&apos;s easy!
+          </p>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-soft dark:border-neutral-800 dark:bg-neutral-900">

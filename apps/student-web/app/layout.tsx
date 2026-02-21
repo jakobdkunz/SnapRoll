@@ -42,11 +42,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <div className="min-h-dvh bg-transparent dark:bg-transparent">
             <header className="sticky top-0 z-10 border-b border-slate-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-950/80 backdrop-blur">
-              <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 py-3 sm:py-4">
-                <div className="justify-self-start min-w-0">
+              <div className="mx-auto grid w-full max-w-6xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 sm:px-6 py-3 sm:py-4">
+                <div className="min-w-0 overflow-hidden">
                   <WordmarkLink />
                 </div>
-                <div className="justify-self-center">
+                <div className="justify-self-center" data-header-switcher>
                   <DemoUserSwitcher />
                 </div>
                 <div className="justify-self-end">

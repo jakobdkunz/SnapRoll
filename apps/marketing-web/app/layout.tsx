@@ -23,8 +23,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `
               (function(){
                 try {
-                  var pref = localStorage.getItem('theme') || 'device';
-                  var isDark = pref === 'dark' || (pref === 'device' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                  var pref = localStorage.getItem('marketing-theme-preference');
+                  if (pref !== 'light' && pref !== 'dark' && pref !== 'system') {
+                    var legacy = localStorage.getItem('theme');
+                    if (legacy === 'light' || legacy === 'dark') pref = legacy;
+                    else if (legacy === 'device') pref = 'system';
+                    else pref = 'system';
+                  }
+                  var isDark = pref === 'dark' || (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   var root = document.documentElement;
                   if (isDark) {
                     root.classList.add('dark');

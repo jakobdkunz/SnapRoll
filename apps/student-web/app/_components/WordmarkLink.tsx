@@ -141,18 +141,79 @@ export function DemoUserSwitcher() {
   return <DemoUserDropdown />;
 }
 
+function AdaptiveWordmarkButton({
+  roleLabel,
+  onClick,
+}: {
+  roleLabel: string;
+  onClick: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const baseRef = useRef<HTMLSpanElement>(null);
+  const roleMeasureRef = useRef<HTMLSpanElement>(null);
+  const [showRole, setShowRole] = useState(true);
+
+  useEffect(() => {
+    function updateRoleVisibility() {
+      const container = containerRef.current;
+      const base = baseRef.current;
+      const roleMeasure = roleMeasureRef.current;
+      if (!container || !base || !roleMeasure) return;
+
+      const roleWidth = roleMeasure.getBoundingClientRect().width;
+      const baseRect = base.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const projectedRoleRight = baseRect.right + 4 + roleWidth;
+      let collidesWithSwitcher = false;
+      const switcher = document.querySelector<HTMLElement>('[data-header-switcher]');
+      if (switcher && switcher.firstElementChild) {
+        const switcherRect = switcher.getBoundingClientRect();
+        if (switcherRect.width > 0) {
+          collidesWithSwitcher = projectedRoleRight >= (switcherRect.left - 8);
+        }
+      }
+      const fitsContainer = projectedRoleRight <= (containerRect.right - 2);
+      setShowRole(fitsContainer && !collidesWithSwitcher);
+    }
+
+    updateRoleVisibility();
+    const rafId = window.requestAnimationFrame(updateRoleVisibility);
+    const observer = new ResizeObserver(updateRoleVisibility);
+    if (containerRef.current) observer.observe(containerRef.current);
+    const switcher = document.querySelector<HTMLElement>('[data-header-switcher]');
+    if (switcher) observer.observe(switcher);
+    window.addEventListener('resize', updateRoleVisibility);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener('resize', updateRoleVisibility);
+    };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="w-full min-w-0 overflow-hidden">
+      <button onClick={onClick} className="relative flex max-w-full items-center gap-0.5 whitespace-nowrap overflow-hidden hover:opacity-80 transition" aria-label="FlameLink home">
+        <span ref={baseRef} className="inline-flex items-center gap-0.5">
+          <Image src="/logo.svg" alt="" width={20} height={20} className="h-5 w-5 -translate-y-[3px]" />
+          <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">FlameLink</span>
+        </span>
+        {showRole ? (
+          <span className="text-lg font-medium text-blue-600 dark:text-neutral-300 ml-1">{roleLabel}</span>
+        ) : null}
+        <span ref={roleMeasureRef} aria-hidden="true" className="absolute invisible text-lg font-medium ml-1">
+          {roleLabel}
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function DemoWordmarkLink() {
   const router = useRouter();
   function onClick() {
     router.push('/dashboard' as Route);
   }
-  return (
-    <button onClick={onClick} className="flex items-center gap-0.5 hover:opacity-80 transition" aria-label="FlameLink home">
-      <Image src="/logo.svg" alt="" width={20} height={20} className="h-5 w-5 -translate-y-[3px]" />
-      <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">FlameLink</span>
-      <span className="text-lg font-medium text-blue-600 dark:text-neutral-300 ml-1">Student (Demo)</span>
-    </button>
-  );
+  return <AdaptiveWordmarkButton roleLabel="Student (Demo)" onClick={onClick} />;
 }
 
 function WorkOSWordmarkLink() {
@@ -163,11 +224,7 @@ function WorkOSWordmarkLink() {
     else router.push('/' as Route);
   }
   return (
-    <button onClick={onClick} className="flex items-center gap-0.5 hover:opacity-80 transition" aria-label="FlameLink home">
-      <Image src="/logo.svg" alt="" width={20} height={20} className="h-5 w-5 -translate-y-[3px]" />
-      <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">FlameLink</span>
-      <span className="text-lg font-medium text-blue-600 dark:text-neutral-300 ml-1">Student</span>
-    </button>
+    <AdaptiveWordmarkButton roleLabel="Student" onClick={onClick} />
   );
 }
 
