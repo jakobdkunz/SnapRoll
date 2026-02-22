@@ -38,12 +38,6 @@ export default function ProposalOnePage() {
 
           <div className="mt-12 grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <p
-                className="inline-flex rounded-full border border-[#20304a]/20 bg-white/70 px-4 py-1 text-xs font-bold uppercase tracking-[0.24em] text-[#29456e]"
-                style={{ animation: 'flamelink-fade-up 0.7s ease-out both' }}
-              >
-                Proposal 1 · Aurora Editorial
-              </p>
               <h1
                 className="mt-5 text-4xl leading-tight text-[#1a2436] sm:text-5xl lg:text-6xl [font-family:var(--font-proposal-one-display)]"
                 style={{ animation: 'flamelink-fade-up 0.8s ease-out 0.08s both' }}
